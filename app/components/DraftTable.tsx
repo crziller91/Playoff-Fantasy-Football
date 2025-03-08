@@ -61,19 +61,79 @@ export default function DraftTable({
     setSearchTerms({ ...searchTerms, [sanitizedKey]: value });
   };
 
+  // Helper to count positions for a team
+  const getTeamPositionCounts = (team: Team) => {
+    const picks = Object.values(draftPicks[team]).filter(Boolean) as Player[];
+    return {
+      QB: picks.filter((p) => p.position === "QB").length,
+      RB: picks.filter((p) => p.position === "RB").length,
+      WR: picks.filter((p) => p.position === "WR").length,
+      TE: picks.filter((p) => p.position === "TE").length,
+      DST: picks.filter((p) => p.position === "DST").length,
+      K: picks.filter((p) => p.position === "K").length,
+    };
+  };
+
   const getFilteredPlayers = (team: Team, round: number): Player[] => {
     const sanitizedKey = `${team}-${round}`.replace(/[^a-zA-Z0-9-]/g, "-");
     const searchTerm = searchTerms[sanitizedKey] || "";
+    const counts = getTeamPositionCounts(team);
+    const hasTE = counts.TE > 0;
+    const hasDST = counts.DST > 0;
+    const hasFlexOccupiedByTEorDST = hasTE || hasDST;
+    const hasFlexOccupiedByExtra =
+      (counts.RB > 1 && !hasTE && !hasDST) ||
+      (counts.WR > 2 && !hasTE && !hasDST) ||
+      (counts.K > 1 && !hasTE && !hasDST);
+    const hasFlex = hasFlexOccupiedByTEorDST || hasFlexOccupiedByExtra;
+
+    // Base caps
+    const caps = {
+      QB: 1,
+      RB: hasFlex ? 1 : 2, // Flex allows 2 RB if not occupied
+      WR: hasFlex ? 2 : 3, // Flex allows 3 WR if not occupied
+      TE: 1,
+      DST: 1,
+      K: hasFlex ? 1 : 2, // Flex allows 2 K if not occupied
+    };
+
     return availablePlayers
       .filter((player) =>
         player.name.toLowerCase().includes(searchTerm.toLowerCase()),
       )
-      .filter(() => canSelectPlayer(team, draftPicks, rounds.length));
+      .filter((player) => {
+        if (!canSelectPlayer(team, draftPicks, rounds.length)) return false;
+
+        const pos = player.position;
+        const count = counts[pos];
+
+        // QB: strict 1 max
+        if (pos === "QB" && count >= caps.QB) return false;
+
+        // TE and DST are mutually exclusive and can only occupy Flex
+        if (
+          pos === "TE" &&
+          (count >= caps.TE || hasDST || hasFlexOccupiedByExtra)
+        )
+          return false;
+        if (
+          pos === "DST" &&
+          (count >= caps.DST || hasTE || hasFlexOccupiedByExtra)
+        )
+          return false;
+
+        // If Flex is occupied (by TE, DST, or extra RB/WR/K), enforce base caps
+        if (hasFlex) {
+          return count < caps[pos];
+        }
+
+        // Flex is still available, allow up to cap
+        return count < caps[pos];
+      });
   };
 
   return (
     <div className="w-full">
-      {/* Main Draft Table with styling */}
       <div className="overflow-x-auto rounded-lg shadow-lg">
         <Table
           hoverable
@@ -120,7 +180,6 @@ export default function DraftTable({
           </Table.Body>
         </Table>
       </div>
-      {/* Legend Table */}
       <div className="mt-4">
         <PositionLegend />
       </div>
