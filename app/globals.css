@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body {
+    background-color: #ececec; /* Matches bg-gray-100 */
+    height: 100%; /* Ensures body fills the viewport */
+}
