@@ -1,3 +1,5 @@
+"use client";
+
 import { Button, Flowbite, Modal } from "flowbite-react";
 import DraftTable from "./DraftTable";
 import { DraftPicks, Player, Team } from "../types";
@@ -52,9 +54,6 @@ export default function DraftBoard({
     <Flowbite>
       <main className="min-h-screen p-4">
         <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-blue-600">
-            Playoff Fantasy Football 2026 Draft Board
-          </h1>
           <div className="flex gap-2">
             <Button color="purple" onClick={handleRandomizeOrder}>
               Randomize Draft Order

@@ -1,10 +1,12 @@
-"use client"; // Client component
+"use client";
 
 import { useState } from "react";
 import DraftBoard from "./components/DraftBoard";
 import { initialPlayers } from "./data/initialPlayers";
 import { Team, DraftPicks } from "./types";
 import { initializeDraftPicks } from "./utils/draftUtils";
+import { Flowbite } from "flowbite-react";
+import NavigationBar from "./components/Navbar";
 
 export default function Page() {
   const initialTeams: Team[] = [
@@ -17,7 +19,7 @@ export default function Page() {
     "Rohan",
     "JT",
     "Christian",
-    "Dougie"
+    "Dougie",
   ];
   const rounds = Array.from({ length: 6 }, (_, i) => i + 1);
 
@@ -29,17 +31,20 @@ export default function Page() {
   const [searchTerms, setSearchTerms] = useState<{ [key: string]: string }>({});
 
   return (
-    <DraftBoard
-      teams={teams}
-      rounds={rounds}
-      initialPlayers={initialPlayers}
-      draftPicks={draftPicks}
-      setDraftPicks={setDraftPicks}
-      availablePlayers={availablePlayers}
-      setAvailablePlayers={setAvailablePlayers}
-      setTeams={setTeams}
-      searchTerms={searchTerms}
-      setSearchTerms={setSearchTerms}
-    />
+    <Flowbite>
+      <NavigationBar />
+      <DraftBoard
+        teams={teams}
+        rounds={rounds}
+        initialPlayers={initialPlayers}
+        draftPicks={draftPicks}
+        setDraftPicks={setDraftPicks}
+        availablePlayers={availablePlayers}
+        setAvailablePlayers={setAvailablePlayers}
+        setTeams={setTeams}
+        searchTerms={searchTerms}
+        setSearchTerms={setSearchTerms}
+      />
+    </Flowbite>
   );
 }

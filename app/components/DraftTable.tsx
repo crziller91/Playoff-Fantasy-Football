@@ -1,3 +1,5 @@
+"use client";
+
 import { Table } from "flowbite-react";
 import { useState } from "react";
 import { DraftPicks, Player, Team } from "../types";

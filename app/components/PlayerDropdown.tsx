@@ -1,3 +1,5 @@
+"use client";
+
 import { Button } from "flowbite-react";
 import { Player, Team } from "../types";
 import { positionColors } from "../data/positionColors";
