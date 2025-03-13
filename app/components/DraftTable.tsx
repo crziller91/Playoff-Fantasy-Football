@@ -7,10 +7,11 @@ import TeamHeader from "./TeamHeader";
 import PlayerDropdown from "./PlayerDropdown";
 import PositionLegend from "./PositionLegend";
 import { canSelectPlayer } from "../utils/draftUtils";
+import AvailablePlayers from "./AvailablePlayers";
 
 interface DraftTableProps {
   teams: Team[];
-  rounds: number[];
+  picks: number[];
   availablePlayers: Player[];
   draftPicks: DraftPicks;
   searchTerms: { [key: string]: string };
@@ -21,7 +22,7 @@ interface DraftTableProps {
 
 export default function DraftTable({
   teams,
-  rounds,
+  picks,
   availablePlayers,
   draftPicks,
   searchTerms,
@@ -31,12 +32,12 @@ export default function DraftTable({
 }: DraftTableProps) {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
-  const handlePlayerSelect = (team: Team, round: number, player: Player) => {
-    if (canSelectPlayer(team, draftPicks, rounds.length)) {
-      const sanitizedKey = `${team}-${round}`.replace(/[^a-zA-Z0-9-]/g, "-");
+  const handlePlayerSelect = (team: Team, pick: number, player: Player) => {
+    if (canSelectPlayer(team, draftPicks, picks.length)) {
+      const sanitizedKey = `${team}-${pick}`.replace(/[^a-zA-Z0-9-]/g, "-");
       setDraftPicks({
         ...draftPicks,
-        [team]: { ...draftPicks[team], [round]: player },
+        [team]: { ...draftPicks[team], [pick]: player },
       });
       setAvailablePlayers(availablePlayers.filter((p) => p.id !== player.id));
       setSearchTerms({ ...searchTerms, [sanitizedKey]: "" });
@@ -44,12 +45,12 @@ export default function DraftTable({
     }
   };
 
-  const handleRemovePick = (team: Team, round: number) => {
-    const removedPlayer = draftPicks[team][round];
+  const handleRemovePick = (team: Team, pick: number) => {
+    const removedPlayer = draftPicks[team][pick];
     if (removedPlayer) {
       setDraftPicks({
         ...draftPicks,
-        [team]: { ...draftPicks[team], [round]: null },
+        [team]: { ...draftPicks[team], [pick]: null },
       });
       setAvailablePlayers(
         [...availablePlayers, removedPlayer].sort((a, b) => a.id - b.id),
@@ -58,8 +59,8 @@ export default function DraftTable({
     setOpenDropdown(null);
   };
 
-  const handleSearchChange = (team: Team, round: number, value: string) => {
-    const sanitizedKey = `${team}-${round}`.replace(/[^a-zA-Z0-9-]/g, "-");
+  const handleSearchChange = (team: Team, pick: number, value: string) => {
+    const sanitizedKey = `${team}-${pick}`.replace(/[^a-zA-Z0-9-]/g, "-");
     setSearchTerms({ ...searchTerms, [sanitizedKey]: value });
   };
 
@@ -76,8 +77,8 @@ export default function DraftTable({
     };
   };
 
-  const getFilteredPlayers = (team: Team, round: number): Player[] => {
-    const sanitizedKey = `${team}-${round}`.replace(/[^a-zA-Z0-9-]/g, "-");
+  const getFilteredPlayers = (team: Team, pick: number): Player[] => {
+    const sanitizedKey = `${team}-${pick}`.replace(/[^a-zA-Z0-9-]/g, "-");
     const searchTerm = searchTerms[sanitizedKey] || "";
     const counts = getTeamPositionCounts(team);
     const hasTE = counts.TE > 0;
@@ -104,7 +105,7 @@ export default function DraftTable({
         player.name.toLowerCase().includes(searchTerm.toLowerCase()),
       )
       .filter((player) => {
-        if (!canSelectPlayer(team, draftPicks, rounds.length)) return false;
+        if (!canSelectPlayer(team, draftPicks, picks.length)) return false;
 
         const pos = player.position;
         const count = counts[pos];
@@ -146,13 +147,13 @@ export default function DraftTable({
             <TeamHeader teams={teams} />
           </Table.Head>
           <Table.Body className="divide-y">
-            {rounds.map((round) => (
-              <Table.Row key={round}>
+            {picks.map((pick) => (
+              <Table.Row key={pick}>
                 <Table.Cell className="w-20 shrink-0 px-4 text-center font-medium text-gray-900">
-                  Round {round}
+                  Pick <br /> {pick}
                 </Table.Cell>
                 {teams.map((team) => {
-                  const sanitizedKey = `${team}-${round}`.replace(
+                  const sanitizedKey = `${team}-${pick}`.replace(
                     /[^a-zA-Z0-9-]/g,
                     "-",
                   );
@@ -160,19 +161,19 @@ export default function DraftTable({
                     <Table.Cell key={sanitizedKey} className="relative p-1">
                       <PlayerDropdown
                         team={team}
-                        round={round}
-                        selectedPlayer={draftPicks[team][round]}
+                        pick={pick}
+                        selectedPlayer={draftPicks[team][pick]}
                         searchTerm={searchTerms[sanitizedKey] || ""}
                         isOpen={openDropdown === sanitizedKey}
-                        filteredPlayers={getFilteredPlayers(team, round)}
+                        filteredPlayers={getFilteredPlayers(team, pick)}
                         onToggle={setOpenDropdown}
                         onSearchChange={(value) =>
-                          handleSearchChange(team, round, value)
+                          handleSearchChange(team, pick, value)
                         }
                         onPlayerSelect={(player) =>
-                          handlePlayerSelect(team, round, player)
+                          handlePlayerSelect(team, pick, player)
                         }
-                        onRemovePick={() => handleRemovePick(team, round)}
+                        onRemovePick={() => handleRemovePick(team, pick)}
                       />
                     </Table.Cell>
                   );
@@ -182,8 +183,9 @@ export default function DraftTable({
           </Table.Body>
         </Table>
       </div>
-      <div className="mt-4">
+      <div className="mt-4 flex flex-col gap-4 md:flex-row md:items-start">
         <PositionLegend />
+        <AvailablePlayers availablePlayers={availablePlayers} />
       </div>
     </div>
   );

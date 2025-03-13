@@ -14,8 +14,11 @@
     "flowbite-react": "^0.8.0",
     "flowbite-react-template-nextjs": "file:",
     "next": "^14.2.24",
+    "primeicons": "^7.0.0",
+    "primereact": "^10.9.2",
     "react": "^18",
-    "react-dom": "^18"
+    "react-dom": "^18",
+    "react-select": "^5.10.1"
   },
   "devDependencies": {
     "@types/node": "^20",

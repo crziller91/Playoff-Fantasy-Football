@@ -16,7 +16,13 @@ export default function NavigationBar() {
         <Button as={Link} href="/" color="blue">
           Draft Board
         </Button>
-        <Button as={Link} href="/nfl-bracket" color="blue">
+        <Button
+          as={Link}
+          href="https://www.nfl.com/playoffs/bracket/"
+          color="blue"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           NFL Bracket
         </Button>
         <NavbarToggle className="md:hidden" />

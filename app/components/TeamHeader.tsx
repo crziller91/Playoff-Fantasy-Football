@@ -8,7 +8,7 @@ export default function TeamHeader({ teams }: TeamHeaderProps) {
   return (
     <>
       <Table.HeadCell className="w-20 shrink-0 bg-blue-600 px-4 text-center text-white">
-        Round
+        Pick #
       </Table.HeadCell>
       {teams.map((team) => (
         <Table.HeadCell

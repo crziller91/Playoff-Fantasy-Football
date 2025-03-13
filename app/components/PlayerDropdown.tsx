@@ -8,7 +8,7 @@ import { createPortal } from "react-dom";
 
 interface PlayerDropdownProps {
   team: Team;
-  round: number;
+  pick: number;
   selectedPlayer: Player | null;
   searchTerm: string;
   isOpen: boolean;
@@ -21,7 +21,7 @@ interface PlayerDropdownProps {
 
 export default function PlayerDropdown({
   team,
-  round,
+  pick,
   selectedPlayer,
   searchTerm,
   isOpen,
@@ -31,7 +31,7 @@ export default function PlayerDropdown({
   onPlayerSelect,
   onRemovePick,
 }: PlayerDropdownProps) {
-  const dropdownKey = `${team}-${round}`.replace(/[^a-zA-Z0-9-]/g, "-");
+  const dropdownKey = `${team}-${pick}`.replace(/[^a-zA-Z0-9-]/g, "-");
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [dropdownPosition, setDropdownPosition] = useState<{
     top: number;
@@ -45,7 +45,6 @@ export default function PlayerDropdown({
       const viewportWidth = window.innerWidth;
       let left = rect.left + window.scrollX;
 
-      // Adjust left position to prevent overflow beyond viewport
       if (left + dropdownWidth > viewportWidth) {
         left = viewportWidth - dropdownWidth;
       }
@@ -59,6 +58,13 @@ export default function PlayerDropdown({
       setDropdownPosition(null);
     }
   }, [isOpen]);
+
+  // Reset search term when dropdown closes
+  useEffect(() => {
+    if (!isOpen && searchTerm !== "") {
+      onSearchChange(""); // Clear the search term when dropdown closes
+    }
+  }, [isOpen, searchTerm, onSearchChange]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -109,6 +115,7 @@ export default function PlayerDropdown({
       )}
       <div className="sticky top-0 bg-white p-2">
         <input
+          autoFocus={isOpen}
           type="text"
           placeholder="Search players..."
           value={searchTerm}
@@ -147,7 +154,7 @@ export default function PlayerDropdown({
         }
         className="w-48 justify-start text-sm"
       >
-        {selectedPlayer?.name || `Pick ${team} R${round}`}
+        {selectedPlayer?.name || `Pick ${team} R${pick}`}
       </Button>
       {isOpen &&
         dropdownPosition &&

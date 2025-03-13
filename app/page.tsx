@@ -21,12 +21,12 @@ export default function Page() {
     "Christian",
     "Dougie",
   ];
-  const rounds = Array.from({ length: 6 }, (_, i) => i + 1);
+  const picks = Array.from({ length: 6 }, (_, i) => i + 1);
 
   const [teams, setTeams] = useState<Team[]>(initialTeams);
   const [availablePlayers, setAvailablePlayers] = useState(initialPlayers);
   const [draftPicks, setDraftPicks] = useState<DraftPicks>(
-    initializeDraftPicks(initialTeams, rounds),
+    initializeDraftPicks(initialTeams, picks),
   );
   const [searchTerms, setSearchTerms] = useState<{ [key: string]: string }>({});
 
@@ -35,7 +35,7 @@ export default function Page() {
       <NavigationBar />
       <DraftBoard
         teams={teams}
-        rounds={rounds}
+        picks={picks}
         initialPlayers={initialPlayers}
         draftPicks={draftPicks}
         setDraftPicks={setDraftPicks}

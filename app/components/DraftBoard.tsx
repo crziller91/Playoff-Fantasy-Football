@@ -6,10 +6,11 @@ import { DraftPicks, Player, Team } from "../types";
 import { initializeDraftPicks, randomizeTeams } from "../utils/draftUtils";
 import { useState } from "react";
 import { HiOutlineExclamationCircle } from "react-icons/hi";
+import RandomizeSpinner from "./RandomizeSpinner";  // Add this import
 
 interface DraftBoardProps {
   teams: Team[];
-  rounds: number[];
+  picks: number[];
   initialPlayers: Player[];
   draftPicks: DraftPicks;
   setDraftPicks: (picks: DraftPicks) => void;
@@ -22,7 +23,7 @@ interface DraftBoardProps {
 
 export default function DraftBoard({
   teams,
-  rounds,
+  picks,
   initialPlayers,
   draftPicks,
   setDraftPicks,
@@ -33,21 +34,27 @@ export default function DraftBoard({
   setSearchTerms,
 }: DraftBoardProps) {
   const [openModal, setOpenModal] = useState(false);
+  const [showSpinner, setShowSpinner] = useState(false);  // Add this state
 
   const handleResetBoard = () => {
-    setTeams([...teams]); // Reset to initial order
+    setTeams([...teams]);
     setAvailablePlayers(initialPlayers);
-    setDraftPicks(initializeDraftPicks(teams, rounds));
+    setDraftPicks(initializeDraftPicks(teams, picks));
     setSearchTerms({});
     setOpenModal(false);
   };
 
   const handleRandomizeOrder = () => {
+    setShowSpinner(true);  // Show spinner when button is clicked
+  };
+
+  const handleSpinnerComplete = () => {
     const shuffledTeams = randomizeTeams(teams);
     setTeams(shuffledTeams);
-    setDraftPicks(initializeDraftPicks(shuffledTeams, rounds));
+    setDraftPicks(initializeDraftPicks(shuffledTeams, picks));
     setAvailablePlayers(initialPlayers);
     setSearchTerms({});
+    setShowSpinner(false);  // Hide spinner when complete
   };
 
   return (
@@ -65,7 +72,7 @@ export default function DraftBoard({
         </div>
         <DraftTable
           teams={teams}
-          rounds={rounds}
+          picks={picks}
           availablePlayers={availablePlayers}
           draftPicks={draftPicks}
           searchTerms={searchTerms}
@@ -99,6 +106,8 @@ export default function DraftBoard({
           </div>
         </Modal.Body>
       </Modal>
+      {/* Randomize Spinner */}
+      {showSpinner && <RandomizeSpinner onComplete={handleSpinnerComplete} />}
     </Flowbite>
   );
 }
