@@ -30,9 +30,40 @@ export default function DraftTable({
 }: DraftTableProps) {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
-  const handlePlayerSelect = (team: Team, pick: number, player: Player) => {
+  // Function to save draft picks or delete them when a player is removed
+  const saveDraftPickQueue = async (teamName: string, round: number, playerId: number | null) => {
+    try {
+      console.log(`${playerId ? "Saving" : "Deleting"} draft pick for ${teamName}, round ${round}`);
+
+      const response = await fetch('/api/draftpicks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          teamName,
+          round,
+          playerId,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        console.error('Error managing draft pick:', data);
+      } else {
+        const result = await response.json();
+        console.log('Draft pick operation result:', result);
+      }
+    } catch (error) {
+      console.error('Error in draft pick operation:', error);
+    }
+  };
+
+  const handlePlayerSelect = async (team: Team, pick: number, player: Player) => {
     if (canSelectPlayer(team, draftPicks, picks.length)) {
       const sanitizedKey = `${team}-${pick}`.replace(/[^a-zA-Z0-9-]/g, "-");
+
+      // Update local state immediately
       setDraftPicks({
         ...draftPicks,
         [team]: { ...draftPicks[team], [pick]: player },
@@ -40,12 +71,16 @@ export default function DraftTable({
       setAvailablePlayers(availablePlayers.filter((p) => p.id !== player.id));
       setSearchTerms({ ...searchTerms, [sanitizedKey]: "" });
       setOpenDropdown(null);
+
+      // Save to database in background without updating UI
+      await saveDraftPickQueue(team, pick, player.id);
     }
   };
 
-  const handleRemovePick = (team: Team, pick: number) => {
+  const handleRemovePick = async (team: Team, pick: number) => {
     const removedPlayer = draftPicks[team][pick];
     if (removedPlayer) {
+      // Update local state immediately
       setDraftPicks({
         ...draftPicks,
         [team]: { ...draftPicks[team], [pick]: null },
@@ -53,8 +88,11 @@ export default function DraftTable({
       setAvailablePlayers(
         [...availablePlayers, removedPlayer].sort((a, b) => a.id - b.id),
       );
+      setOpenDropdown(null);
+
+      // Send null playerId to API to completely delete the pick
+      await saveDraftPickQueue(team, pick, null);
     }
-    setOpenDropdown(null);
   };
 
   const handleSearchChange = (team: Team, pick: number, value: string) => {

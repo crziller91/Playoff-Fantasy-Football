@@ -2,20 +2,31 @@
   "name": "flowbite-react-template-nextjs",
   "version": "0.1.0",
   "private": true,
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "format": "prettier . --write",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "initdb": "tsx scripts/initDb.ts",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:seed": "prisma db seed",
+    "db:reset": "node script/reset-db.js"
   },
   "dependencies": {
+    "@prisma/client": "^6.5.0",
+    "better-sqlite3": "^11.9.1",
     "flowbite-react": "^0.8.0",
     "flowbite-react-template-nextjs": "file:",
     "next": "^14.2.24",
     "primeicons": "^7.0.0",
     "primereact": "^10.9.2",
+    "prisma": "^6.5.0",
     "react": "^18",
     "react-dom": "^18",
     "react-select": "^5.10.1"
@@ -33,6 +44,7 @@
     "prettier": "^3.2.5",
     "prettier-plugin-tailwindcss": "^0.5.12",
     "tailwindcss": "^3.4.1",
+    "tsx": "^4.19.3",
     "typescript": "^5"
   }
 }

@@ -29,10 +29,8 @@ export default function DraftBoard({
   setDraftPicks,
   availablePlayers,
   setAvailablePlayers,
-  setTeams,
   searchTerms,
   setSearchTerms,
-  onResetBoard,
 }: DraftBoardProps) {
   return (
     <Flowbite>
@@ -43,16 +41,18 @@ export default function DraftBoard({
           </div>
           <PositionLegend />
         </div>
-        <DraftTable
-          teams={teams}
-          picks={picks}
-          availablePlayers={availablePlayers}
-          draftPicks={draftPicks}
-          searchTerms={searchTerms}
-          setDraftPicks={setDraftPicks}
-          setAvailablePlayers={setAvailablePlayers}
-          setSearchTerms={setSearchTerms}
-        />
+        <div className="draft-table-container">
+          <DraftTable
+            teams={teams}
+            picks={picks}
+            availablePlayers={availablePlayers}
+            draftPicks={draftPicks}
+            searchTerms={searchTerms}
+            setDraftPicks={setDraftPicks}
+            setAvailablePlayers={setAvailablePlayers}
+            setSearchTerms={setSearchTerms}
+          />
+        </div>
       </main>
     </Flowbite>
   );

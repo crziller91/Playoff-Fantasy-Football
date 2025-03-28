@@ -1,3 +1,52 @@
+# Playoff Fantasy Football
+
+A fantasy football draft board application for the NFL playoffs.
+
+## Database Setup
+
+This application uses SQLite with Prisma ORM for data persistence. Follow these steps to set up the database:
+
+1. Install dependencies:
+
+   ```
+   npm install
+   ```
+
+2. Generate Prisma client:
+
+   ```
+   npm run prisma:generate
+   ```
+
+3. Create database and run migrations:
+
+   ```
+   npm run prisma:migrate
+   ```
+
+4. Seed the database with initial data:
+   ```
+   npm run prisma:seed
+   ```
+
+## Running the Application
+
+Start the development server:
+
+```
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
+
+## Features
+
+- Draft board with team picks
+- Player selection with position filtering
+- Available players list
+- Position color coding
+- Reset board functionality
+
 This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
 ## Getting Started

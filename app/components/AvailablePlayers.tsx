@@ -25,7 +25,7 @@ export default function AvailablePlayers({ availablePlayers }: AvailablePlayersP
                             availablePlayers.map((player, index) => (
                                 <Table.Row
                                     key={player.id}
-                                    className={`w-36 flex-shrink-0 border-r ${index === 0 ? 'bg-yellow-200' : ''}`}
+                                    className={`w-36 shrink-0 border-r ${index === 0 ? 'bg-yellow-200' : ''}`}
                                 >
                                     <Table.Cell className={`flex items-center justify-between p-2 text-sm ${index === 0 ? 'text-black font-bold' : ''}`}>
                                         <span className="truncate">{player.name}</span>

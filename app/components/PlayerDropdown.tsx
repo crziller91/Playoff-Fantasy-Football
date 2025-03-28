@@ -3,7 +3,7 @@
 import { Button } from "flowbite-react";
 import { Player, Team } from "../types";
 import { positionColors } from "../data/positionColors";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 interface PlayerDropdownProps {
@@ -37,8 +37,15 @@ export default function PlayerDropdown({
     top: number;
     left: number;
   } | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
 
+  // Handle client-side rendering
   useEffect(() => {
+    setIsMounted(true);
+    return () => setIsMounted(false);
+  }, []);
+
+  const calculatePosition = useCallback(() => {
     if (isOpen && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
       const dropdownWidth = 192; // Matches w-48
@@ -50,14 +57,17 @@ export default function PlayerDropdown({
       }
       if (left < 0) left = 0;
 
-      setDropdownPosition({
+      return {
         top: rect.bottom + window.scrollY + 2,
         left,
-      });
-    } else {
-      setDropdownPosition(null);
+      };
     }
+    return null;
   }, [isOpen]);
+
+  useEffect(() => {
+    setDropdownPosition(calculatePosition());
+  }, [isOpen, calculatePosition]);
 
   // Reset search term when dropdown closes
   useEffect(() => {
@@ -94,7 +104,8 @@ export default function PlayerDropdown({
     onToggle(isOpen ? null : dropdownKey);
   };
 
-  const dropdownContent = (
+  // Memoize the dropdown content to prevent unnecessary re-renders
+  const renderDropdownContent = useMemo(() => (
     <div
       id={`dropdown-${dropdownKey}`}
       className="w-48 rounded border border-gray-300 bg-white shadow-lg"
@@ -142,7 +153,7 @@ export default function PlayerDropdown({
         )}
       </div>
     </div>
-  );
+  ), [dropdownKey, dropdownPosition, filteredPlayers, isOpen, onPlayerSelect, onRemovePick, onSearchChange, searchTerm, selectedPlayer]);
 
   return (
     <div className="relative">
@@ -158,8 +169,12 @@ export default function PlayerDropdown({
       </Button>
       {isOpen &&
         dropdownPosition &&
-        typeof window !== "undefined" &&
-        createPortal(dropdownContent, document.body)}
+        isMounted &&
+        createPortal(
+          renderDropdownContent,
+          document.body,
+          `dropdown-portal-${dropdownKey}`
+        )}
     </div>
   );
 }
