@@ -5,9 +5,7 @@ import { useState } from "react";
 import { DraftPicks, Player, Team } from "../types";
 import TeamHeader from "./TeamHeader";
 import PlayerDropdown from "./PlayerDropdown";
-import PositionLegend from "./PositionLegend";
 import { canSelectPlayer } from "../utils/draftUtils";
-import AvailablePlayers from "./AvailablePlayers";
 
 interface DraftTableProps {
   teams: Team[];
@@ -93,11 +91,11 @@ export default function DraftTable({
     // Base caps
     const caps = {
       QB: 1,
-      RB: hasFlex ? 1 : 2, // Flex allows 2 RB if not occupied
-      WR: hasFlex ? 2 : 3, // Flex allows 3 WR if not occupied
+      RB: hasFlex ? 1 : 2,
+      WR: hasFlex ? 2 : 3,
       TE: 1,
       DST: 1,
-      K: hasFlex ? 1 : 2, // Flex allows 2 K if not occupied
+      K: hasFlex ? 1 : 2,
     };
 
     return availablePlayers
@@ -110,10 +108,8 @@ export default function DraftTable({
         const pos = player.position;
         const count = counts[pos];
 
-        // QB: strict 1 max
         if (pos === "QB" && count >= caps.QB) return false;
 
-        // TE and DST are mutually exclusive and can only occupy Flex
         if (
           pos === "TE" &&
           (count >= caps.TE || hasDST || hasFlexOccupiedByExtra)
@@ -125,12 +121,10 @@ export default function DraftTable({
         )
           return false;
 
-        // If Flex is occupied (by TE, DST, or extra RB/WR/K), enforce base caps
         if (hasFlex) {
           return count < caps[pos];
         }
 
-        // Flex is still available, allow up to cap
         return count < caps[pos];
       });
   };
@@ -182,10 +176,6 @@ export default function DraftTable({
             ))}
           </Table.Body>
         </Table>
-      </div>
-      <div className="mt-4 flex flex-col gap-4 md:flex-row md:items-start">
-        <PositionLegend />
-        <AvailablePlayers availablePlayers={availablePlayers} />
       </div>
     </div>
   );

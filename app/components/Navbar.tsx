@@ -1,32 +1,72 @@
-import { Button, Navbar, NavbarBrand, NavbarToggle } from "flowbite-react";
+import { Button, Modal, Navbar, NavbarBrand } from "flowbite-react";
 import Link from "next/link";
+import { useState } from "react";
+import { HiOutlineExclamationCircle } from "react-icons/hi";
 
-export default function NavigationBar() {
+interface NavigationBarProps {
+  onResetBoard?: () => void;
+}
+
+export default function NavigationBar({ onResetBoard }: NavigationBarProps) {
+  const [openModal, setOpenModal] = useState(false);
+
+  const handleResetConfirm = () => {
+    if (onResetBoard) {
+      onResetBoard();
+    }
+    setOpenModal(false);
+  };
+
   return (
     <Navbar
       fluid
       className="sticky top-0 z-50 border-b-[1px] border-gray-300 bg-gray-100 py-4" // Thicker navbar with underline and padding
     >
-      <NavbarBrand as={Link} href="/" className="px-1">
-        <span className="self-center whitespace-nowrap text-2xl font-semibold">
-          Playoff Fantasy Football 2026
-        </span>
-      </NavbarBrand>
-      <div className="flex items-center space-x-2 md:order-2">
-        <Button as={Link} href="/" color="blue">
-          Draft Board
-        </Button>
-        <Button
-          as={Link}
-          href="https://www.nfl.com/playoffs/bracket/"
-          color="blue"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          NFL Bracket
-        </Button>
-        <NavbarToggle className="md:hidden" />
+      <div className="flex w-full items-center justify-between">
+        <NavbarBrand as={Link} href="/" className="px-1">
+          <span className="self-center whitespace-nowrap text-2xl font-semibold">
+            Playoff Fantasy Football 2026
+          </span>
+        </NavbarBrand>
+        <div className="flex items-center gap-2">
+          <Button color="failure" onClick={() => setOpenModal(true)}>
+            Reset Board
+          </Button>
+          <Button as={Link} href="/" color="blue">
+            Draft Board
+          </Button>
+          <Button
+            as={Link}
+            href="https://www.nfl.com/playoffs/bracket/"
+            color="blue"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            NFL Bracket
+          </Button>
+        </div>
       </div>
+
+      {/* Reset Confirmation Modal */}
+      <Modal show={openModal} size="md" onClose={() => setOpenModal(false)} popup>
+        <Modal.Header />
+        <Modal.Body>
+          <div className="text-center">
+            <HiOutlineExclamationCircle className="mx-auto mb-4 size-14 text-gray-400 dark:text-gray-200" />
+            <h3 className="mb-5 text-lg font-normal text-gray-500 dark:text-gray-400">
+              Are you sure you want to reset the draft board?
+            </h3>
+            <div className="flex justify-center gap-4">
+              <Button color="failure" onClick={handleResetConfirm}>
+                Yes, I&apos;m sure
+              </Button>
+              <Button color="gray" onClick={() => setOpenModal(false)}>
+                No, cancel
+              </Button>
+            </div>
+          </div>
+        </Modal.Body>
+      </Modal>
     </Navbar>
   );
 }

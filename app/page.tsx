@@ -30,9 +30,16 @@ export default function Page() {
   );
   const [searchTerms, setSearchTerms] = useState<{ [key: string]: string }>({});
 
+  const handleResetBoard = () => {
+    setTeams([...initialTeams]);
+    setAvailablePlayers(initialPlayers);
+    setDraftPicks(initializeDraftPicks(initialTeams, picks));
+    setSearchTerms({});
+  };
+
   return (
     <Flowbite>
-      <NavigationBar />
+      <NavigationBar onResetBoard={handleResetBoard} />
       <DraftBoard
         teams={teams}
         picks={picks}
@@ -44,6 +51,7 @@ export default function Page() {
         setTeams={setTeams}
         searchTerms={searchTerms}
         setSearchTerms={setSearchTerms}
+        onResetBoard={handleResetBoard}
       />
     </Flowbite>
   );
