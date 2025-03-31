@@ -1,48 +1,28 @@
-// app/types/index.ts
-
-export interface Player {
+export type Player = {
   id: number;
   name: string;
   position: "QB" | "RB" | "WR" | "TE" | "K" | "DST";
-}
+};
 
-export interface DraftPicks {
+export type Team = string;
+
+export type DraftPicks = {
   [team: string]: {
-    [round: number]: Player | null;
+    [pick: number]: Player | null;
   };
-}
+};
 
-// Extended DraftPick type with relations
-export interface DraftPickWithRelations {
+export type DraftPickWithRelations = {
   id: number;
   teamId: number;
-  round: number;
+  team: { id: number; name: string };
   playerId: number | null;
-  team: {
-    name: Team;
-  };
   player: Player | null;
-}
+  round: number;
+};
 
-// Define the expected POST request body
-export interface DraftPickRequest {
-  teamName: Team;
+export type DraftPickRequest = {
+  teamName: string;
   round: number;
   playerId: number | null;
-}
-
-export interface SearchTerms {
-  [key: string]: string;
-}
-
-export type Team =
-  | "Luis"
-  | "Sill"
-  | "Hunter & Julie"
-  | "Joe"
-  | "Peter"
-  | "Alan"
-  | "Rohan"
-  | "JT"
-  | "Christian"
-  | "Dougie";
+};

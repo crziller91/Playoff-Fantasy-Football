@@ -1,26 +1,45 @@
-import { NextResponse } from 'next/server';
-import prisma from '../../../lib/prisma';
-import { Player } from '@prisma/client';
+import { NextResponse } from "next/server";
+import prisma from "../../../lib/prisma";
+import { Player } from "../../types";
 
-export async function GET() {
-    try {
-        console.log('API route: Fetching players from database');
-        const players = await prisma.player.findMany();
-        console.log(`API route: Found ${players.length} players`);
+// Centralized error messages for consistency and easy updates
+const ERROR_MESSAGES = {
+  FETCH_FAILED: "Failed to fetch players",
+} as const;
 
-        // Format the position field to match the expected type in the frontend
-        const formattedPlayers = players.map((player: Player) => ({
-            id: player.id,
-            name: player.name,
-            position: player.position as "QB" | "RB" | "WR" | "TE" | "K" | "DST",
-        }));
+// Utility function to standardize error responses
+// Ensures consistent error formatting across routes
+const createErrorResponse = (message: string, error: unknown, status: number) => {
+  const details = error instanceof Error ? error.message : String(error);
+  return NextResponse.json({ error: message, details }, { status });
+};
 
-        return NextResponse.json(formattedPlayers);
-    } catch (error) {
-        console.error('API route: Error fetching players:', error);
-        return NextResponse.json(
-            { error: 'Failed to fetch players', details: error instanceof Error ? error.message : String(error) },
-            { status: 500 }
-        );
-    }
-} 
+// GET handler: Retrieves all players from the database
+export async function GET(): Promise<NextResponse> {
+  try {
+    // Log the start of the operation for debugging
+    console.log("API GET /players: Fetching players from database");
+
+    // Fetch all players from the Player table
+    const players = await prisma.player.findMany();
+
+    console.log(`API GET /players: Found ${players.length} players`);
+
+    // Format the raw database data into the Player type expected by the frontend
+    // No domain logic needed here; simple mapping suffices
+    const formattedPlayers: Player[] = players.map((player) => ({
+      id: player.id,
+      name: player.name,
+      position: player.position as "QB" | "RB" | "WR" | "TE" | "K" | "DST",
+    }));
+
+    // Return the formatted players with a 200 OK status
+    return NextResponse.json(formattedPlayers, { status: 200 });
+  } catch (error) {
+    // Log the error with details for server-side debugging
+    console.error("API GET /players: Error fetching players:", error);
+
+    // Return a standardized error response
+    return createErrorResponse(ERROR_MESSAGES.FETCH_FAILED, error, 500);
+  }
+}

@@ -202,55 +202,45 @@ const teamNames = [
     "Dougie",
 ]
 
-async function main() {
-    console.log(`Start seeding ...`)
+async function seedDatabase() {
+    console.log("Start seeding...");
 
     try {
         // Clean existing data
-        console.log('Cleaning existing data...');
-        // Check if the draftPick model exists and delete records if it does
-        try {
-            // @ts-ignore - handle this dynamically since the model might not exist yet
-            await prisma.$executeRawUnsafe('DELETE FROM "DraftPick"');
-        } catch (e) {
-            console.log('No DraftPick table exists yet, skipping deletion');
-        }
+        console.log("Cleaning existing data...");
+        await prisma.draftPick.deleteMany();
         await prisma.player.deleteMany();
         await prisma.team.deleteMany();
 
-        // Create players
+        // Seed players
         console.log(`Creating ${playerData.length} players...`);
         await prisma.player.createMany({
-            data: playerData,
+            data: playerData.map((player) => ({
+                id: player.id,
+                name: player.name,
+                position: player.position,
+            })),
         });
-
         console.log(`Created ${playerData.length} players`);
 
-        // Create teams
+        // Seed teams
         console.log(`Creating ${teamNames.length} teams...`);
-        for (let i = 0; i < teamNames.length; i++) {
-            await prisma.team.create({
-                data: {
-                    name: teamNames[i],
-                },
-            });
-        }
-
+        await prisma.team.createMany({
+            data: teamNames.map((name) => ({ name })),
+        });
         console.log(`Created ${teamNames.length} teams`);
 
-        console.log(`Seeding finished.`);
+        console.log("Seeding finished.");
     } catch (error) {
-        console.error('Error during seeding:', error);
+        console.error("Error during seeding:", error);
         throw error;
+    } finally {
+        await prisma.$disconnect();
     }
 }
 
-main()
-    .then(async () => {
-        await prisma.$disconnect()
-    })
-    .catch(async (e) => {
-        console.error(e)
-        await prisma.$disconnect()
-        process.exit(1)
-    }) 
+seedDatabase().catch(async (e) => {
+    console.error("Seeding failed:", e);
+    await prisma.$disconnect();
+    process.exit(1);
+}); 

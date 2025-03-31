@@ -10,7 +10,6 @@ import AvailablePlayers from "./AvailablePlayers";
 interface DraftBoardProps {
   teams: Team[];
   picks: number[];
-  initialPlayers: Player[];
   draftPicks: DraftPicks;
   setDraftPicks: (picks: DraftPicks) => void;
   availablePlayers: Player[];
@@ -24,7 +23,6 @@ interface DraftBoardProps {
 export default function DraftBoard({
   teams,
   picks,
-  initialPlayers,
   draftPicks,
   setDraftPicks,
   availablePlayers,

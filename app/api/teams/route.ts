@@ -1,22 +1,41 @@
-import { NextResponse } from 'next/server';
-import prisma from '../../../lib/prisma';
-import { Team } from '@prisma/client';
+import { NextResponse } from "next/server";
+import prisma from "../../../lib/prisma";
+import { Team } from "../../types";
 
-export async function GET() {
-    try {
-        console.log('API route: Fetching teams from database');
-        const teams = await prisma.team.findMany();
-        console.log(`API route: Found ${teams.length} teams`);
+// Centralized error messages for consistency and easy updates
+const ERROR_MESSAGES = {
+  FETCH_FAILED: "Failed to fetch teams",
+} as const;
 
-        // Format the team names to match the expected type in the frontend
-        const formattedTeams = teams.map((team: Team) => team.name);
+// Utility function to standardize error responses
+// Ensures consistent error formatting across routes
+const createErrorResponse = (message: string, error: unknown, status: number) => {
+  const details = error instanceof Error ? error.message : String(error);
+  return NextResponse.json({ error: message, details }, { status });
+};
 
-        return NextResponse.json(formattedTeams);
-    } catch (error) {
-        console.error('API route: Error fetching teams:', error);
-        return NextResponse.json(
-            { error: 'Failed to fetch teams', details: error instanceof Error ? error.message : String(error) },
-            { status: 500 }
-        );
-    }
-} 
+// GET handler: Retrieves all team names from the database
+export async function GET(): Promise<NextResponse> {
+  try {
+    // Log the start of the operation for debugging
+    console.log("API GET /teams: Fetching teams from database");
+
+    // Fetch all teams from the Team table
+    const teams = await prisma.team.findMany();
+
+    console.log(`API GET /teams: Found ${teams.length} teams`);
+
+    // Extract team names into the Team type (string) expected by the frontend
+    // No complex logic needed; simple mapping suffices
+    const formattedTeams: Team[] = teams.map((team) => team.name as Team);
+
+    // Return the formatted team names with a 200 OK status
+    return NextResponse.json(formattedTeams, { status: 200 });
+  } catch (error) {
+    // Log the error with details for server-side debugging
+    console.error("API GET /teams: Error fetching teams:", error);
+
+    // Return a standardized error response
+    return createErrorResponse(ERROR_MESSAGES.FETCH_FAILED, error, 500);
+  }
+}

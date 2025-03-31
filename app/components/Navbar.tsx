@@ -20,6 +20,7 @@ export default function NavigationBar({ onResetBoard }: NavigationBarProps) {
   return (
     <Navbar
       fluid
+      // eslint-disable-next-line tailwindcss/no-unnecessary-arbitrary-value
       className="sticky top-0 z-50 border-b-[1px] border-gray-300 bg-gray-100 py-4" // Thicker navbar with underline and padding
     >
       <div className="flex w-full items-center justify-between">
