@@ -1,6 +1,6 @@
 "use client";
 
-import { Flowbite } from "flowbite-react";
+import { Flowbite, Spinner } from "flowbite-react"; // Add Spinner import
 import DraftBoard from "./components/DraftBoard";
 import NavigationBar from "./components/Navbar";
 import { useDraft } from "./hooks/useDraft"; // Custom hook for draft logic
@@ -22,7 +22,12 @@ export default function Page() {
   } = useDraft();
 
   if (loading) {
-    return <div className="flex h-screen items-center justify-center">Loading...</div>;
+    return (
+      // eslint-disable-next-line tailwindcss/migration-from-tailwind-2
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
+        <Spinner color="info" aria-label="Loading draft board" size="xl" />
+      </div>
+    );
   }
 
   if (error) {

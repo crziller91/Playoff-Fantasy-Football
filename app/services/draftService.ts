@@ -1,4 +1,3 @@
-// services/draftService.ts
 import { DraftPicks, Player } from "../types";
 
 export const fetchPlayers = async (): Promise<Player[]> => {
