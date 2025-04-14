@@ -1,7 +1,7 @@
-import { Button, Modal, Navbar, NavbarBrand } from "flowbite-react";
+import { Avatar, DropdownDivider, Button, DropdownHeader, DropdownItem, Modal, Navbar, NavbarBrand, Dropdown } from "flowbite-react";
 import Link from "next/link";
 import { useState } from "react";
-import { HiOutlineExclamationCircle } from "react-icons/hi";
+import { HiOutlineExclamationCircle, HiMenu } from "react-icons/hi";
 
 interface NavigationBarProps {
   onResetBoard?: () => void;
@@ -30,12 +30,6 @@ export default function NavigationBar({ onResetBoard }: NavigationBarProps) {
           </span>
         </NavbarBrand>
         <div className="flex items-center gap-2">
-          <Button color="failure" onClick={() => setOpenModal(true)}>
-            Reset Board
-          </Button>
-          <Button as={Link} href="/" color="blue">
-            Draft Board
-          </Button>
           <Button
             as={Link}
             href="https://www.nfl.com/playoffs/bracket/"
@@ -45,6 +39,17 @@ export default function NavigationBar({ onResetBoard }: NavigationBarProps) {
           >
             NFL Bracket
           </Button>
+          <div className="ml-2">
+            <Dropdown
+              arrowIcon={false}
+              inline
+              label={
+                <HiMenu className="size-6" />
+              }
+            >
+              <DropdownItem onClick={() => setOpenModal(true)}>Master Reset</DropdownItem>
+            </Dropdown>
+          </div>
         </div>
       </div>
 
@@ -55,7 +60,7 @@ export default function NavigationBar({ onResetBoard }: NavigationBarProps) {
           <div className="text-center">
             <HiOutlineExclamationCircle className="mx-auto mb-4 size-14 text-gray-400 dark:text-gray-200" />
             <h3 className="mb-5 text-lg font-normal text-gray-500 dark:text-gray-400">
-              Are you sure you want to reset the draft board?
+              Are you sure you want to reset everything?
             </h3>
             <div className="flex justify-center gap-4">
               <Button color="failure" onClick={handleResetConfirm}>
