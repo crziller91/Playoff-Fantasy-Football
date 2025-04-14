@@ -19,6 +19,8 @@ export default function Page() {
     setTeams,
     setSearchTerms,
     handleResetBoard,
+    isDraftFinished,
+    finishDraft,
   } = useDraft();
 
   if (loading) {
@@ -58,6 +60,8 @@ export default function Page() {
         searchTerms={searchTerms}
         setSearchTerms={setSearchTerms}
         onResetBoard={handleResetBoard}
+        isDraftFinished={isDraftFinished}
+        finishDraft={finishDraft}
       />
     </Flowbite>
   );

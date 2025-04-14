@@ -17,6 +17,7 @@ interface DraftTableProps {
   setDraftPicks: (picks: DraftPicks) => void;
   setAvailablePlayers: (players: Player[]) => void;
   setSearchTerms: (terms: { [key: string]: string }) => void;
+  isDraftFinished: boolean;
 }
 
 export default function DraftTable({
@@ -28,6 +29,7 @@ export default function DraftTable({
   setDraftPicks,
   setAvailablePlayers,
   setSearchTerms,
+  isDraftFinished,
 }: DraftTableProps) {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
@@ -77,7 +79,7 @@ export default function DraftTable({
                       <PlayerDropdown
                         team={team}
                         pick={pick}
-                        selectedPlayer={draftPicks[team]?.[pick] || null} // Guard against undefined
+                        selectedPlayer={draftPicks[team]?.[pick] || null}
                         searchTerm={searchTerms[sanitizedKey] || ""}
                         isOpen={openDropdown === sanitizedKey}
                         filteredPlayers={DraftManager.filterPlayers(
@@ -90,6 +92,7 @@ export default function DraftTable({
                         onSearchChange={(value) => handleSearchChange(team, pick, value)}
                         onPlayerSelect={(player) => handlePlayerSelect(team, pick, player)}
                         onRemovePick={() => handleRemovePick(team, pick)}
+                        isDraftFinished={isDraftFinished}
                       />
                     </Table.Cell>
                   );

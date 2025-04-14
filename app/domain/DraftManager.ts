@@ -4,17 +4,9 @@ export class DraftManager {
     static readonly PICKS = Array.from({ length: 6 }, (_, i) => i + 1);
 
     static readonly INITIAL_TEAMS: Team[] = [
-        "Luis",
-        "Sill",
-        "Hunter & Julie",
-        "Joe",
-        "Peter",
-        "Alan",
-        "Rohan",
-        "JT",
         "Christian",
-        "Dougie",
-      ];
+        "Peter",
+    ];
 
     static initializeDraftPicks(teams: Team[]): DraftPicks {
         const draftPicks: DraftPicks = {};

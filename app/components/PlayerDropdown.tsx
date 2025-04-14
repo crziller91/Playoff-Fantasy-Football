@@ -17,6 +17,7 @@ interface PlayerDropdownProps {
   onSearchChange: (value: string) => void;
   onPlayerSelect: (player: Player) => void;
   onRemovePick: () => void;
+  isDraftFinished: boolean;
 }
 
 export default function PlayerDropdown({
@@ -30,6 +31,7 @@ export default function PlayerDropdown({
   onSearchChange,
   onPlayerSelect,
   onRemovePick,
+  isDraftFinished,
 }: PlayerDropdownProps) {
   const dropdownKey = `${team}-${pick}`.replace(/[^a-zA-Z0-9-]/g, "-");
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -39,7 +41,6 @@ export default function PlayerDropdown({
   } | null>(null);
   const [isMounted, setIsMounted] = useState(false);
 
-  // Handle client-side rendering
   useEffect(() => {
     setIsMounted(true);
     return () => setIsMounted(false);
@@ -48,7 +49,7 @@ export default function PlayerDropdown({
   const calculatePosition = useCallback(() => {
     if (isOpen && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
-      const dropdownWidth = 192; // Matches w-48
+      const dropdownWidth = 192;
       const viewportWidth = window.innerWidth;
       let left = rect.left + window.scrollX;
 
@@ -69,10 +70,9 @@ export default function PlayerDropdown({
     setDropdownPosition(calculatePosition());
   }, [isOpen, calculatePosition]);
 
-  // Reset search term when dropdown closes
   useEffect(() => {
     if (!isOpen && searchTerm !== "") {
-      onSearchChange(""); // Clear the search term when dropdown closes
+      onSearchChange("");
     }
   }, [isOpen, searchTerm, onSearchChange]);
 
@@ -101,10 +101,11 @@ export default function PlayerDropdown({
   }, [isOpen, onToggle, dropdownKey]);
 
   const handleButtonClick = () => {
-    onToggle(isOpen ? null : dropdownKey);
+    if (!isDraftFinished) {
+      onToggle(isOpen ? null : dropdownKey);
+    }
   };
 
-  // Memoize the dropdown content to prevent unnecessary re-renders
   const renderDropdownContent = useMemo(() => (
     <div
       id={`dropdown-${dropdownKey}`}
@@ -164,12 +165,14 @@ export default function PlayerDropdown({
           selectedPlayer ? positionColors[selectedPlayer.position] : "gray"
         }
         className="w-48 justify-start text-sm"
+        disabled={isDraftFinished}
       >
         {selectedPlayer?.name || `Pick ${team} R${pick}`}
       </Button>
       {isOpen &&
         dropdownPosition &&
         isMounted &&
+        !isDraftFinished &&
         createPortal(
           renderDropdownContent,
           document.body,

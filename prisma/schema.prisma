@@ -36,3 +36,8 @@ model DraftPick {
   
   @@unique([teamId, round])
 }
+
+model DraftStatus {
+  id            Int     @id @default(autoincrement())
+  isDraftFinished Boolean @default(false)
+}

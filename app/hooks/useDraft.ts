@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { DraftPicks, Player } from "../types";
 import { DraftManager } from "../domain/DraftManager";
-import { fetchPlayers, fetchDraftPicks, fetchTeams, resetDraftPicks } from "../services/draftService";
+import { fetchPlayers, fetchDraftPicks, fetchTeams, resetDraftPicks, getDraftStatus, setDraftStatus } from "../services/draftService";
 
 export const useDraft = () => {
   const [teams, setTeams] = useState<string[]>([]);
@@ -16,14 +16,16 @@ export const useDraft = () => {
   const [searchTerms, setSearchTerms] = useState<{ [key: string]: string }>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isDraftFinished, setIsDraftFinished] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [players, picks, dbTeams] = await Promise.all([
+        const [players, picks, dbTeams, draftStatus] = await Promise.all([
           fetchPlayers(),
           fetchDraftPicks(),
           fetchTeams(),
+          getDraftStatus(),
         ]);
         const available = DraftManager.calculateAvailablePlayers(players, picks);
         setTeams(dbTeams);
@@ -31,6 +33,7 @@ export const useDraft = () => {
         // Merge fetched picks with initialized structure
         const initializedPicks = DraftManager.initializeDraftPicks(dbTeams);
         setDraftPicks({ ...initializedPicks, ...picks });
+        setIsDraftFinished(draftStatus);
         setLoading(false);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unknown error");
@@ -43,14 +46,25 @@ export const useDraft = () => {
   const handleResetBoard = async () => {
     try {
       await resetDraftPicks();
+      await setDraftStatus(false);
       const [players, dbTeams] = await Promise.all([fetchPlayers(), fetchTeams()]);
       setTeams(dbTeams);
       setAvailablePlayers(players);
       setDraftPicks(DraftManager.initializeDraftPicks(dbTeams));
       setSearchTerms({});
+      setIsDraftFinished(false);
     } catch (err) {
       console.error("Failed to reset board:", err);
       alert("Failed to reset board. Please try again.");
+    }
+  };
+
+  const finishDraft = async () => {
+    try {
+      await setDraftStatus(true);
+      setIsDraftFinished(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to finish draft");
     }
   };
 
@@ -62,6 +76,8 @@ export const useDraft = () => {
     searchTerms,
     loading,
     error,
+    isDraftFinished,
+    finishDraft,
     setDraftPicks,
     setAvailablePlayers,
     setTeams,

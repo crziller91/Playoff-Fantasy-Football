@@ -190,16 +190,8 @@ const playerData = [
 ]
 
 const teamNames = [
-    "Luis",
-    "Sill",
-    "Hunter & Julie",
-    "Joe",
-    "Peter",
-    "Alan",
-    "Rohan",
-    "JT",
     "Christian",
-    "Dougie",
+    "Peter",
 ]
 
 async function seedDatabase() {
@@ -211,6 +203,7 @@ async function seedDatabase() {
         await prisma.draftPick.deleteMany();
         await prisma.player.deleteMany();
         await prisma.team.deleteMany();
+        await prisma.draftStatus.deleteMany();
 
         // Seed players
         console.log(`Creating ${playerData.length} players...`);
@@ -229,6 +222,15 @@ async function seedDatabase() {
             data: teamNames.map((name) => ({ name })),
         });
         console.log(`Created ${teamNames.length} teams`);
+
+        // Initialize draft status
+        console.log("Initializing draft status...");
+        await prisma.draftStatus.create({
+            data: {
+                isDraftFinished: false
+            }
+        });
+        console.log("Draft status initialized");
 
         console.log("Seeding finished.");
     } catch (error) {
