@@ -47,7 +47,7 @@ export default function NavigationBar({ onResetBoard }: NavigationBarProps) {
                 <HiMenu className="size-6" />
               }
             >
-              <DropdownItem onClick={() => setOpenModal(true)}>Master Reset</DropdownItem>
+              <DropdownItem onClick={() => setOpenModal(true)}>Reset All</DropdownItem>
             </Dropdown>
           </div>
         </div>
