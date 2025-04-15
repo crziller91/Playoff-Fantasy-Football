@@ -26,3 +26,64 @@ export type DraftPickRequest = {
   round: number;
   playerId: number | null;
 };
+
+// Additional types for the scoring functionality
+export interface ExtendedPlayer extends Player {
+  score?: number;
+  scoreData?: ScoreForm;
+}
+
+export interface ScoreForm {
+  touchdowns?: string;
+  yards?: string;
+  twoPtConversions?: string;
+  interceptions?: string;
+  completions?: string;
+  rushingYards?: string;
+  rushingAttempts?: string;
+  receivingYards?: string;
+  receptions?: string;
+  pat?: string;
+  fgMisses?: string;
+  fg?: string;
+  fgYardages?: string[];
+  sacks?: string;
+  blockedKicks?: string;
+  fumblesRecovered?: string;
+  safeties?: string;
+  pointsAllowed?: string;
+  yardsAllowed?: string;
+}
+
+// Interface for form validation errors
+export interface FormErrors {
+  [key: string]: boolean;
+}
+
+// Props interfaces for components
+export interface TeamsViewProps {
+  teams: Team[];
+  draftPicks: DraftPicks;
+  isDraftFinished: boolean;
+}
+
+export interface TeamCardProps {
+  team: Team;
+  draftPicks: DraftPicks;
+  playerScores: { [key: string]: ExtendedPlayer };
+  onEditScore: (player: ExtendedPlayer) => void;
+}
+
+export interface ScoreModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  player: ExtendedPlayer | null;
+  scoreForm: ScoreForm;
+  formErrors: FormErrors;
+  submitAttempted: boolean;
+  fgCount: number;
+  onInputChange: (field: keyof ScoreForm, value: string) => void;
+  onFgCountChange: (value: string) => void;
+  onFgYardageChange: (index: number, value: string) => void;
+  onSubmit: () => void;
+}
