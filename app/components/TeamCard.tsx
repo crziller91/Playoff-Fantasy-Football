@@ -58,6 +58,11 @@ export default function TeamCard({
                                             {player.name}
                                             {isDisabled && statusMessage}
                                         </p>
+                                        {player.teamName && (
+                                            <p className="text-xs text-gray-500">
+                                                {player.teamName}
+                                            </p>
+                                        )}
                                         {playerScores[player.name]?.score !== undefined && !isDisabled && (
                                             <p className="text-xs text-green-600 font-semibold">
                                                 {playerScores[player.name]?.score} pts

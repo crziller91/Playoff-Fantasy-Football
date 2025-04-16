@@ -29,6 +29,7 @@ export class DraftManager {
                     id: pick.player.id,
                     name: pick.player.name,
                     position: pick.player.position as "QB" | "RB" | "WR" | "TE" | "K" | "DST",
+                    teamName: pick.player.teamName || undefined, // Include teamName if available
                 }
                 : null;
         });

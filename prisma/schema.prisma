@@ -17,6 +17,7 @@ model Player {
   id        Int      @id
   name      String
   position  String
+  teamName  String?
   draftPicks DraftPick[]
 }
 

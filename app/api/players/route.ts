@@ -26,11 +26,12 @@ export async function GET(): Promise<NextResponse> {
     console.log(`API GET /players: Found ${players.length} players`);
 
     // Format the raw database data into the Player type expected by the frontend
-    // No domain logic needed here; simple mapping suffices
+    // Now including teamName in the formatted response
     const formattedPlayers: Player[] = players.map((player) => ({
       id: player.id,
       name: player.name,
       position: player.position as "QB" | "RB" | "WR" | "TE" | "K" | "DST",
+      teamName: player.teamName || undefined, // Include teamName if available
     }));
 
     // Return the formatted players with a 200 OK status

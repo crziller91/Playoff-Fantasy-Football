@@ -10,6 +10,7 @@ export async function getPlayers(): Promise<Player[]> {
             id: player.id,
             name: player.name,
             position: player.position as "QB" | "RB" | "WR" | "TE" | "K" | "DST",
+            teamName: player.teamName || undefined,
         }));
     } catch (error) {
         console.error("Database error when getting players:", error);

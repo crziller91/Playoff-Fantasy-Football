@@ -2,6 +2,7 @@ export type Player = {
   id: number;
   name: string;
   position: "QB" | "RB" | "WR" | "TE" | "K" | "DST";
+  teamName?: string; // Added teamName as optional for backward compatibility
 };
 
 export type Team = string;

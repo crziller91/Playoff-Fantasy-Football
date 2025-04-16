@@ -11,6 +11,7 @@ import TeamCard from "./TeamCard";
 import ScoreModal from "./ScoreModal";
 import ClearScoresModal from "./ClearScoresModal";
 import PlayerStatusModal from "./PlayerStatusModal";
+import PlayerReactivationModal from "./PlayerReactivationModal";
 import { calculatePlayerScore, validateForm } from "../utils/scoreCalculator";
 
 // Define the playoff rounds
@@ -30,6 +31,8 @@ export default function TeamsView({
   const [selectedPlayer, setSelectedPlayer] = useState<ExtendedPlayer | null>(null);
   const [clearScoresPlayer, setClearScoresPlayer] = useState<ExtendedPlayer | null>(null);
   const [statusPlayer, setStatusPlayer] = useState<ExtendedPlayer | null>(null);
+  const [openReactivationModal, setOpenReactivationModal] = useState(false);
+  const [reactivationPlayer, setReactivationPlayer] = useState<ExtendedPlayer | null>(null);
   const [scoreForm, setScoreForm] = useState<ScoreForm>({});
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [submitAttempted, setSubmitAttempted] = useState(false);
@@ -138,6 +141,13 @@ export default function TeamsView({
       return;
     }
 
+    // Check if player is already disabled and we're trying to re-enable
+    if (playerScores[round]?.[player.name]?.isDisabled) {
+      setReactivationPlayer({ ...player, currentRound: round });
+      setOpenReactivationModal(true);
+      return;
+    }
+
     // For Wild Card, we can directly toggle disabled status
     if (round === "Wild Card") {
       updatePlayerStatus(player, !playerScores[round]?.[player.name]?.isDisabled, false);
@@ -177,6 +187,23 @@ export default function TeamsView({
   const handleCloseStatusModal = () => {
     setOpenStatusModal(false);
     setStatusPlayer(null);
+  };
+
+  // Handle player reactivation confirmation
+  const handlePlayerReactivation = () => {
+    if (!reactivationPlayer) return;
+
+    // Reactivate the player by setting isDisabled to false
+    updatePlayerStatus(reactivationPlayer, false, false);
+
+    setOpenReactivationModal(false);
+    setReactivationPlayer(null);
+  };
+
+  // Close the reactivation modal without taking action
+  const handleCloseReactivationModal = () => {
+    setOpenReactivationModal(false);
+    setReactivationPlayer(null);
   };
 
   // Shared function to update player status
@@ -453,54 +480,6 @@ export default function TeamsView({
     </div>
   );
 
-  // Render overall scores tab
-  const renderScoresTab = () => {
-    const overallScores = calculateOverallTeamScores();
-
-    // Sort teams by overall score (highest first)
-    const sortedTeams = [...teams].sort((a, b) => (overallScores[b] || 0) - (overallScores[a] || 0));
-
-    return (
-      <div className="grid grid-cols-1 gap-4">
-        {sortedTeams.map(team => (
-          <div key={`overall-${team}`} className="rounded-lg bg-white p-4 shadow">
-            <div className="mb-4 flex items-center justify-between">
-              <h5 className="text-xl font-bold leading-none text-gray-900 dark:text-white">
-                {team}
-              </h5>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                {overallScores[team] || 0} pts
-              </div>
-            </div>
-
-            {/* Show round-by-round breakdown */}
-            <div className="space-y-2">
-              {PLAYOFF_ROUNDS.map(round => {
-                // Calculate team score for this round
-                let roundScore = 0;
-                const teamPlayers = getOrderedTeamPicks(team, draftPicks);
-
-                teamPlayers.forEach(({ player }) => {
-                  // Skip disabled players
-                  if (playerScores[round]?.[player.name]?.isDisabled) return;
-                  // Add player's score for this round
-                  roundScore += playerScores[round]?.[player.name]?.score || 0;
-                });
-
-                return (
-                  <div key={`${team}-${round}`} className="flex items-center justify-between">
-                    <span className="text-sm text-gray-700">{round}:</span>
-                    <span className="text-sm font-semibold">{roundScore} pts</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  };
-
   // If draft isn't finished, show placeholder
   if (!isDraftFinished) {
     return (
@@ -573,6 +552,14 @@ export default function TeamsView({
         onClose={handleCloseStatusModal}
         onConfirmEliminated={handlePlayerEliminated}
         onConfirmNotPlaying={handlePlayerNotPlaying}
+      />
+
+      {/* Player Reactivation modal */}
+      <PlayerReactivationModal
+        isOpen={openReactivationModal}
+        player={reactivationPlayer}
+        onClose={handleCloseReactivationModal}
+        onConfirm={handlePlayerReactivation}
       />
     </div>
   );

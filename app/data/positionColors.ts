@@ -1,9 +1,9 @@
 export const positionColors = {
   QB: "success",
   RB: "purple",
-  WR: "blue",
+  WR: "warning",
   TE: "failure",
-  K: "warning",
+  K: "light",
   DST: "dark",
   default: "gray",
 } as const;
@@ -11,8 +11,8 @@ export const positionColors = {
 export const legendColors = {
   QB: "#22C55E", // Success
   RB: "#8B5CF6", // Purple
-  WR: "#3B82F6", // Blue
+  WR: "#F59E0B", // Blue
   TE: "#EF4444", // Failure
-  K: "#F59E0B",  // Warning
+  K: "#FFFFFF",  // Warning
   DST: "#111827", // Dark
 } as const;

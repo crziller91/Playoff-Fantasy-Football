@@ -15,16 +15,27 @@ export async function POST(request: Request) {
     try {
         const { isDraftFinished } = await request.json();
 
-        // Update or create the draft status
-        const draftStatus = await prisma.draftStatus.upsert({
-            where: { id: 1 },
-            update: { isDraftFinished },
-            create: { isDraftFinished }
-        });
+        // First, check if any draft status record exists
+        const existingStatus = await prisma.draftStatus.findFirst();
+
+        let draftStatus;
+
+        if (existingStatus) {
+            // If a record exists, update it
+            draftStatus = await prisma.draftStatus.update({
+                where: { id: existingStatus.id },
+                data: { isDraftFinished }
+            });
+        } else {
+            // If no record exists, create a new one
+            draftStatus = await prisma.draftStatus.create({
+                data: { isDraftFinished }
+            });
+        }
 
         return NextResponse.json(draftStatus);
     } catch (error) {
         console.error('Error updating draft status:', error);
         return NextResponse.json({ error: 'Failed to update draft status' }, { status: 500 });
     }
-} 
+}
