@@ -1,23 +1,24 @@
-import { Tabs } from "flowbite-react";
-import { useState, useEffect } from "react";
-import { 
-  TeamsViewProps, 
-  ExtendedPlayer, 
-  ScoreForm, 
+import { Tabs, Alert } from "flowbite-react";
+import { useState, useEffect, useCallback } from "react";
+import {
+  TeamsViewProps,
+  ExtendedPlayer,
+  ScoreForm,
   FormErrors,
   PlayerScoresByRound
 } from "../types";
 import TeamCard from "./TeamCard";
 import ScoreModal from "./ScoreModal";
 import ClearScoresModal from "./ClearScoresModal";
+import PlayerStatusModal from "./PlayerStatusModal";
 import { calculatePlayerScore, validateForm } from "../utils/scoreCalculator";
 
 // Define the playoff rounds
 export const PLAYOFF_ROUNDS = ["Wild Card", "Divisional", "Conference", "Superbowl"];
 
-export default function TeamsView({ 
-  teams, 
-  draftPicks, 
+export default function TeamsView({
+  teams,
+  draftPicks,
   isDraftFinished,
   playerScores: externalPlayerScores,
   setPlayerScores: externalSetPlayerScores
@@ -25,16 +26,18 @@ export default function TeamsView({
   // Modal state
   const [openModal, setOpenModal] = useState(false);
   const [openClearScoresModal, setOpenClearScoresModal] = useState(false);
+  const [openStatusModal, setOpenStatusModal] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<ExtendedPlayer | null>(null);
   const [clearScoresPlayer, setClearScoresPlayer] = useState<ExtendedPlayer | null>(null);
+  const [statusPlayer, setStatusPlayer] = useState<ExtendedPlayer | null>(null);
   const [scoreForm, setScoreForm] = useState<ScoreForm>({});
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [fgCount, setFgCount] = useState(0);
-  
+
   // Tab state
   const [activeRound, setActiveRound] = useState<string>("Wild Card");
-  
+
   // Use local or external player scores state
   const [localPlayerScores, setLocalPlayerScores] = useState<PlayerScoresByRound>({
     "Wild Card": {},
@@ -42,55 +45,70 @@ export default function TeamsView({
     "Conference": {},
     "Superbowl": {}
   });
-  
+
   // Use external state if provided, otherwise use local state
   const playerScores = externalPlayerScores || localPlayerScores;
   const setPlayerScores = externalSetPlayerScores || setLocalPlayerScores;
 
+  // Memoize the getOrderedTeamPicks function to use in dependency arrays
+  const getOrderedTeamPicks = useCallback((team: string, draftPicks: any) => {
+    const positionOrder = ["QB", "RB", "WR", "TE", "DST", "K"];
+    const teamPicks = Object.entries(draftPicks[team] || {})
+      .filter(([_, player]) => player !== null)
+      .map(([pick, player]) => ({ pick: Number(pick), player: player as ExtendedPlayer }));
+
+    return teamPicks.sort((a, b) => {
+      const posA = positionOrder.indexOf(a.player.position);
+      const posB = positionOrder.indexOf(b.player.position);
+      if (posA !== posB) return posA - posB;
+      return a.pick - b.pick;
+    });
+  }, []);
+
   // Round validation information
-  const [roundValidation, setRoundValidation] = useState<{[round: string]: boolean}>({
+  const [roundValidation, setRoundValidation] = useState<{ [round: string]: boolean }>({
     "Wild Card": true,
     "Divisional": false,
     "Conference": false,
     "Superbowl": false
   });
 
-  // Check if a specific round is complete (all players have scores or are marked as not playing)
-  const isRoundComplete = (round: string) => {
-    const allTeamPlayers: ExtendedPlayer[] = [];
-    
-    // Collect all players from all teams
-    teams.forEach(team => {
-      const teamPicks = getOrderedTeamPicks(team, draftPicks);
-      teamPicks.forEach(({player}) => {
-        allTeamPlayers.push(player);
-      });
-    });
-    
-    // Check if all players have been scored or marked as not playing
-    return allTeamPlayers.every(player => {
-      const playerData = playerScores[round]?.[player.name];
-      return playerData?.scoreData || playerData?.isDisabled === true;
-    });
-  };
-
   // Update round validation whenever playerScores changes
   useEffect(() => {
+    // Define isRoundComplete function inside the effect
+    const isRoundComplete = (round: string) => {
+      const allTeamPlayers: ExtendedPlayer[] = [];
+
+      // Collect all players from all teams
+      teams.forEach(team => {
+        const teamPicks = getOrderedTeamPicks(team, draftPicks);
+        teamPicks.forEach(({ player }) => {
+          allTeamPlayers.push(player);
+        });
+      });
+
+      // Check if all players have been scored or marked as not playing
+      return allTeamPlayers.every(player => {
+        const playerData = playerScores[round]?.[player.name];
+        return playerData?.scoreData || playerData?.isDisabled === true;
+      });
+    };
+
     const wildCardComplete = isRoundComplete("Wild Card");
     const divisionalComplete = isRoundComplete("Divisional");
     const conferenceComplete = isRoundComplete("Conference");
-    
+
     setRoundValidation({
       "Wild Card": true, // Always enabled
       "Divisional": wildCardComplete,
       "Conference": wildCardComplete && divisionalComplete,
       "Superbowl": wildCardComplete && divisionalComplete && conferenceComplete
     });
-  }, [playerScores, teams, draftPicks]);
+  }, [playerScores, teams, draftPicks, getOrderedTeamPicks]);
 
   // Handler for opening the score editing modal
   const handleEditScore = (player: ExtendedPlayer) => {
-    setSelectedPlayer({...player, currentRound: activeRound});
+    setSelectedPlayer({ ...player, currentRound: activeRound });
     // Load existing score data if available
     setScoreForm(playerScores[activeRound]?.[player.name]?.scoreData || {});
     setFgCount(parseInt(playerScores[activeRound]?.[player.name]?.scoreData?.fg || "0", 10) || 0);
@@ -112,39 +130,113 @@ export default function TeamsView({
   // Handler for toggling player disabled status
   const handleTogglePlayerDisabled = (player: ExtendedPlayer, isClearScores?: boolean) => {
     const round = activeRound;
-    
+
     // If this is a clear scores action, open the confirmation modal
     if (isClearScores && playerScores[round]?.[player.name]?.scoreData) {
-      setClearScoresPlayer({...player, currentRound: round});
+      setClearScoresPlayer({ ...player, currentRound: round });
       setOpenClearScoresModal(true);
       return;
     }
-    
+
+    // For Wild Card, we can directly toggle disabled status
+    if (round === "Wild Card") {
+      updatePlayerStatus(player, !playerScores[round]?.[player.name]?.isDisabled, false);
+    }
+    // For other rounds, open the status modal to determine if elimination or just not playing
+    else {
+      setStatusPlayer({ ...player, currentRound: round });
+      setOpenStatusModal(true);
+    }
+  };
+
+  // Handle player being eliminated from playoffs
+  const handlePlayerEliminated = () => {
+    if (!statusPlayer) return;
+
+    const round = statusPlayer.currentRound || activeRound;
+
+    // Update this round and cascade to future rounds
+    updatePlayerStatus(statusPlayer, true, true);
+
+    setOpenStatusModal(false);
+    setStatusPlayer(null);
+  };
+
+  // Handle player just not playing this specific round (injury)
+  const handlePlayerNotPlaying = () => {
+    if (!statusPlayer) return;
+
+    // Just update the current round, don't cascade
+    updatePlayerStatus(statusPlayer, true, false);
+
+    setOpenStatusModal(false);
+    setStatusPlayer(null);
+  };
+
+  // Close the status modal without taking action
+  const handleCloseStatusModal = () => {
+    setOpenStatusModal(false);
+    setStatusPlayer(null);
+  };
+
+  // Shared function to update player status
+  const updatePlayerStatus = (player: ExtendedPlayer, isDisabled: boolean, cascade: boolean) => {
+    const round = player.currentRound || activeRound;
+
     setPlayerScores((prev) => {
-      const roundScores = prev[round] || {};
-      const currentPlayer = roundScores[player.name] || { ...player, currentRound: round };
-      const isCurrentlyDisabled = currentPlayer.isDisabled || false;
-      
+      // Create a deep copy of the previous state
+      const newState: PlayerScoresByRound = JSON.parse(JSON.stringify(prev));
+
+      // Initialize the round if it doesn't exist
+      if (!newState[round]) {
+        newState[round] = {};
+      }
+
+      // Get or create the player entry
+      const currentPlayer = newState[round][player.name] || { ...player, currentRound: round };
+
       // If the player already has scores, don't allow toggling disabled status
-      if (currentPlayer.scoreData && !isCurrentlyDisabled) {
+      if (currentPlayer.scoreData && isDisabled) {
         return prev;
       }
-      
-      // If toggling from enabled to disabled, clear any existing score data
-      const updatedPlayer = {
+
+      // Update status for this round
+      const statusReason = isDisabled ? (cascade ? "eliminated" : "notPlaying") : null;
+
+      // Update player in current round
+      newState[round][player.name] = {
         ...currentPlayer,
-        isDisabled: !isCurrentlyDisabled,
-        score: isCurrentlyDisabled ? currentPlayer.score : 0,
-        scoreData: isCurrentlyDisabled ? currentPlayer.scoreData : undefined
+        isDisabled: isDisabled,
+        statusReason: statusReason,
+        score: isDisabled ? 0 : currentPlayer.score,
+        scoreData: isDisabled ? undefined : currentPlayer.scoreData
       };
-      
-      return {
-        ...prev,
-        [round]: {
-          ...roundScores,
-          [player.name]: updatedPlayer,
-        }
-      };
+
+      // If cascade is true and we're not in Wild Card round,
+      // then also disable this player for all subsequent rounds
+      if (cascade && isDisabled && round !== "Wild Card") {
+        const subsequentRounds = PLAYOFF_ROUNDS.slice(PLAYOFF_ROUNDS.indexOf(round) + 1);
+
+        subsequentRounds.forEach(futureRound => {
+          // Initialize the round if it doesn't exist
+          if (!newState[futureRound]) {
+            newState[futureRound] = {};
+          }
+
+          const futurePlayer = newState[futureRound][player.name] || { ...player, currentRound: futureRound };
+
+          // Update player in future round
+          newState[futureRound][player.name] = {
+            ...futurePlayer,
+            isDisabled: true,
+            statusReason: "eliminated", // Mark as eliminated in future rounds
+            score: 0,
+            scoreData: undefined
+          };
+        });
+      }
+
+      return newState;
     });
   };
 
@@ -152,10 +244,10 @@ export default function TeamsView({
   const handleConfirmClearScores = () => {
     if (!clearScoresPlayer) return;
     const round = clearScoresPlayer.currentRound || activeRound;
-    
+
     setPlayerScores((prev) => {
       const roundScores = prev[round] || {};
-      
+
       return {
         ...prev,
         [round]: {
@@ -169,7 +261,7 @@ export default function TeamsView({
         }
       };
     });
-    
+
     setOpenClearScoresModal(false);
     setClearScoresPlayer(null);
   };
@@ -184,7 +276,7 @@ export default function TeamsView({
   const handleInputChange = (field: keyof ScoreForm, value: string) => {
     if (value === "" || /^-?\d*$/.test(value)) {
       setScoreForm((prev) => ({ ...prev, [field]: value }));
-      
+
       // Clear error for this field if it was previously marked as error
       if (formErrors[field]) {
         setFormErrors((prev) => {
@@ -206,7 +298,7 @@ export default function TeamsView({
         fg: value,
         fgYardages: Array(count).fill(""),
       }));
-      
+
       // Clear error for fg field if it was previously marked as error
       if (formErrors.fg) {
         setFormErrors((prev) => {
@@ -226,7 +318,7 @@ export default function TeamsView({
         newYardages[index] = value;
         return { ...prev, fgYardages: newYardages };
       });
-      
+
       // Clear error for this specific yardage field if it was previously marked as error
       if (formErrors[`fgYardage${index}`]) {
         setFormErrors((prev) => {
@@ -242,13 +334,13 @@ export default function TeamsView({
   const handleSubmit = () => {
     if (!selectedPlayer) return;
     const round = selectedPlayer.currentRound || activeRound;
-    
+
     setSubmitAttempted(true);
-    
+
     // Validate form before submission
     const newErrors = validateForm(selectedPlayer, scoreForm, fgCount);
     setFormErrors(newErrors);
-    
+
     if (Object.keys(newErrors).length > 0) {
       return;
     }
@@ -259,7 +351,7 @@ export default function TeamsView({
     // Update playerScores state
     setPlayerScores((prev) => {
       const roundScores = prev[round] || {};
-      
+
       return {
         ...prev,
         [round]: {
@@ -279,66 +371,51 @@ export default function TeamsView({
 
   // Calculate overall team scores across all rounds
   const calculateOverallTeamScores = () => {
-    const overallScores: {[team: string]: number} = {};
-    
+    const overallScores: { [team: string]: number } = {};
+
     teams.forEach(team => {
       let totalScore = 0;
-      
+
       // Sum up scores from all rounds
       Object.values(playerScores).forEach(roundScores => {
         const teamPlayers = getOrderedTeamPicks(team, draftPicks);
-        teamPlayers.forEach(({player}) => {
+        teamPlayers.forEach(({ player }) => {
           // Skip disabled players
           if (roundScores[player.name]?.isDisabled) return;
           // Add player's score for this round (or 0 if not played)
           totalScore += roundScores[player.name]?.score || 0;
         });
       });
-      
+
       overallScores[team] = totalScore;
     });
-    
-    return overallScores;
-  };
-  
-  // Get ordered team picks (importing from scoreCalculator.ts)
-  const getOrderedTeamPicks = (team: string, draftPicks: any) => {
-    const positionOrder = ["QB", "RB", "WR", "TE", "DST", "K"];
-    const teamPicks = Object.entries(draftPicks[team] || {})
-        .filter(([_, player]) => player !== null)
-        .map(([pick, player]) => ({ pick: Number(pick), player: player as ExtendedPlayer }));
 
-    return teamPicks.sort((a, b) => {
-        const posA = positionOrder.indexOf(a.player.position);
-        const posB = positionOrder.indexOf(b.player.position);
-        if (posA !== posB) return posA - posB;
-        return a.pick - b.pick;
-    });
+    return overallScores;
   };
 
   // Render team cards for the current tab
   const renderTeamCards = () => {
     // Calculate team scores for the current round
-    const roundScores: {[team: string]: number} = {};
-    
+    const roundScores: { [team: string]: number } = {};
+
     teams.forEach(team => {
       // Calculate team score for this round
       const teamPlayers = getOrderedTeamPicks(team, draftPicks);
       let roundScore = 0;
-      
-      teamPlayers.forEach(({player}) => {
+
+      teamPlayers.forEach(({ player }) => {
         // Skip disabled players
         if (playerScores[activeRound]?.[player.name]?.isDisabled) return;
         // Add player's score for this round
         roundScore += playerScores[activeRound]?.[player.name]?.score || 0;
       });
-      
+
       roundScores[team] = roundScore;
     });
-    
+
     // Sort teams by round score (highest first)
     const sortedTeams = [...teams].sort((a, b) => roundScores[b] - roundScores[a]);
-    
+
     return (
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {sortedTeams.map((team) => (
@@ -375,18 +452,18 @@ export default function TeamsView({
       </div>
     </div>
   );
-  
+
   // Render overall scores tab
   const renderScoresTab = () => {
     const overallScores = calculateOverallTeamScores();
-    
+
     // Sort teams by overall score (highest first)
     const sortedTeams = [...teams].sort((a, b) => (overallScores[b] || 0) - (overallScores[a] || 0));
-    
+
     return (
       <div className="grid grid-cols-1 gap-4">
         {sortedTeams.map(team => (
-          <div key={`overall-${team}`} className="p-4 bg-white rounded-lg shadow">
+          <div key={`overall-${team}`} className="rounded-lg bg-white p-4 shadow">
             <div className="mb-4 flex items-center justify-between">
               <h5 className="text-xl font-bold leading-none text-gray-900 dark:text-white">
                 {team}
@@ -395,23 +472,23 @@ export default function TeamsView({
                 {overallScores[team] || 0} pts
               </div>
             </div>
-            
+
             {/* Show round-by-round breakdown */}
             <div className="space-y-2">
               {PLAYOFF_ROUNDS.map(round => {
                 // Calculate team score for this round
                 let roundScore = 0;
                 const teamPlayers = getOrderedTeamPicks(team, draftPicks);
-                
-                teamPlayers.forEach(({player}) => {
+
+                teamPlayers.forEach(({ player }) => {
                   // Skip disabled players
                   if (playerScores[round]?.[player.name]?.isDisabled) return;
                   // Add player's score for this round
                   roundScore += playerScores[round]?.[player.name]?.score || 0;
                 });
-                
+
                 return (
-                  <div key={`${team}-${round}`} className="flex justify-between items-center">
+                  <div key={`${team}-${round}`} className="flex items-center justify-between">
                     <span className="text-sm text-gray-700">{round}:</span>
                     <span className="text-sm font-semibold">{roundScore} pts</span>
                   </div>
@@ -445,26 +522,26 @@ export default function TeamsView({
         <Tabs.Item active title="Wild Card">
           {renderTeamCards()}
         </Tabs.Item>
-        <Tabs.Item 
+        <Tabs.Item
           title="Divisional"
           disabled={!roundValidation["Divisional"]}
         >
           {roundValidation["Divisional"] ? renderTeamCards() : renderDisabledRound("Divisional")}
         </Tabs.Item>
-        <Tabs.Item 
+        <Tabs.Item
           title="Conference"
           disabled={!roundValidation["Conference"]}
         >
           {roundValidation["Conference"] ? renderTeamCards() : renderDisabledRound("Conference")}
         </Tabs.Item>
-        <Tabs.Item 
+        <Tabs.Item
           title="Superbowl"
           disabled={!roundValidation["Superbowl"]}
         >
           {roundValidation["Superbowl"] ? renderTeamCards() : renderDisabledRound("Superbowl")}
         </Tabs.Item>
       </Tabs>
-      
+
       {/* Score modal */}
       <ScoreModal
         isOpen={openModal}
@@ -479,13 +556,23 @@ export default function TeamsView({
         onFgYardageChange={handleFgYardageChange}
         onSubmit={handleSubmit}
       />
-      
+
       {/* Clear Scores confirmation modal */}
       <ClearScoresModal
         isOpen={openClearScoresModal}
         player={clearScoresPlayer}
         onClose={handleCloseClearScoresModal}
         onConfirm={handleConfirmClearScores}
+      />
+
+      {/* Player Status modal */}
+      <PlayerStatusModal
+        isOpen={openStatusModal}
+        player={statusPlayer}
+        round={activeRound}
+        onClose={handleCloseStatusModal}
+        onConfirmEliminated={handlePlayerEliminated}
+        onConfirmNotPlaying={handlePlayerNotPlaying}
       />
     </div>
   );

@@ -31,7 +31,22 @@ export default function TeamCard({
             <div className="flow-root">
                 <ul className="divide-y divide-gray-200 dark:divide-gray-700">
                     {getOrderedTeamPicks(team, draftPicks).map(({ pick, player }) => {
-                        const isDisabled = playerScores[player.name]?.isDisabled || false;
+                        const playerData = playerScores[player.name];
+                        const isDisabled = playerData?.isDisabled || false;
+                        const statusReason = playerData?.statusReason;
+                        
+                        // Determine status message based on the status reason
+                        let statusMessage = "";
+                        if (isDisabled) {
+                            if (round === "Wild Card") {
+                                statusMessage = " (Bye Week/Not Playing)";
+                            } else if (statusReason === "eliminated") {
+                                statusMessage = " (Eliminated)";
+                            } else {
+                                statusMessage = " (Inactive/Injured)";
+                            }
+                        }
+                        
                         return (
                             <li key={pick} className="py-3 sm:py-4">
                                 <div className="flex items-center space-x-4">
@@ -41,7 +56,7 @@ export default function TeamCard({
                                     <div className="min-w-0 flex-1">
                                         <p className={`truncate text-sm font-medium ${isDisabled ? "text-gray-400" : "text-gray-900"} dark:text-white`}>
                                             {player.name}
-                                            {isDisabled && " (Not Playing)"}
+                                            {isDisabled && statusMessage}
                                         </p>
                                         {playerScores[player.name]?.score !== undefined && !isDisabled && (
                                             <p className="text-xs text-green-600 font-semibold">

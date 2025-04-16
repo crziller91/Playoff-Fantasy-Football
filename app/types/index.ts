@@ -32,6 +32,7 @@ export interface ExtendedPlayer extends Player {
   score?: number;
   scoreData?: ScoreForm;
   isDisabled?: boolean; // Track disabled status
+  statusReason?: "eliminated" | "notPlaying" | null; // Track the reason player is disabled
   currentRound?: string; // Track which playoff round this score is for
 }
 
