@@ -2,7 +2,7 @@ import { Button, DropdownItem, Navbar, NavbarBrand, Dropdown } from "flowbite-re
 import Link from "next/link";
 import { useState } from "react";
 import { HiMenu } from "react-icons/hi";
-import ResetConfirmationModal from "./ResetConfirmationModal";
+import ResetConfirmationModal from "../modals/ResetConfirmationModal";
 
 interface NavigationBarProps {
   onResetBoard?: () => void;

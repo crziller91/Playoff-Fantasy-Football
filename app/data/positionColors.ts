@@ -9,10 +9,10 @@ export const positionColors = {
 } as const;
 
 export const legendColors = {
-  QB: "#22C55E", // Success
+  QB: "#22C55E", // Green
   RB: "#8B5CF6", // Purple
-  WR: "#F59E0B", // Blue
-  TE: "#EF4444", // Failure
-  K: "#155E75",  // Warning
-  DST: "#111827", // Dark
+  WR: "#F59E0B", // Yellow
+  TE: "#EF4444", // Red
+  K: "#155E75",  // Cyan
+  DST: "#111827", // Black
 } as const;

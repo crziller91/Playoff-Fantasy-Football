@@ -8,10 +8,10 @@ import {
   PlayerScoresByRound
 } from "../types";
 import TeamCard from "./TeamCard";
-import ScoreModal from "./ScoreModal";
-import ClearScoresModal from "./ClearScoresModal";
-import PlayerStatusModal from "./PlayerStatusModal";
-import PlayerReactivationModal from "./PlayerReactivationModal";
+import ScoreModal from "../modals/ScoreModal";
+import ClearScoresModal from "../modals/ClearScoresModal";
+import PlayerStatusModal from "../modals/PlayerStatusModal";
+import PlayerReactivationModal from "../modals/PlayerReactivationModal";
 import { calculatePlayerScore, validateForm } from "../utils/scoreCalculator";
 
 // Define the playoff rounds
