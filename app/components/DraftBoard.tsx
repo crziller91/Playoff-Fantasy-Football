@@ -1,14 +1,14 @@
 "use client";
 
 import { Flowbite, TabItem, Tabs } from "flowbite-react";
-import { DraftPicks, Player, Team } from "../types";
+import { DraftPicks, Player, Team, PlayerScoresByRound } from "../types";
 import { useState, useMemo } from "react";
 import { HiUserCircle } from "react-icons/hi";
 import { MdDashboard } from "react-icons/md";
 import DraftDashboard from "./DraftDashboard";
-import TeamsView from "./TeamsView";
+import TeamsView, { PLAYOFF_ROUNDS } from "./TeamsView";
 import { MdScoreboard } from "react-icons/md";
-
+import ScoresTab from "./ScoresTab";
 
 interface DraftBoardProps {
   teams: Team[];
@@ -40,6 +40,14 @@ export default function DraftBoard({
   finishDraft,
 }: DraftBoardProps) {
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+  
+  // Initialize playerScores state with all playoff rounds
+  const [playerScores, setPlayerScores] = useState<PlayerScoresByRound>({
+    "Wild Card": {},
+    "Divisional": {},
+    "Conference": {},
+    "Superbowl": {}
+  });
 
   // Check if all dropdowns are filled
   const isDraftComplete = useMemo(() => {
@@ -80,13 +88,17 @@ export default function DraftBoard({
                   teams={teams}
                   draftPicks={draftPicks}
                   isDraftFinished={isDraftFinished}
+                  playerScores={playerScores}
+                  setPlayerScores={setPlayerScores}
                 />
               </TabItem>
               <TabItem title="Scores" icon={MdScoreboard}>
               {isDraftFinished ? (
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    Test
-                  </div>
+                  <ScoresTab
+                    teams={teams}
+                    draftPicks={draftPicks}
+                    playerScores={playerScores}
+                  />
                 ) : (
                   <div className="flex h-32 items-center justify-center text-gray-500">
                     Complete draft first

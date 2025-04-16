@@ -8,14 +8,22 @@ export default function TeamCard({
     draftPicks,
     playerScores,
     onEditScore,
-    onTogglePlayerDisabled
-}: TeamCardProps) {
+    onTogglePlayerDisabled,
+    round // Optional prop to display which round we're showing
+}: TeamCardProps & { round?: string }) {
     return (
         <Card className="w-full">
             <div className="mb-4 flex items-center justify-between">
-                <h5 className="text-xl font-bold leading-none text-gray-900 dark:text-white">
-                    {team}
-                </h5>
+                <div>
+                    <h5 className="text-xl font-bold leading-none text-gray-900 dark:text-white">
+                        {team}
+                    </h5>
+                    {round && (
+                        <span className="text-sm text-gray-500">
+                            {round} Round
+                        </span>
+                    )}
+                </div>
                 <div className="text-lg font-semibold text-gray-900 dark:text-white">
                     Score: {getTeamScore(team, draftPicks, playerScores)}
                 </div>
@@ -35,6 +43,11 @@ export default function TeamCard({
                                             {player.name}
                                             {isDisabled && " (Not Playing)"}
                                         </p>
+                                        {playerScores[player.name]?.score !== undefined && !isDisabled && (
+                                            <p className="text-xs text-green-600 font-semibold">
+                                                {playerScores[player.name]?.score} pts
+                                            </p>
+                                        )}
                                     </div>
                                     <div className="flex space-x-2">
                                         <Button

@@ -4,14 +4,24 @@ import {
   TeamsViewProps, 
   ExtendedPlayer, 
   ScoreForm, 
-  FormErrors 
+  FormErrors,
+  PlayerScoresByRound
 } from "../types";
 import TeamCard from "./TeamCard";
 import ScoreModal from "./ScoreModal";
 import ClearScoresModal from "./ClearScoresModal";
 import { calculatePlayerScore, validateForm } from "../utils/scoreCalculator";
 
-export default function TeamsView({ teams, draftPicks, isDraftFinished }: TeamsViewProps) {
+// Define the playoff rounds
+export const PLAYOFF_ROUNDS = ["Wild Card", "Divisional", "Conference", "Superbowl"];
+
+export default function TeamsView({ 
+  teams, 
+  draftPicks, 
+  isDraftFinished,
+  playerScores: externalPlayerScores,
+  setPlayerScores: externalSetPlayerScores
+}: TeamsViewProps) {
   // Modal state
   const [openModal, setOpenModal] = useState(false);
   const [openClearScoresModal, setOpenClearScoresModal] = useState(false);
@@ -23,17 +33,26 @@ export default function TeamsView({ teams, draftPicks, isDraftFinished }: TeamsV
   const [fgCount, setFgCount] = useState(0);
   
   // Tab state
-  const [activeTab, setActiveTab] = useState<string>("Wild Card");
+  const [activeRound, setActiveRound] = useState<string>("Wild Card");
   
-  // Player scores state
-  const [playerScores, setPlayerScores] = useState<{ [key: string]: ExtendedPlayer }>({});
+  // Use local or external player scores state
+  const [localPlayerScores, setLocalPlayerScores] = useState<PlayerScoresByRound>({
+    "Wild Card": {},
+    "Divisional": {},
+    "Conference": {},
+    "Superbowl": {}
+  });
+  
+  // Use external state if provided, otherwise use local state
+  const playerScores = externalPlayerScores || localPlayerScores;
+  const setPlayerScores = externalSetPlayerScores || setLocalPlayerScores;
 
   // Handler for opening the score editing modal
   const handleEditScore = (player: ExtendedPlayer) => {
-    setSelectedPlayer(player);
+    setSelectedPlayer({...player, currentRound: activeRound});
     // Load existing score data if available
-    setScoreForm(playerScores[player.name]?.scoreData || {});
-    setFgCount(parseInt(playerScores[player.name]?.scoreData?.fg || "0", 10) || 0);
+    setScoreForm(playerScores[activeRound]?.[player.name]?.scoreData || {});
+    setFgCount(parseInt(playerScores[activeRound]?.[player.name]?.scoreData?.fg || "0", 10) || 0);
     setOpenModal(true);
     setFormErrors({});
     setSubmitAttempted(false);
@@ -51,15 +70,18 @@ export default function TeamsView({ teams, draftPicks, isDraftFinished }: TeamsV
 
   // Handler for toggling player disabled status
   const handleTogglePlayerDisabled = (player: ExtendedPlayer, isClearScores?: boolean) => {
+    const round = activeRound;
+    
     // If this is a clear scores action, open the confirmation modal
-    if (isClearScores && playerScores[player.name]?.scoreData) {
-      setClearScoresPlayer(player);
+    if (isClearScores && playerScores[round]?.[player.name]?.scoreData) {
+      setClearScoresPlayer({...player, currentRound: round});
       setOpenClearScoresModal(true);
       return;
     }
     
     setPlayerScores((prev) => {
-      const currentPlayer = prev[player.name] || { ...player };
+      const roundScores = prev[round] || {};
+      const currentPlayer = roundScores[player.name] || { ...player, currentRound: round };
       const isCurrentlyDisabled = currentPlayer.isDisabled || false;
       
       // If the player already has scores, don't allow toggling disabled status
@@ -77,7 +99,10 @@ export default function TeamsView({ teams, draftPicks, isDraftFinished }: TeamsV
       
       return {
         ...prev,
-        [player.name]: updatedPlayer,
+        [round]: {
+          ...roundScores,
+          [player.name]: updatedPlayer,
+        }
       };
     });
   };
@@ -85,16 +110,24 @@ export default function TeamsView({ teams, draftPicks, isDraftFinished }: TeamsV
   // Handler for confirming clear scores
   const handleConfirmClearScores = () => {
     if (!clearScoresPlayer) return;
+    const round = clearScoresPlayer.currentRound || activeRound;
     
-    setPlayerScores((prev) => ({
-      ...prev,
-      [clearScoresPlayer.name]: {
-        ...clearScoresPlayer,
-        score: 0,
-        scoreData: undefined,
-        isDisabled: false
-      }
-    }));
+    setPlayerScores((prev) => {
+      const roundScores = prev[round] || {};
+      
+      return {
+        ...prev,
+        [round]: {
+          ...roundScores,
+          [clearScoresPlayer.name]: {
+            ...clearScoresPlayer,
+            score: 0,
+            scoreData: undefined,
+            isDisabled: false
+          }
+        }
+      };
+    });
     
     setOpenClearScoresModal(false);
     setClearScoresPlayer(null);
@@ -167,6 +200,7 @@ export default function TeamsView({ teams, draftPicks, isDraftFinished }: TeamsV
   // Form submission handler
   const handleSubmit = () => {
     if (!selectedPlayer) return;
+    const round = selectedPlayer.currentRound || activeRound;
     
     setSubmitAttempted(true);
     
@@ -182,17 +216,63 @@ export default function TeamsView({ teams, draftPicks, isDraftFinished }: TeamsV
     const score = calculatePlayerScore(selectedPlayer, scoreForm);
 
     // Update playerScores state
-    setPlayerScores((prev) => ({
-      ...prev,
-      [selectedPlayer.name]: {
-        ...selectedPlayer,
-        score,
-        scoreData: { ...scoreForm },
-        isDisabled: false, // Ensure player is enabled when scores are submitted
-      },
-    }));
+    setPlayerScores((prev) => {
+      const roundScores = prev[round] || {};
+      
+      return {
+        ...prev,
+        [round]: {
+          ...roundScores,
+          [selectedPlayer.name]: {
+            ...selectedPlayer,
+            score,
+            scoreData: { ...scoreForm },
+            isDisabled: false, // Ensure player is enabled when scores are submitted
+          }
+        }
+      };
+    });
 
     handleCloseModal();
+  };
+
+  // Calculate overall team scores across all rounds
+  const calculateOverallTeamScores = () => {
+    const overallScores: {[team: string]: number} = {};
+    
+    teams.forEach(team => {
+      let totalScore = 0;
+      
+      // Sum up scores from all rounds
+      Object.values(playerScores).forEach(roundScores => {
+        const teamPlayers = getOrderedTeamPicks(team, draftPicks);
+        teamPlayers.forEach(({player}) => {
+          // Skip disabled players
+          if (roundScores[player.name]?.isDisabled) return;
+          // Add player's score for this round (or 0 if not played)
+          totalScore += roundScores[player.name]?.score || 0;
+        });
+      });
+      
+      overallScores[team] = totalScore;
+    });
+    
+    return overallScores;
+  };
+  
+  // Get ordered team picks (importing from scoreCalculator.ts)
+  const getOrderedTeamPicks = (team: string, draftPicks: any) => {
+    const positionOrder = ["QB", "RB", "WR", "TE", "DST", "K"];
+    const teamPicks = Object.entries(draftPicks[team] || {})
+        .filter(([_, player]) => player !== null)
+        .map(([pick, player]) => ({ pick: Number(pick), player: player as ExtendedPlayer }));
+
+    return teamPicks.sort((a, b) => {
+        const posA = positionOrder.indexOf(a.player.position);
+        const posB = positionOrder.indexOf(b.player.position);
+        if (posA !== posB) return posA - posB;
+        return a.pick - b.pick;
+    });
   };
 
   // Render team cards for the current tab
@@ -200,16 +280,65 @@ export default function TeamsView({ teams, draftPicks, isDraftFinished }: TeamsV
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
       {teams.map((team) => (
         <TeamCard
-          key={team}
+          key={`${team}-${activeRound}`}
           team={team}
           draftPicks={draftPicks}
-          playerScores={playerScores}
+          playerScores={playerScores[activeRound] || {}}
           onEditScore={handleEditScore}
           onTogglePlayerDisabled={handleTogglePlayerDisabled}
+          round={activeRound}
         />
       ))}
     </div>
   );
+  
+  // Render overall scores tab
+  const renderScoresTab = () => {
+    const overallScores = calculateOverallTeamScores();
+    
+    // Sort teams by overall score (highest first)
+    const sortedTeams = [...teams].sort((a, b) => (overallScores[b] || 0) - (overallScores[a] || 0));
+    
+    return (
+      <div className="grid grid-cols-1 gap-4">
+        {sortedTeams.map(team => (
+          <div key={`overall-${team}`} className="p-4 bg-white rounded-lg shadow">
+            <div className="mb-4 flex items-center justify-between">
+              <h5 className="text-xl font-bold leading-none text-gray-900 dark:text-white">
+                {team}
+              </h5>
+              <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                {overallScores[team] || 0} pts
+              </div>
+            </div>
+            
+            {/* Show round-by-round breakdown */}
+            <div className="space-y-2">
+              {PLAYOFF_ROUNDS.map(round => {
+                // Calculate team score for this round
+                let roundScore = 0;
+                const teamPlayers = getOrderedTeamPicks(team, draftPicks);
+                
+                teamPlayers.forEach(({player}) => {
+                  // Skip disabled players
+                  if (playerScores[round]?.[player.name]?.isDisabled) return;
+                  // Add player's score for this round
+                  roundScore += playerScores[round]?.[player.name]?.score || 0;
+                });
+                
+                return (
+                  <div key={`${team}-${round}`} className="flex justify-between items-center">
+                    <span className="text-sm text-gray-700">{round}:</span>
+                    <span className="text-sm font-semibold">{roundScore} pts</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   // If draft isn't finished, show placeholder
   if (!isDraftFinished) {
@@ -226,27 +355,20 @@ export default function TeamsView({ teams, draftPicks, isDraftFinished }: TeamsV
         aria-label="Playoff rounds"
         variant="underline"
         onActiveTabChange={(tab) => {
-          const tabs = ["Wild Card", "Divisional", "Conference", "Superbowl"];
-          setActiveTab(tabs[tab]);
+          setActiveRound(PLAYOFF_ROUNDS[tab]);
         }}
       >
         <Tabs.Item active title="Wild Card">
           {renderTeamCards()}
         </Tabs.Item>
         <Tabs.Item title="Divisional">
-          <div className="flex h-32 items-center justify-center text-gray-500">
-            Divisional
-          </div>
+          {renderTeamCards()}
         </Tabs.Item>
         <Tabs.Item title="Conference">
-          <div className="flex h-32 items-center justify-center text-gray-500">
-            Conference
-          </div>
+          {renderTeamCards()}
         </Tabs.Item>
         <Tabs.Item title="Superbowl">
-          <div className="flex h-32 items-center justify-center text-gray-500">
-            Superbowl
-          </div>
+          {renderTeamCards()}
         </Tabs.Item>
       </Tabs>
       

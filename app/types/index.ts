@@ -31,7 +31,8 @@ export type DraftPickRequest = {
 export interface ExtendedPlayer extends Player {
   score?: number;
   scoreData?: ScoreForm;
-  isDisabled?: boolean; // New property to track disabled status
+  isDisabled?: boolean; // Track disabled status
+  currentRound?: string; // Track which playoff round this score is for
 }
 
 export interface ScoreForm {
@@ -56,6 +57,11 @@ export interface ScoreForm {
   yardsAllowed?: string;
 }
 
+// New type to store player scores by playoff round
+export interface PlayerScoresByRound {
+  [round: string]: { [playerName: string]: ExtendedPlayer };
+}
+
 // Interface for form validation errors
 export interface FormErrors {
   [key: string]: boolean;
@@ -66,6 +72,8 @@ export interface TeamsViewProps {
   teams: Team[];
   draftPicks: DraftPicks;
   isDraftFinished: boolean;
+  playerScores?: PlayerScoresByRound;
+  setPlayerScores?: React.Dispatch<React.SetStateAction<PlayerScoresByRound>>;
 }
 
 export interface TeamCardProps {
@@ -73,7 +81,8 @@ export interface TeamCardProps {
   draftPicks: DraftPicks;
   playerScores: { [key: string]: ExtendedPlayer };
   onEditScore: (player: ExtendedPlayer) => void;
-  onTogglePlayerDisabled: (player: ExtendedPlayer, isClearScores?: boolean) => void; // Updated function prop
+  onTogglePlayerDisabled: (player: ExtendedPlayer, isClearScores?: boolean) => void;
+  round?: string; // Optional property to indicate which playoff round is being displayed
 }
 
 export interface ScoreModalProps {
@@ -88,4 +97,11 @@ export interface ScoreModalProps {
   onFgCountChange: (value: string) => void;
   onFgYardageChange: (index: number, value: string) => void;
   onSubmit: () => void;
+}
+
+// Props for the Scores tab
+export interface ScoresTabProps {
+  teams: Team[];
+  draftPicks: DraftPicks;
+  playerScores: PlayerScoresByRound;
 }
