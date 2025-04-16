@@ -1,5 +1,5 @@
 import { Tabs } from "flowbite-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   TeamsViewProps, 
   ExtendedPlayer, 
@@ -46,6 +46,47 @@ export default function TeamsView({
   // Use external state if provided, otherwise use local state
   const playerScores = externalPlayerScores || localPlayerScores;
   const setPlayerScores = externalSetPlayerScores || setLocalPlayerScores;
+
+  // Round validation information
+  const [roundValidation, setRoundValidation] = useState<{[round: string]: boolean}>({
+    "Wild Card": true,
+    "Divisional": false,
+    "Conference": false,
+    "Superbowl": false
+  });
+
+  // Check if a specific round is complete (all players have scores or are marked as not playing)
+  const isRoundComplete = (round: string) => {
+    const allTeamPlayers: ExtendedPlayer[] = [];
+    
+    // Collect all players from all teams
+    teams.forEach(team => {
+      const teamPicks = getOrderedTeamPicks(team, draftPicks);
+      teamPicks.forEach(({player}) => {
+        allTeamPlayers.push(player);
+      });
+    });
+    
+    // Check if all players have been scored or marked as not playing
+    return allTeamPlayers.every(player => {
+      const playerData = playerScores[round]?.[player.name];
+      return playerData?.scoreData || playerData?.isDisabled === true;
+    });
+  };
+
+  // Update round validation whenever playerScores changes
+  useEffect(() => {
+    const wildCardComplete = isRoundComplete("Wild Card");
+    const divisionalComplete = isRoundComplete("Divisional");
+    const conferenceComplete = isRoundComplete("Conference");
+    
+    setRoundValidation({
+      "Wild Card": true, // Always enabled
+      "Divisional": wildCardComplete,
+      "Conference": wildCardComplete && divisionalComplete,
+      "Superbowl": wildCardComplete && divisionalComplete && conferenceComplete
+    });
+  }, [playerScores, teams, draftPicks]);
 
   // Handler for opening the score editing modal
   const handleEditScore = (player: ExtendedPlayer) => {
@@ -276,19 +317,62 @@ export default function TeamsView({
   };
 
   // Render team cards for the current tab
-  const renderTeamCards = () => (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-      {teams.map((team) => (
-        <TeamCard
-          key={`${team}-${activeRound}`}
-          team={team}
-          draftPicks={draftPicks}
-          playerScores={playerScores[activeRound] || {}}
-          onEditScore={handleEditScore}
-          onTogglePlayerDisabled={handleTogglePlayerDisabled}
-          round={activeRound}
-        />
-      ))}
+  const renderTeamCards = () => {
+    // Calculate team scores for the current round
+    const roundScores: {[team: string]: number} = {};
+    
+    teams.forEach(team => {
+      // Calculate team score for this round
+      const teamPlayers = getOrderedTeamPicks(team, draftPicks);
+      let roundScore = 0;
+      
+      teamPlayers.forEach(({player}) => {
+        // Skip disabled players
+        if (playerScores[activeRound]?.[player.name]?.isDisabled) return;
+        // Add player's score for this round
+        roundScore += playerScores[activeRound]?.[player.name]?.score || 0;
+      });
+      
+      roundScores[team] = roundScore;
+    });
+    
+    // Sort teams by round score (highest first)
+    const sortedTeams = [...teams].sort((a, b) => roundScores[b] - roundScores[a]);
+    
+    return (
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        {sortedTeams.map((team) => (
+          <TeamCard
+            key={`${team}-${activeRound}`}
+            team={team}
+            draftPicks={draftPicks}
+            playerScores={playerScores[activeRound] || {}}
+            onEditScore={handleEditScore}
+            onTogglePlayerDisabled={handleTogglePlayerDisabled}
+            round={activeRound}
+          />
+        ))}
+      </div>
+    );
+  };
+
+  // Render placeholder for disabled rounds
+  const renderDisabledRound = (round: string) => (
+    <div className="flex flex-col items-center justify-center p-8 text-center">
+      <div className="mb-4 text-xl font-semibold text-gray-700">
+        {round} Round Locked
+      </div>
+      <div className="text-gray-500">
+        {round === "Divisional" && (
+          <p>Complete all Wild Card player scores first.</p>
+        )}
+        {round === "Conference" && (
+          <p>Complete all Wild Card and Divisional player scores first.</p>
+        )}
+        {round === "Superbowl" && (
+          <p>Complete all Wild Card, Divisional, and Conference player scores first.</p>
+        )}
+      </div>
     </div>
   );
   
@@ -361,14 +445,23 @@ export default function TeamsView({
         <Tabs.Item active title="Wild Card">
           {renderTeamCards()}
         </Tabs.Item>
-        <Tabs.Item title="Divisional">
-          {renderTeamCards()}
+        <Tabs.Item 
+          title="Divisional"
+          disabled={!roundValidation["Divisional"]}
+        >
+          {roundValidation["Divisional"] ? renderTeamCards() : renderDisabledRound("Divisional")}
         </Tabs.Item>
-        <Tabs.Item title="Conference">
-          {renderTeamCards()}
+        <Tabs.Item 
+          title="Conference"
+          disabled={!roundValidation["Conference"]}
+        >
+          {roundValidation["Conference"] ? renderTeamCards() : renderDisabledRound("Conference")}
         </Tabs.Item>
-        <Tabs.Item title="Superbowl">
-          {renderTeamCards()}
+        <Tabs.Item 
+          title="Superbowl"
+          disabled={!roundValidation["Superbowl"]}
+        >
+          {roundValidation["Superbowl"] ? renderTeamCards() : renderDisabledRound("Superbowl")}
         </Tabs.Item>
       </Tabs>
       
