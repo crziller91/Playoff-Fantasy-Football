@@ -10,10 +10,10 @@ export const calculatePlayerScore = (player: ExtendedPlayer, form: ScoreForm): n
     switch (player.position) {
         case "QB":
             score += parseNum(form.touchdowns) * 4; // 4 pts per passing TD
-            score += Math.floor(parseNum(form.yards) / 25); // 1 pt per 25 yards
+            score += Math.round(parseNum(form.yards) / 25); // 1 pt per 25 yards
             score += parseNum(form.twoPtConversions) * 2; // 2 pts per 2-pt conversion
             score -= parseNum(form.interceptions) * 2; // -2 per INT
-            score += Math.floor(parseNum(form.completions) / 10); // 1 pt per 10 completions
+            score += Math.round(parseNum(form.completions) / 10); // 1 pt per 10 completions
             break;
         case "RB":
             score += parseNum(form.touchdowns) * 6; // 6 pts per TD
@@ -93,6 +93,10 @@ export const getOrderedTeamPicks = (team: string, draftPicks: any) => {
 // Calculate total team score
 export const getTeamScore = (team: string, draftPicks: any, playerScores: { [key: string]: ExtendedPlayer }): number => {
     return getOrderedTeamPicks(team, draftPicks).reduce((total, { player }) => {
+        // Skip disabled players when calculating team score
+        if (playerScores[player.name]?.isDisabled) {
+            return total;
+        }
         return total + (playerScores[player.name]?.score || 0);
     }, 0);
 };

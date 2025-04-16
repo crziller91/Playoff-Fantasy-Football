@@ -31,6 +31,7 @@ export type DraftPickRequest = {
 export interface ExtendedPlayer extends Player {
   score?: number;
   scoreData?: ScoreForm;
+  isDisabled?: boolean; // New property to track disabled status
 }
 
 export interface ScoreForm {
@@ -72,6 +73,7 @@ export interface TeamCardProps {
   draftPicks: DraftPicks;
   playerScores: { [key: string]: ExtendedPlayer };
   onEditScore: (player: ExtendedPlayer) => void;
+  onTogglePlayerDisabled: (player: ExtendedPlayer, isClearScores?: boolean) => void; // Updated function prop
 }
 
 export interface ScoreModalProps {

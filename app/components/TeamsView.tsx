@@ -8,12 +8,15 @@ import {
 } from "../types";
 import TeamCard from "./TeamCard";
 import ScoreModal from "./ScoreModal";
+import ClearScoresModal from "./ClearScoresModal";
 import { calculatePlayerScore, validateForm } from "../utils/scoreCalculator";
 
 export default function TeamsView({ teams, draftPicks, isDraftFinished }: TeamsViewProps) {
   // Modal state
   const [openModal, setOpenModal] = useState(false);
+  const [openClearScoresModal, setOpenClearScoresModal] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<ExtendedPlayer | null>(null);
+  const [clearScoresPlayer, setClearScoresPlayer] = useState<ExtendedPlayer | null>(null);
   const [scoreForm, setScoreForm] = useState<ScoreForm>({});
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [submitAttempted, setSubmitAttempted] = useState(false);
@@ -44,6 +47,63 @@ export default function TeamsView({ teams, draftPicks, isDraftFinished }: TeamsV
     setFgCount(0);
     setFormErrors({});
     setSubmitAttempted(false);
+  };
+
+  // Handler for toggling player disabled status
+  const handleTogglePlayerDisabled = (player: ExtendedPlayer, isClearScores?: boolean) => {
+    // If this is a clear scores action, open the confirmation modal
+    if (isClearScores && playerScores[player.name]?.scoreData) {
+      setClearScoresPlayer(player);
+      setOpenClearScoresModal(true);
+      return;
+    }
+    
+    setPlayerScores((prev) => {
+      const currentPlayer = prev[player.name] || { ...player };
+      const isCurrentlyDisabled = currentPlayer.isDisabled || false;
+      
+      // If the player already has scores, don't allow toggling disabled status
+      if (currentPlayer.scoreData && !isCurrentlyDisabled) {
+        return prev;
+      }
+      
+      // If toggling from enabled to disabled, clear any existing score data
+      const updatedPlayer = {
+        ...currentPlayer,
+        isDisabled: !isCurrentlyDisabled,
+        score: isCurrentlyDisabled ? currentPlayer.score : 0,
+        scoreData: isCurrentlyDisabled ? currentPlayer.scoreData : undefined
+      };
+      
+      return {
+        ...prev,
+        [player.name]: updatedPlayer,
+      };
+    });
+  };
+
+  // Handler for confirming clear scores
+  const handleConfirmClearScores = () => {
+    if (!clearScoresPlayer) return;
+    
+    setPlayerScores((prev) => ({
+      ...prev,
+      [clearScoresPlayer.name]: {
+        ...clearScoresPlayer,
+        score: 0,
+        scoreData: undefined,
+        isDisabled: false
+      }
+    }));
+    
+    setOpenClearScoresModal(false);
+    setClearScoresPlayer(null);
+  };
+
+  // Handler for closing clear scores modal
+  const handleCloseClearScoresModal = () => {
+    setOpenClearScoresModal(false);
+    setClearScoresPlayer(null);
   };
 
   // Handler for input field changes
@@ -128,6 +188,7 @@ export default function TeamsView({ teams, draftPicks, isDraftFinished }: TeamsV
         ...selectedPlayer,
         score,
         scoreData: { ...scoreForm },
+        isDisabled: false, // Ensure player is enabled when scores are submitted
       },
     }));
 
@@ -144,6 +205,7 @@ export default function TeamsView({ teams, draftPicks, isDraftFinished }: TeamsV
           draftPicks={draftPicks}
           playerScores={playerScores}
           onEditScore={handleEditScore}
+          onTogglePlayerDisabled={handleTogglePlayerDisabled}
         />
       ))}
     </div>
@@ -201,6 +263,14 @@ export default function TeamsView({ teams, draftPicks, isDraftFinished }: TeamsV
         onFgCountChange={handleFgCountChange}
         onFgYardageChange={handleFgYardageChange}
         onSubmit={handleSubmit}
+      />
+      
+      {/* Clear Scores confirmation modal */}
+      <ClearScoresModal
+        isOpen={openClearScoresModal}
+        player={clearScoresPlayer}
+        onClose={handleCloseClearScoresModal}
+        onConfirm={handleConfirmClearScores}
       />
     </div>
   );

@@ -1,7 +1,8 @@
-import { Avatar, DropdownDivider, Button, DropdownHeader, DropdownItem, Modal, Navbar, NavbarBrand, Dropdown } from "flowbite-react";
+import { Button, DropdownItem, Navbar, NavbarBrand, Dropdown } from "flowbite-react";
 import Link from "next/link";
 import { useState } from "react";
-import { HiOutlineExclamationCircle, HiMenu } from "react-icons/hi";
+import { HiMenu } from "react-icons/hi";
+import ResetConfirmationModal from "./ResetConfirmationModal";
 
 interface NavigationBarProps {
   onResetBoard?: () => void;
@@ -54,25 +55,11 @@ export default function NavigationBar({ onResetBoard }: NavigationBarProps) {
       </div>
 
       {/* Reset Confirmation Modal */}
-      <Modal show={openModal} size="md" onClose={() => setOpenModal(false)} popup>
-        <Modal.Header />
-        <Modal.Body>
-          <div className="text-center">
-            <HiOutlineExclamationCircle className="mx-auto mb-4 size-14 text-gray-400 dark:text-gray-200" />
-            <h3 className="mb-5 text-lg font-normal text-gray-500 dark:text-gray-400">
-              Are you sure you want to reset everything?
-            </h3>
-            <div className="flex justify-center gap-4">
-              <Button color="failure" onClick={handleResetConfirm}>
-                Yes, I&apos;m sure
-              </Button>
-              <Button color="gray" onClick={() => setOpenModal(false)}>
-                No, cancel
-              </Button>
-            </div>
-          </div>
-        </Modal.Body>
-      </Modal>
+      <ResetConfirmationModal
+        isOpen={openModal}
+        onClose={() => setOpenModal(false)}
+        onConfirm={handleResetConfirm}
+      />
     </Navbar>
   );
 }
