@@ -57,19 +57,19 @@ export default function DraftDashboard({
             <div className="flex max-w-full flex-col gap-4 lg:flex-row">
                 {!isDraftFinished && (
                     <>
-                        <div className="w-full min-w-[200px] lg:w-1/3">
+                        <div className="w-full min-w-[200px] lg:w-fit">
                             <SelectedPlayerTable
                                 availablePlayers={availablePlayers}
                                 selectedPlayer={selectedPlayer}
                                 setSelectedPlayer={setSelectedPlayer}
                             />
                         </div>
-                        <div className="w-full min-w-0 lg:w-fit">
+                        <div className="w-full min-w-0 lg:flex-1">
                             <AvailablePlayers availablePlayers={availablePlayers} />
                         </div>
                     </>
                 )}
-                <div className="shrink-0">
+                <div className="shrink-0 lg:w-auto">
                     <PositionLegend />
                 </div>
             </div>
@@ -82,4 +82,4 @@ export default function DraftDashboard({
             )}
         </>
     );
-} 
+}
