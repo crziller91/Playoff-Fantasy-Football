@@ -41,6 +41,7 @@ export default function BudgetModal({
         
         // Clear error and submit
         setError("");
+        setShowAlert(true); // Ensure alert is visible if budget error comes back
         onConfirm(costValue);
     };
 

@@ -47,11 +47,6 @@ export default function AvailablePlayers({ availablePlayers }: AvailablePlayersP
                         </div>
 
                         <div className="flex items-center">
-                            <span className="mr-4 text-sm font-normal">
-                                Showing {filteredPlayers.length} of {availablePlayers.length} players
-                                {positionFilter !== "ALL" && ` (${positionFilter} only)`}
-                            </span>
-
                             {/* Position filter dropdown */}
                             <Dropdown
                                 label={
