@@ -1,4 +1,4 @@
-import { Player, Team, DraftPicks, DraftPickWithRelations } from "../types";
+import { Player, Team, DraftPicks, DraftPickWithRelations, TeamWithBudget } from "../types";
 
 export class DraftManager {
     static readonly PICKS = Array.from({ length: 6 }, (_, i) => i + 1);

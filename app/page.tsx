@@ -1,9 +1,9 @@
 "use client";
 
-import { Flowbite, Spinner } from "flowbite-react"; // Add Spinner import
+import { Flowbite, Spinner } from "flowbite-react";
 import DraftBoard from "./components/DraftBoard";
 import NavigationBar from "./components/Navbar";
-import { useDraft } from "./hooks/useDraft"; // Custom hook for draft logic
+import { useDraft } from "./hooks/useDraft";
 
 export default function Page() {
   const {
@@ -12,12 +12,14 @@ export default function Page() {
     availablePlayers,
     draftPicks,
     searchTerms,
+    teamBudgets,
     loading,
     error,
     setDraftPicks,
     setAvailablePlayers,
     setTeams,
     setSearchTerms,
+    setTeamBudgets,
     handleResetBoard,
     isDraftFinished,
     finishDraft,
@@ -59,6 +61,8 @@ export default function Page() {
         setTeams={setTeams}
         searchTerms={searchTerms}
         setSearchTerms={setSearchTerms}
+        teamBudgets={teamBudgets}
+        setTeamBudgets={setTeamBudgets}
         onResetBoard={handleResetBoard}
         isDraftFinished={isDraftFinished}
         finishDraft={finishDraft}

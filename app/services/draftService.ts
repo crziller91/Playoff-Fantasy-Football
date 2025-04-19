@@ -1,4 +1,4 @@
-import { DraftPicks, Player } from "../types";
+import { DraftPicks, Player, TeamWithBudget } from "../types";
 
 export const fetchPlayers = async (): Promise<Player[]> => {
   const response = await fetch("/api/players");
@@ -12,19 +12,22 @@ export const fetchDraftPicks = async (): Promise<DraftPicks> => {
   return response.json();
 };
 
-export const fetchTeams = async (): Promise<string[]> => {
+export const fetchTeams = async (): Promise<TeamWithBudget[]> => {
   const response = await fetch("/api/teams");
   if (!response.ok) throw new Error(`API returned status: ${response.status}`);
   return response.json();
 };
 
-export const saveDraftPick = async (team: string, round: number, playerId: number | null) => {
+export const saveDraftPick = async (team: string, round: number, playerId: number | null, cost?: number) => {
   const response = await fetch("/api/draftpicks", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ teamName: team, round, playerId }),
+    body: JSON.stringify({ teamName: team, round, playerId, cost }),
   });
-  if (!response.ok) throw new Error(`Failed to save draft pick: ${response.status}`);
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || `Failed to save draft pick: ${response.status}`);
+  }
   return response.json();
 };
 

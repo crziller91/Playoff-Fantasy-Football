@@ -11,9 +11,11 @@ interface DraftDashboardProps {
     availablePlayers: Player[];
     draftPicks: DraftPicks;
     searchTerms: { [key: string]: string };
+    teamBudgets: Map<string, number>;
     setDraftPicks: (picks: DraftPicks) => void;
     setAvailablePlayers: (players: Player[]) => void;
     setSearchTerms: (terms: { [key: string]: string }) => void;
+    setTeamBudgets: (budgets: Map<string, number>) => void;
     isDraftFinished: boolean;
     isDraftComplete: boolean;
     finishDraft: () => void;
@@ -27,9 +29,11 @@ export default function DraftDashboard({
     availablePlayers,
     draftPicks,
     searchTerms,
+    teamBudgets,
     setDraftPicks,
     setAvailablePlayers,
     setSearchTerms,
+    setTeamBudgets,
     isDraftFinished,
     isDraftComplete,
     finishDraft,
@@ -45,12 +49,14 @@ export default function DraftDashboard({
                     availablePlayers={availablePlayers}
                     draftPicks={draftPicks}
                     searchTerms={searchTerms}
+                    teamBudgets={teamBudgets}
                     setDraftPicks={(newPicks) => {
                         setDraftPicks(newPicks);
                         setSelectedPlayer(null);
                     }}
                     setAvailablePlayers={setAvailablePlayers}
                     setSearchTerms={setSearchTerms}
+                    setTeamBudgets={setTeamBudgets}
                     isDraftFinished={isDraftFinished}
                 />
             </div>

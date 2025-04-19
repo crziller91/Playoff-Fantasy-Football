@@ -10,10 +10,10 @@ const ERROR_MESSAGES = {
   RESET_FAILED: "Failed to reset draft picks",
   MISSING_FIELDS: "Missing required fields: teamName and round are required",
   TEAM_NOT_FOUND: (teamName: string) => `Team "${teamName}" not found`,
+  INSUFFICIENT_BUDGET: (budget: number) => `Insufficient budget. Only $${budget} remaining.`,
 } as const;
 
 // Utility function to standardize error responses
-// Reduces duplication and ensures consistent error formatting
 const createErrorResponse = (message: string, error: unknown, status: number) => {
   const details = error instanceof Error ? error.message : String(error);
   return NextResponse.json({ error: message, details }, { status });
@@ -22,30 +22,22 @@ const createErrorResponse = (message: string, error: unknown, status: number) =>
 // GET handler: Retrieves all draft picks from the database
 export async function GET(): Promise<NextResponse> {
   try {
-    // Log the start of the operation for debugging
     console.log("API GET /draftpicks: Fetching draft picks from database");
 
-    // Fetch all draft picks with related team and player data
     const draftPicks = await prisma.draftPick.findMany({
       include: {
-        team: true, // Include team details (name, id)
-        player: true, // Include player details (if picked)
+        team: true,
+        player: true,
       },
     }) as DraftPickWithRelations[];
 
     console.log(`API GET /draftpicks: Found ${draftPicks.length} draft picks`);
 
-    // Format the raw database data into the DraftPicks structure expected by the frontend
-    // Delegate to DraftManager to keep business logic out of the data layer
     const formattedDraftPicks = DraftManager.formatDraftPicks(draftPicks);
 
-    // Return the formatted data with a 200 OK status
     return NextResponse.json(formattedDraftPicks, { status: 200 });
   } catch (error) {
-    // Log the error with details for server-side debugging
     console.error("API GET /draftpicks: Error fetching draft picks:", error);
-
-    // Return a standardized error response
     return createErrorResponse(ERROR_MESSAGES.FETCH_FAILED, error, 500);
   }
 }
@@ -53,14 +45,11 @@ export async function GET(): Promise<NextResponse> {
 // POST handler: Saves or deletes a draft pick based on the request payload
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
-    // Log the start of the save operation
     console.log("API POST /draftpicks: Processing draft pick save request");
 
-    // Parse the request body into the expected DraftPickRequest shape
     const data: DraftPickRequest = await request.json();
-    const { teamName, round, playerId } = data;
+    const { teamName, round, playerId, cost } = data;
 
-    // Validate required fields to ensure data integrity
     if (!teamName || round === undefined) {
       return NextResponse.json(
         { error: ERROR_MESSAGES.MISSING_FIELDS },
@@ -68,12 +57,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // Fetch the team by name to get its ID for the database operation
+    // Fetch the team by name to get its ID and budget
     const team = await prisma.team.findFirst({
       where: { name: teamName },
     });
 
-    // Check if the team exists; return 404 if not
     if (!team) {
       return NextResponse.json(
         { error: ERROR_MESSAGES.TEAM_NOT_FOUND(teamName) },
@@ -87,12 +75,25 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         teamId: team.id,
         round,
       },
+      include: {
+        player: true,
+      },
     });
 
-    // If playerId is null, delete the pick; otherwise, save or update it
-    return playerId === null
-      ? await deleteDraftPick(existingPick, teamName, round)
-      : await saveDraftPick(existingPick, team.id, teamName, round, playerId);
+    // If playerId is null, delete the pick and refund the cost if applicable
+    if (playerId === null) {
+      return await deleteDraftPick(existingPick, teamName, round);
+    } else {
+      // Check if the team has enough budget for this pick
+      if (cost && cost > team.budget) {
+        return NextResponse.json(
+          { error: ERROR_MESSAGES.INSUFFICIENT_BUDGET(team.budget) },
+          { status: 400 }
+        );
+      }
+
+      return await saveDraftPick(existingPick, team.id, teamName, round, playerId, cost);
+    }
   } catch (error) {
     console.error("API POST /draftpicks: Error processing request:", error);
     return createErrorResponse(ERROR_MESSAGES.SAVE_FAILED, error, 500);
@@ -104,14 +105,21 @@ export async function DELETE(): Promise<NextResponse> {
   try {
     console.log("API DELETE /draftpicks: Resetting all draft picks");
 
-    // Delete all records from the DraftPick table
-    const result = await prisma.draftPick.deleteMany();
+    // Start a transaction to delete draft picks and reset team budgets
+    await prisma.$transaction(async (prisma) => {
+      // Delete all records from the DraftPick table
+      await prisma.draftPick.deleteMany();
 
-    console.log(`API DELETE /draftpicks: Deleted ${result.count} draft picks`);
+      // Reset all team budgets to 200
+      await prisma.team.updateMany({
+        data: {
+          budget: 200
+        }
+      });
+    });
 
-    // Return a success message with a 200 OK status
     return NextResponse.json(
-      { message: `Successfully reset ${result.count} draft picks` },
+      { message: "Successfully reset all draft picks and team budgets" },
       { status: 200 }
     );
   } catch (error) {
@@ -122,13 +130,12 @@ export async function DELETE(): Promise<NextResponse> {
 
 // Helper function to delete an existing draft pick
 async function deleteDraftPick(
-  existingPick: { id: number } | null,
+  existingPick: { id: number; cost?: number | null; player?: any } | null,
   teamName: Team,
   round: number
 ): Promise<NextResponse> {
   console.log(`API POST /draftpicks: Deleting draft pick for ${teamName}, round ${round}`);
 
-  // If no pick exists, return a 200 with a message (no action needed)
   if (!existingPick) {
     return NextResponse.json(
       { message: `No draft pick found for ${teamName}, round ${round}` },
@@ -136,12 +143,26 @@ async function deleteDraftPick(
     );
   }
 
-  // Delete the existing pick by its ID
-  await prisma.draftPick.delete({
-    where: { id: existingPick.id },
+  // Start transaction to delete pick and refund the cost to team's budget if applicable
+  await prisma.$transaction(async (prisma) => {
+    // Delete the pick
+    await prisma.draftPick.delete({
+      where: { id: existingPick.id },
+    });
+
+    // If there was a cost, refund it to the team's budget
+    if (existingPick.cost) {
+      await prisma.team.updateMany({
+        where: { name: teamName },
+        data: {
+          budget: {
+            increment: existingPick.cost
+          }
+        }
+      });
+    }
   });
 
-  // Return a success message with a 200 OK status
   return NextResponse.json(
     { message: `Draft pick for ${teamName}, round ${round} deleted successfully` },
     { status: 200 }
@@ -150,34 +171,74 @@ async function deleteDraftPick(
 
 // Helper function to save or update a draft pick
 async function saveDraftPick(
-  existingPick: { id: number } | null,
+  existingPick: { id: number; cost?: number | null } | null,
   teamId: number,
   teamName: Team,
   round: number,
-  playerId: number
+  playerId: number,
+  cost: number | null | undefined
 ): Promise<NextResponse> {
   console.log(`API POST /draftpicks: Saving draft pick for ${teamName}, round ${round}, player ${playerId}`);
 
-  // Define the data structure for creating a new pick
-  const pickData = {
-    teamId,
-    round,
-    playerId,
-  };
+  // Declare pick variable outside the transaction 
+  let pick: any = null;
 
-  // Update if the pick exists, otherwise create a new one
-  const pick = existingPick
-    ? await prisma.draftPick.update({
+  await prisma.$transaction(async (prisma) => {
+    // If there's an existing pick with a cost, refund it
+    if (existingPick && existingPick.cost) {
+      await prisma.team.update({
+        where: { id: teamId },
+        data: {
+          budget: {
+            increment: existingPick.cost
+          }
+        }
+      });
+    }
+
+    // Define the data structure for creating/updating a pick
+    const pickData = {
+      teamId,
+      round,
+      playerId,
+      cost: cost || null, // Use null if cost is undefined
+    };
+
+    // Update or create the pick
+    if (existingPick) {
+      pick = await prisma.draftPick.update({
         where: { id: existingPick.id },
-        data: { playerId },
-        include: { player: true, team: true },
-      })
-    : await prisma.draftPick.create({
         data: pickData,
         include: { player: true, team: true },
       });
+    } else {
+      pick = await prisma.draftPick.create({
+        data: pickData,
+        include: { player: true, team: true },
+      });
+    }
 
-  // Return the created/updated pick with a 201 Created or 200 OK status
+    // If there's a cost, deduct it from the team's budget
+    if (cost) {
+      await prisma.team.update({
+        where: { id: teamId },
+        data: {
+          budget: {
+            decrement: cost
+          }
+        }
+      });
+    }
+  });
+
+  // Make sure pick is defined before returning
+  if (!pick) {
+    return NextResponse.json(
+      { error: "Failed to create or update draft pick" },
+      { status: 500 }
+    );
+  }
+
   return NextResponse.json(pick as DraftPickWithRelations, {
     status: existingPick ? 200 : 201,
   });

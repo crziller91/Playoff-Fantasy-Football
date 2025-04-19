@@ -20,6 +20,8 @@ interface DraftBoardProps {
   setTeams: (teams: Team[]) => void;
   searchTerms: { [key: string]: string };
   setSearchTerms: (terms: { [key: string]: string }) => void;
+  teamBudgets: Map<string, number>;
+  setTeamBudgets: (budgets: Map<string, number>) => void;
   onResetBoard: () => void;
   isDraftFinished: boolean;
   finishDraft: () => void;
@@ -35,6 +37,8 @@ export default function DraftBoard({
   setTeams,
   searchTerms,
   setSearchTerms,
+  teamBudgets,
+  setTeamBudgets,
   onResetBoard,
   isDraftFinished,
   finishDraft,
@@ -73,9 +77,11 @@ export default function DraftBoard({
                   availablePlayers={availablePlayers}
                   draftPicks={draftPicks}
                   searchTerms={searchTerms}
+                  teamBudgets={teamBudgets}
                   setDraftPicks={setDraftPicks}
                   setAvailablePlayers={setAvailablePlayers}
                   setSearchTerms={setSearchTerms}
+                  setTeamBudgets={setTeamBudgets}
                   isDraftFinished={isDraftFinished}
                   isDraftComplete={isDraftComplete}
                   finishDraft={finishDraft}

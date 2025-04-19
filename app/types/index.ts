@@ -2,8 +2,13 @@ export type Player = {
   id: number;
   name: string;
   position: "QB" | "RB" | "WR" | "TE" | "K" | "DST";
-  teamName?: string; // Added teamName as optional for backward compatibility
+  teamName?: string;
 };
+
+export interface TeamWithBudget {
+  name: string;
+  budget: number;
+}
 
 export type Team = string;
 
@@ -16,19 +21,31 @@ export type DraftPicks = {
 export type DraftPickWithRelations = {
   id: number;
   teamId: number;
-  team: { id: number; name: string };
+  team: { id: number; name: string; budget: number };
   playerId: number | null;
   player: Player | null;
   round: number;
+  cost: number | null;
 };
 
 export type DraftPickRequest = {
   teamName: string;
   round: number;
   playerId: number | null;
+  cost?: number | null;
 };
 
-// Additional types for the scoring functionality
+// Additional interfaces for the budget modal
+export interface BudgetModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  player: Player | null;
+  team: string;
+  onConfirm: (cost: number) => void;
+  budgetError?: string; // Added budgetError property
+}
+
+// Rest of the file remains the same
 export interface ExtendedPlayer extends Player {
   score?: number;
   scoreData?: ScoreForm;

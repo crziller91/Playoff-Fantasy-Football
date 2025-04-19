@@ -217,12 +217,15 @@ async function seedDatabase() {
         });
         console.log(`Created ${playerData.length} players`);
 
-        // Seed teams
+        // Seed teams with budget
         console.log(`Creating ${teamNames.length} teams...`);
         await prisma.team.createMany({
-            data: teamNames.map((name) => ({ name })),
+            data: teamNames.map((name) => ({ 
+                name,
+                budget: 200 // Initialize each team with a budget of $200
+            })),
         });
-        console.log(`Created ${teamNames.length} teams`);
+        console.log(`Created ${teamNames.length} teams with $200 budget each`);
 
         // Initialize draft status
         console.log("Initializing draft status...");
@@ -246,4 +249,4 @@ seedDatabase().catch(async (e) => {
     console.error("Seeding failed:", e);
     await prisma.$disconnect();
     process.exit(1);
-}); 
+});

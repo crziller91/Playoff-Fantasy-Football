@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { DraftPicks, Player } from "../types";
+import { DraftPicks, Player, Team, TeamWithBudget } from "../types";
 import { DraftManager } from "../domain/DraftManager";
 import { fetchPlayers, fetchDraftPicks, fetchTeams, resetDraftPicks, getDraftStatus, setDraftStatus } from "../services/draftService";
 
 export const useDraft = () => {
-  const [teams, setTeams] = useState<string[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [teamBudgets, setTeamBudgets] = useState<Map<string, number>>(new Map());
   const [availablePlayers, setAvailablePlayers] = useState<Player[]>([]);
   // Initialize draftPicks with all teams and rounds
   const [draftPicks, setDraftPicks] = useState<DraftPicks>(() => {
@@ -21,17 +22,28 @@ export const useDraft = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [players, picks, dbTeams, draftStatus] = await Promise.all([
+        const [players, picks, teamsData, draftStatus] = await Promise.all([
           fetchPlayers(),
           fetchDraftPicks(),
           fetchTeams(),
           getDraftStatus(),
         ]);
+
         const available = DraftManager.calculateAvailablePlayers(players, picks);
-        setTeams(dbTeams);
+
+        // Extract team names and budgets
+        const teamNames = teamsData.map((t: TeamWithBudget) => t.name);
+        const budgetMap = new Map<string, number>();
+        teamsData.forEach((t: TeamWithBudget) => {
+          budgetMap.set(t.name, t.budget);
+        });
+
+        setTeams(teamNames);
+        setTeamBudgets(budgetMap);
         setAvailablePlayers(available);
+
         // Merge fetched picks with initialized structure
-        const initializedPicks = DraftManager.initializeDraftPicks(dbTeams);
+        const initializedPicks = DraftManager.initializeDraftPicks(teamNames);
         setDraftPicks({ ...initializedPicks, ...picks });
         setIsDraftFinished(draftStatus);
         setLoading(false);
@@ -47,10 +59,19 @@ export const useDraft = () => {
     try {
       await resetDraftPicks();
       await setDraftStatus(false);
-      const [players, dbTeams] = await Promise.all([fetchPlayers(), fetchTeams()]);
-      setTeams(dbTeams);
+      const [players, teamsData] = await Promise.all([fetchPlayers(), fetchTeams()]);
+
+      // Extract team names and reset budgets
+      const teamNames = teamsData.map((t: TeamWithBudget) => t.name);
+      const budgetMap = new Map<string, number>();
+      teamsData.forEach((t: TeamWithBudget) => {
+        budgetMap.set(t.name, t.budget); // Should be 200 after reset
+      });
+
+      setTeams(teamNames);
+      setTeamBudgets(budgetMap);
       setAvailablePlayers(players);
-      setDraftPicks(DraftManager.initializeDraftPicks(dbTeams));
+      setDraftPicks(DraftManager.initializeDraftPicks(teamNames));
       setSearchTerms({});
       setIsDraftFinished(false);
     } catch (err) {
@@ -74,6 +95,7 @@ export const useDraft = () => {
     availablePlayers,
     draftPicks,
     searchTerms,
+    teamBudgets,
     loading,
     error,
     isDraftFinished,
@@ -82,6 +104,7 @@ export const useDraft = () => {
     setAvailablePlayers,
     setTeams,
     setSearchTerms,
+    setTeamBudgets,
     handleResetBoard,
   };
 };
