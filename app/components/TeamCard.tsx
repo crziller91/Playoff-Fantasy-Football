@@ -1,7 +1,18 @@
-import { Card, Button } from "flowbite-react";
+import { Card, Button, Badge } from "flowbite-react"; // Added Badge import
 import { TeamCardProps, ExtendedPlayer } from "../types";
 import { getOrderedTeamPicks, getTeamScore } from "../utils/scoreCalculator";
 import { HiX } from "react-icons/hi";
+import { positionColors } from "../data/positionColors";
+
+// Map position to badge color
+const positionBadgeColors: Record<string, "info" | "gray" | "failure" | "success" | "warning" | "indigo" | "purple" | "pink"> = {
+    QB: "success",    // Green
+    RB: "purple",     // Purple
+    WR: "warning",    // Yellow
+    TE: "failure",    // Red
+    K: "info",        // Blue
+    DST: "gray"       // Dark
+};
 
 export default function TeamCard({
     team,
@@ -34,7 +45,7 @@ export default function TeamCard({
                         const playerData = playerScores[player.name];
                         const isDisabled = playerData?.isDisabled || false;
                         const statusReason = playerData?.statusReason;
-                        
+
                         // Determine status message based on the status reason
                         let statusMessage = "";
                         if (isDisabled) {
@@ -46,13 +57,21 @@ export default function TeamCard({
                                 statusMessage = " (Inactive/Injured)";
                             }
                         }
-                        
+
+                        // Get the badge color based on position
+                        const badgeColor = positionBadgeColors[player.position];
+
                         return (
                             <li key={pick} className="py-3 sm:py-4">
                                 <div className="flex items-center space-x-4">
-                                    <div className="inline-flex items-center text-base font-semibold text-gray-900 dark:text-white">
+                                    {/* Position Badge */}
+                                    <Badge
+                                        color={badgeColor}
+                                        size="sm"
+                                        className={isDisabled ? "opacity-50" : ""}
+                                    >
                                         {player.position}
-                                    </div>
+                                    </Badge>
                                     <div className="min-w-0 flex-1">
                                         <p className={`truncate text-sm font-medium ${isDisabled ? "text-gray-400" : "text-gray-900"} dark:text-white`}>
                                             {player.name}

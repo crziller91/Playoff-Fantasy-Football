@@ -1,4 +1,3 @@
-// app/modals/BudgetModal.tsx
 import { Modal, Button, Label, TextInput, Alert } from "flowbite-react";
 import { useState, useEffect } from "react";
 import { BudgetModalProps } from "../types";
