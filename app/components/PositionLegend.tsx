@@ -9,7 +9,7 @@ export default function PositionLegend() {
       <Table.Head>
         <Table.HeadCell
           colSpan={legend.length}
-          className="bg-blue-600 p-2 text-center text-sm text-white"
+          className="bg-gray-700 p-2 text-center text-sm text-white"
         >
           Position Legend
         </Table.HeadCell>

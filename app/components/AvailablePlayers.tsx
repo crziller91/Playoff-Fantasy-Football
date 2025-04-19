@@ -40,7 +40,7 @@ export default function AvailablePlayers({ availablePlayers }: AvailablePlayersP
                 <Table.Head>
                     <Table.HeadCell
                         colSpan={8}
-                        className="bg-blue-600 p-2 flex justify-between items-center text-sm text-white"
+                        className="bg-gray-700 p-2 flex justify-between items-center text-sm text-white"
                     >
                         <div className="flex-1">
                             <span className="pl-4">Available Players</span>

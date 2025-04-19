@@ -34,7 +34,7 @@ export default function NavigationBar({ onResetBoard }: NavigationBarProps) {
           <Button
             as={Link}
             href="https://www.nfl.com/playoffs/bracket/"
-            color="blue"
+            color="info"
             target="_blank"
             rel="noopener noreferrer"
           >

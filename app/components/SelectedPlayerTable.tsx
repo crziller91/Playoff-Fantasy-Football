@@ -168,7 +168,7 @@ export default function SelectedPlayerTable({
     return (
         <Table className="w-auto rounded-lg border-0 bg-white shadow-lg">
             <Table.Head>
-                <Table.HeadCell className="bg-blue-600 p-2 text-center text-sm text-white">
+                <Table.HeadCell className="bg-gray-700 p-2 text-center text-sm text-white">
                     Player For Auction
                 </Table.HeadCell>
             </Table.Head>

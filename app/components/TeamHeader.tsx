@@ -8,7 +8,7 @@ interface TeamHeaderProps {
 export default function TeamHeader({ teams, teamBudgets }: TeamHeaderProps) {
   return (
     <>
-      <Table.HeadCell className="w-20 shrink-0 bg-blue-600 px-4 text-center text-white">
+      <Table.HeadCell className="w-20 shrink-0 bg-gray-700 px-4 text-center text-white">
         Pick #
       </Table.HeadCell>
       {teams.map((team) => {
@@ -16,7 +16,7 @@ export default function TeamHeader({ teams, teamBudgets }: TeamHeaderProps) {
         return (
           <Table.HeadCell
             key={team}
-            className="bg-blue-600 p-1 text-sm text-white"
+            className="bg-gray-700 p-1 text-sm text-white"
           >
             <div className="flex flex-col">
               <span>{team}</span>
