@@ -93,6 +93,8 @@ export interface TeamsViewProps {
   isDraftFinished: boolean;
   playerScores?: PlayerScoresByRound;
   setPlayerScores?: React.Dispatch<React.SetStateAction<PlayerScoresByRound>>;
+  initialActiveRound?: string;  // For initial active round
+  onRoundChange?: (round: string) => void;  // For round change callback
 }
 
 export interface TeamCardProps {

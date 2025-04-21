@@ -1,8 +1,8 @@
 "use client";
 
-import { Flowbite, TabItem, Tabs } from "flowbite-react";
+import { Flowbite, TabItem, Tabs, type TabsRef } from "flowbite-react";
 import { DraftPicks, Player, Team, PlayerScoresByRound } from "../types";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import { HiUserCircle } from "react-icons/hi";
 import { MdDashboard } from "react-icons/md";
 import DraftDashboard from "./DraftDashboard";
@@ -10,6 +10,15 @@ import TeamsView, { PLAYOFF_ROUNDS } from "./TeamsView";
 import { MdScoreboard } from "react-icons/md";
 import ScoresTab from "./ScoresTab";
 import { fetchPlayerScores } from "../services/scoreService";
+import { useRouter, useSearchParams } from "next/navigation";
+
+// Define constants outside the component
+const TAB_NAMES = ["draft", "teams", "scores"] as const;
+const TAB_MAP: Record<string, number> = {
+  "draft": 0,
+  "teams": 1,
+  "scores": 2
+};
 
 interface DraftBoardProps {
   teams: Team[];
@@ -46,6 +55,27 @@ export default function DraftBoard({
   isDraftFinished,
   finishDraft,
 }: DraftBoardProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const tabsRef = useRef<TabsRef>(null);
+  
+  // Get tab and subtab from URL query parameters
+  const tabParam = searchParams.get("tab");
+  const subtabParam = searchParams.get("subtab");
+  
+  // Initialize activeTab state
+  const [activeTab, setActiveTab] = useState(() => {
+    if (tabParam && tabParam in TAB_MAP) {
+      return TAB_MAP[tabParam];
+    }
+    return 0; // Default to Draft Board
+  });
+  
+  // Initialize activeSubTab for Teams view
+  const [activeSubTab, setActiveSubTab] = useState(
+    subtabParam || "Wild Card"
+  );
+  
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -56,6 +86,28 @@ export default function DraftBoard({
     "Conference": {},
     "Superbowl": {}
   });
+
+  // Update URL when tabs change
+  useEffect(() => {
+    const currentTab = TAB_NAMES[activeTab];
+    
+    // Only include subtab param for teams tab
+    if (currentTab === "teams") {
+      router.push(`?tab=${currentTab}&subtab=${activeSubTab}`);
+    } else {
+      router.push(`?tab=${currentTab}`);
+    }
+  }, [activeTab, activeSubTab, router]);
+
+  // Set active tab based on URL params when component mounts
+  useEffect(() => {
+    if (tabParam && tabParam in TAB_MAP) {
+      const tabIndex = TAB_MAP[tabParam];
+      if (tabsRef.current) {
+        tabsRef.current.setActiveTab(tabIndex);
+      }
+    }
+  }, [tabParam]);
 
   // Load player scores from the database when draft is finished
   useEffect(() => {
@@ -96,12 +148,22 @@ export default function DraftBoard({
     });
   };
 
+  // Handle tab change
+  const handleTabChange = (tab: number) => {
+    setActiveTab(tab);
+  };
+
   return (
     <Flowbite>
       <main className="min-h-screen bg-gray-50 p-4">
         <div className="mb-1">
           <div className="mb-4">
-            <Tabs aria-label="Default tabs" variant="default">
+            <Tabs 
+              aria-label="Default tabs" 
+              variant="default" 
+              ref={tabsRef}
+              onActiveTabChange={handleTabChange}
+            >
               <TabItem active title="Draft Board" icon={MdDashboard}>
                 <DraftDashboard
                   teams={teams}
@@ -133,6 +195,8 @@ export default function DraftBoard({
                     isDraftFinished={isDraftFinished}
                     playerScores={playerScores}
                     setPlayerScores={setPlayerScores}
+                    initialActiveRound={activeSubTab}
+                    onRoundChange={setActiveSubTab}
                   />
                 )}
               </TabItem>

@@ -1,5 +1,5 @@
-import { Tabs, Alert } from "flowbite-react";
-import { useState, useEffect, useCallback } from "react";
+import { Tabs, type TabsRef } from "flowbite-react";
+import { useState, useEffect, useCallback, useRef, useLayoutEffect } from "react";
 import {
   TeamsViewProps,
   ExtendedPlayer,
@@ -23,7 +23,9 @@ export default function TeamsView({
   draftPicks,
   isDraftFinished,
   playerScores: externalPlayerScores,
-  setPlayerScores: externalSetPlayerScores
+  setPlayerScores: externalSetPlayerScores,
+  initialActiveRound,  // New prop with default value
+  onRoundChange // New callback prop
 }: TeamsViewProps) {
   // Modal state
   const [openModal, setOpenModal] = useState(false);
@@ -39,9 +41,13 @@ export default function TeamsView({
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [fgCount, setFgCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const tabsRef = useRef<TabsRef>(null);
 
-  // Tab state
-  const [activeRound, setActiveRound] = useState<string>("Wild Card");
+  // Use the initialActiveRound prop directly without a default
+  const [activeRound, setActiveRound] = useState<string>(
+    // If initialActiveRound is provided, use it, otherwise use "Wild Card"
+    initialActiveRound || "Wild Card"
+  );
 
   // Use local or external player scores state
   const [localPlayerScores, setLocalPlayerScores] = useState<PlayerScoresByRound>({
@@ -54,6 +60,28 @@ export default function TeamsView({
   // Use external state if provided, otherwise use local state
   const playerScores = externalPlayerScores || localPlayerScores;
   const setPlayerScores = externalSetPlayerScores || setLocalPlayerScores;
+
+  // Set the tab on mount and when initialActiveRound changes
+  useEffect(() => {
+    // Only proceed if initialActiveRound is defined and we have a valid ref
+    if (initialActiveRound && tabsRef.current) {
+      const roundIndex = PLAYOFF_ROUNDS.indexOf(initialActiveRound);
+      if (roundIndex !== -1) {
+        console.log('Setting tab to:', initialActiveRound, 'index:', roundIndex);
+        // Use a slight delay to ensure the tabs are fully rendered
+        setTimeout(() => {
+          tabsRef.current?.setActiveTab(roundIndex);
+        }, 50);
+      }
+    }
+  }, [initialActiveRound]);
+
+  // The normal useEffect to notify parent of changes
+  useEffect(() => {
+    if (onRoundChange && activeRound !== initialActiveRound) {
+      onRoundChange(activeRound);
+    }
+  }, [activeRound, onRoundChange, initialActiveRound]);
 
   // Load player scores from the database on component mount
   useEffect(() => {
@@ -182,6 +210,12 @@ export default function TeamsView({
     setFgCount(0);
     setFormErrors({});
     setSubmitAttempted(false);
+  };
+
+  // Handle tab change from user interaction
+  const handleTabChange = (tab: number) => {
+    const newRound = PLAYOFF_ROUNDS[tab];
+    setActiveRound(newRound);
   };
 
   // Handler for toggling player disabled status
@@ -620,11 +654,10 @@ export default function TeamsView({
       <Tabs
         aria-label="Playoff rounds"
         variant="underline"
-        onActiveTabChange={(tab) => {
-          setActiveRound(PLAYOFF_ROUNDS[tab]);
-        }}
+        ref={tabsRef}
+        onActiveTabChange={handleTabChange}
       >
-        <Tabs.Item active title="Wild Card">
+        <Tabs.Item active={activeRound === "Wild Card"} title="Wild Card">
           {renderTeamCards()}
         </Tabs.Item>
         <Tabs.Item
