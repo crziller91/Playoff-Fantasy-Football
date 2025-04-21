@@ -423,7 +423,7 @@ export default function ScoreModal({
                     </h3>
                     {renderPositionFields()}
                     <div className="w-full">
-                        <Button color="blue" onClick={onSubmit}>
+                        <Button onClick={onSubmit}>
                             Submit
                         </Button>
                     </div>

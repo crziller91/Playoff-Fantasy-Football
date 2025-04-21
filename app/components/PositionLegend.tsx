@@ -5,11 +5,11 @@ export default function PositionLegend() {
   const legend = Object.keys(legendColors) as (keyof typeof legendColors)[];
 
   return (
-    <Table className="w-auto rounded-lg border-0 bg-white shadow-lg">
+    <Table className="w-auto rounded-lg border-0 bg-white shadow-xl">
       <Table.Head>
         <Table.HeadCell
           colSpan={legend.length}
-          className="bg-gray-700 p-2 text-center text-sm text-white"
+          className="bg-gray-200 p-2 text-center text-sm"
         >
           Position Legend
         </Table.HeadCell>

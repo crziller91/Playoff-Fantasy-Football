@@ -35,12 +35,12 @@ export default function AvailablePlayers({ availablePlayers }: AvailablePlayersP
     }, [positionFilter]);
 
     return (
-        <div className="w-full h-full rounded-lg border-0 bg-white shadow-lg">
-            <Table className="w-full rounded-lg border-0 bg-white shadow-lg">
+        <div className="w-full h-full rounded-lg border-0 bg-white shadow-xl">
+            <Table className="w-full rounded-lg border-0 bg-white shadow-xl">
                 <Table.Head>
                     <Table.HeadCell
                         colSpan={8}
-                        className="bg-gray-700 p-2 flex justify-between items-center text-sm text-white"
+                        className="bg-gray-200 p-2 flex justify-between items-center text-sm"
                     >
                         <div className="flex-1">
                             <span className="pl-4">Available Players</span>

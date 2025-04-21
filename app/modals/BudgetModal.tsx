@@ -116,7 +116,7 @@ export default function BudgetModal({
                         />
                     </div>
                     <div className="flex justify-center gap-4">
-                        <Button color="blue" onClick={handleSubmit}>
+                        <Button onClick={handleSubmit}>
                             Submit
                         </Button>
                         <Button color="gray" onClick={handleClose}>

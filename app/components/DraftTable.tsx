@@ -143,7 +143,7 @@ export default function DraftTable({
 
   return (
     <div className="w-full">
-      <div className="overflow-x-auto rounded-lg shadow-lg">
+      <div className="overflow-x-auto rounded-lg shadow-xl">
         <Table hoverable className="w-full table-fixed bg-white" style={{ minWidth: `${teams.length * 192 + 80}px` }}>
           <Table.Head>
             <TeamHeader teams={teams} teamBudgets={teamBudgets} />

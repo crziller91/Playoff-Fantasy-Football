@@ -22,6 +22,15 @@ export default function TeamCard({
     onTogglePlayerDisabled,
     round // Optional prop to display which round we're showing
 }: TeamCardProps & { round?: string }) {
+
+    // Helper function to safely check if a player's score is greater than 0
+    const hasPositiveScore = (playerName: string): boolean => {
+        if (!playerScores || !playerScores[playerName]) return false;
+        
+        const score = playerScores[playerName].score;
+        return typeof score === 'number' && score > 0;
+    };
+
     return (
         <Card className="w-full">
             <div className="mb-4 flex items-center justify-between">
@@ -35,9 +44,7 @@ export default function TeamCard({
                         </span>
                     )}
                 </div>
-                <div className="text-lg font-semibold text-gray-900 dark:text-white">
-                    Score: {getTeamScore(team, draftPicks, playerScores)}
-                </div>
+                <Badge size="lg" color="gray">{getTeamScore(team, draftPicks, playerScores)} pts</Badge>
             </div>
             <div className="flow-root">
                 <ul className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -45,6 +52,7 @@ export default function TeamCard({
                         const playerData = playerScores[player.name];
                         const isDisabled = playerData?.isDisabled || false;
                         const statusReason = playerData?.statusReason;
+                        const showScore = hasPositiveScore(player.name) && !isDisabled;
 
                         // Determine status message based on the status reason
                         let statusMessage = "";
@@ -82,7 +90,7 @@ export default function TeamCard({
                                                 {player.teamName}
                                             </p>
                                         )}
-                                        {playerScores[player.name]?.score !== undefined && !isDisabled && (
+                                        {showScore && (
                                             <p className="text-xs text-green-600 font-semibold">
                                                 {playerScores[player.name]?.score} pts
                                             </p>
@@ -91,7 +99,7 @@ export default function TeamCard({
                                     <div className="flex space-x-2">
                                         <Button
                                             size="xs"
-                                            color={playerScores[player.name]?.scoreData ? "success" : "blue"}
+                                            color={playerScores[player.name]?.scoreData ? "success" : "info"}
                                             disabled={isDisabled}
                                             onClick={() => onEditScore(player as ExtendedPlayer)}
                                         >
