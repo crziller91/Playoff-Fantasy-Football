@@ -20,6 +20,21 @@ const TAB_MAP: Record<string, number> = {
   "scores": 2
 };
 
+// Define mappings between URL parameters and display names
+const URL_PARAM_TO_ROUND: Record<string, string> = {
+  "wildCard": "Wild Card",
+  "divisional": "Divisional",
+  "conference": "Conference",
+  "superbowl": "Superbowl"
+};
+
+const ROUND_TO_URL_PARAM: Record<string, string> = {
+  "Wild Card": "wildCard",
+  "Divisional": "divisional",
+  "Conference": "conference",
+  "Superbowl": "superbowl"
+};
+
 interface DraftBoardProps {
   teams: Team[];
   picks: number[];
@@ -58,11 +73,11 @@ export default function DraftBoard({
   const router = useRouter();
   const searchParams = useSearchParams();
   const tabsRef = useRef<TabsRef>(null);
-  
+
   // Get tab and subtab from URL query parameters
   const tabParam = searchParams.get("tab");
   const subtabParam = searchParams.get("subtab");
-  
+
   // Initialize activeTab state
   const [activeTab, setActiveTab] = useState(() => {
     if (tabParam && tabParam in TAB_MAP) {
@@ -70,12 +85,16 @@ export default function DraftBoard({
     }
     return 0; // Default to Draft Board
   });
-  
+
   // Initialize activeSubTab for Teams view
-  const [activeSubTab, setActiveSubTab] = useState(
-    subtabParam || "Wild Card"
-  );
-  
+  const [activeSubTab, setActiveSubTab] = useState(() => {
+    // Convert from URL parameter to display name if available
+    if (subtabParam && subtabParam in URL_PARAM_TO_ROUND) {
+      return URL_PARAM_TO_ROUND[subtabParam];
+    }
+    return "Wild Card"; // Default
+  });
+
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -90,10 +109,12 @@ export default function DraftBoard({
   // Update URL when tabs change
   useEffect(() => {
     const currentTab = TAB_NAMES[activeTab];
-    
+
     // Only include subtab param for teams tab
     if (currentTab === "teams") {
-      router.push(`?tab=${currentTab}&subtab=${activeSubTab}`);
+      // Convert display name to URL parameter
+      const subtabParam = ROUND_TO_URL_PARAM[activeSubTab] || "wildCard";
+      router.push(`?tab=${currentTab}&subtab=${subtabParam}`);
     } else {
       router.push(`?tab=${currentTab}`);
     }
@@ -103,11 +124,27 @@ export default function DraftBoard({
   useEffect(() => {
     if (tabParam && tabParam in TAB_MAP) {
       const tabIndex = TAB_MAP[tabParam];
+
+      // Set the active tab using the ref
       if (tabsRef.current) {
         tabsRef.current.setActiveTab(tabIndex);
       }
+
+      // Update active tab state
+      setActiveTab(tabIndex);
+
+      // Handle subtab if we're on the teams tab
+      if (tabParam === 'teams' && subtabParam) {
+        // Convert URL parameter to display name
+        const roundDisplayName = URL_PARAM_TO_ROUND[subtabParam];
+
+        // Only update if it's a valid round name
+        if (roundDisplayName && PLAYOFF_ROUNDS.includes(roundDisplayName)) {
+          setActiveSubTab(roundDisplayName);
+        }
+      }
     }
-  }, [tabParam]);
+  }, [tabParam, subtabParam]);
 
   // Load player scores from the database when draft is finished
   useEffect(() => {
@@ -153,18 +190,23 @@ export default function DraftBoard({
     setActiveTab(tab);
   };
 
+  // Handle round change from TeamsView
+  const handleRoundChange = (round: string) => {
+    setActiveSubTab(round);
+  };
+
   return (
     <Flowbite>
       <main className="min-h-screen bg-gray-50 p-4">
         <div className="mb-1">
           <div className="mb-4">
-            <Tabs 
-              aria-label="Default tabs" 
-              variant="default" 
+            <Tabs
+              aria-label="Default tabs"
+              variant="default"
               ref={tabsRef}
               onActiveTabChange={handleTabChange}
             >
-              <TabItem active title="Draft Board" icon={MdDashboard}>
+              <TabItem active={activeTab === 0} title="Draft Board" icon={MdDashboard}>
                 <DraftDashboard
                   teams={teams}
                   picks={picks}
@@ -183,24 +225,25 @@ export default function DraftBoard({
                   setSelectedPlayer={setSelectedPlayer}
                 />
               </TabItem>
-              <TabItem title="Teams" icon={HiUserCircle}>
+              <TabItem active={activeTab === 1} title="Teams" icon={HiUserCircle}>
                 {isLoading ? (
                   <div className="flex h-32 items-center justify-center text-gray-500">
                     Loading player scores...
                   </div>
                 ) : (
                   <TeamsView
+                    key={`teams-view-${activeSubTab}`} // Add a key prop to force remounting
                     teams={teams}
                     draftPicks={draftPicks}
                     isDraftFinished={isDraftFinished}
                     playerScores={playerScores}
                     setPlayerScores={setPlayerScores}
                     initialActiveRound={activeSubTab}
-                    onRoundChange={setActiveSubTab}
+                    onRoundChange={handleRoundChange}
                   />
                 )}
               </TabItem>
-              <TabItem title="Scores" icon={MdScoreboard}>
+              <TabItem active={activeTab === 2} title="Scores" icon={MdScoreboard}>
                 {isDraftFinished ? (
                   isLoading ? (
                     <div className="flex h-32 items-center justify-center text-gray-500">

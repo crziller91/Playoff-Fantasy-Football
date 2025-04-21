@@ -61,20 +61,16 @@ export default function TeamsView({
   const playerScores = externalPlayerScores || localPlayerScores;
   const setPlayerScores = externalSetPlayerScores || setLocalPlayerScores;
 
-  // Set the tab on mount and when initialActiveRound changes
-  useEffect(() => {
-    // Only proceed if initialActiveRound is defined and we have a valid ref
+  // This useLayoutEffect runs BEFORE rendering to set the tab
+  useLayoutEffect(() => {
     if (initialActiveRound && tabsRef.current) {
       const roundIndex = PLAYOFF_ROUNDS.indexOf(initialActiveRound);
       if (roundIndex !== -1) {
-        console.log('Setting tab to:', initialActiveRound, 'index:', roundIndex);
-        // Use a slight delay to ensure the tabs are fully rendered
-        setTimeout(() => {
-          tabsRef.current?.setActiveTab(roundIndex);
-        }, 50);
+        // Directly set the active tab without delay
+        tabsRef.current.setActiveTab(roundIndex);
       }
     }
-  }, [initialActiveRound]);
+  }, [initialActiveRound]); // Only depend on initialActiveRound
 
   // The normal useEffect to notify parent of changes
   useEffect(() => {
@@ -657,22 +653,28 @@ export default function TeamsView({
         ref={tabsRef}
         onActiveTabChange={handleTabChange}
       >
-        <Tabs.Item active={activeRound === "Wild Card"} title="Wild Card">
+        <Tabs.Item
+          active={activeRound === "Wild Card"}
+          title="Wild Card"
+        >
           {renderTeamCards()}
         </Tabs.Item>
         <Tabs.Item
+          active={activeRound === "Divisional"}
           title="Divisional"
           disabled={!roundValidation["Divisional"]}
         >
           {roundValidation["Divisional"] ? renderTeamCards() : renderDisabledRound("Divisional")}
         </Tabs.Item>
         <Tabs.Item
+          active={activeRound === "Conference"}
           title="Conference"
           disabled={!roundValidation["Conference"]}
         >
           {roundValidation["Conference"] ? renderTeamCards() : renderDisabledRound("Conference")}
         </Tabs.Item>
         <Tabs.Item
+          active={activeRound === "Superbowl"}
           title="Superbowl"
           disabled={!roundValidation["Superbowl"]}
         >
