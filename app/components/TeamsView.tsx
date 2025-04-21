@@ -13,6 +13,7 @@ import ClearScoresModal from "../modals/ClearScoresModal";
 import PlayerStatusModal from "../modals/PlayerStatusModal";
 import PlayerReactivationModal from "../modals/PlayerReactivationModal";
 import { calculatePlayerScore, validateForm } from "../utils/scoreCalculator";
+import { fetchPlayerScores, savePlayerScore, bulkSavePlayerScores, convertToApiFormat, deletePlayerScore } from "../services/scoreService";
 
 // Define the playoff rounds
 export const PLAYOFF_ROUNDS = ["Wild Card", "Divisional", "Conference", "Superbowl"];
@@ -37,6 +38,7 @@ export default function TeamsView({
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [fgCount, setFgCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Tab state
   const [activeRound, setActiveRound] = useState<string>("Wild Card");
@@ -52,6 +54,58 @@ export default function TeamsView({
   // Use external state if provided, otherwise use local state
   const playerScores = externalPlayerScores || localPlayerScores;
   const setPlayerScores = externalSetPlayerScores || setLocalPlayerScores;
+
+  // Load player scores from the database on component mount
+  useEffect(() => {
+    const loadPlayerScores = async () => {
+      try {
+        setIsLoading(true);
+        const scores = await fetchPlayerScores();
+        // Only update if we have scores and aren't using external state management
+        if (scores && Object.keys(scores).length > 0 && !externalPlayerScores) {
+          setLocalPlayerScores(scores);
+        }
+      } catch (error) {
+        console.error("Error loading player scores:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (isDraftFinished) {
+      loadPlayerScores();
+    }
+  }, [isDraftFinished, externalPlayerScores]);
+
+  // Save player scores to the database when they change
+  useEffect(() => {
+    // Don't save if we're still loading or draft isn't finished
+    if (isLoading || !isDraftFinished) return;
+
+    // Don't run on initial render when playerScores might be empty
+    if (Object.values(playerScores).every(round => Object.keys(round).length === 0)) return;
+
+    const saveScores = async () => {
+      try {
+        // Convert player scores to API format
+        const apiFormatScores = convertToApiFormat(playerScores);
+
+        // Only save if we have scores to save
+        if (apiFormatScores.length > 0) {
+          await bulkSavePlayerScores(apiFormatScores);
+        }
+      } catch (error) {
+        console.error("Error saving player scores:", error);
+      }
+    };
+
+    // Use a debounce to prevent too many API calls
+    const timeoutId = setTimeout(() => {
+      saveScores();
+    }, 1000);
+
+    return () => clearTimeout(timeoutId);
+  }, [playerScores, isDraftFinished, isLoading]);
 
   // Memoize the getOrderedTeamPicks function to use in dependency arrays
   const getOrderedTeamPicks = useCallback((team: string, draftPicks: any) => {
@@ -163,8 +217,6 @@ export default function TeamsView({
   const handlePlayerEliminated = () => {
     if (!statusPlayer) return;
 
-    const round = statusPlayer.currentRound || activeRound;
-
     // Update this round and cascade to future rounds
     updatePlayerStatus(statusPlayer, true, true);
 
@@ -193,8 +245,32 @@ export default function TeamsView({
   const handlePlayerReactivation = () => {
     if (!reactivationPlayer) return;
 
-    // Reactivate the player by setting isDisabled to false
-    updatePlayerStatus(reactivationPlayer, false, false);
+    const round = reactivationPlayer.currentRound || activeRound;
+
+    // Update UI state by removing the player from the disabled state
+    setPlayerScores((prev) => {
+      // Create a deep copy of the previous state
+      const newState: PlayerScoresByRound = JSON.parse(JSON.stringify(prev));
+
+      // If the player has a record in this round, update it
+      if (newState[round]?.[reactivationPlayer.name]) {
+        // Remove the player's disabled status entry completely
+        delete newState[round][reactivationPlayer.name];
+      }
+
+      return newState;
+    });
+
+    // Delete the player's score entry from the database instead of updating it
+    savePlayerScore(
+      reactivationPlayer.id,
+      round,
+      false,      // isDisabled = false
+      null,       // statusReason = null
+      0,          // score = 0
+      undefined,  // scoreData = undefined
+      true        // NEW: deleteIfReactivated = true
+    ).catch(err => console.error(`Error deleting player score: ${err}`));
 
     setOpenReactivationModal(false);
     setReactivationPlayer(null);
@@ -265,6 +341,33 @@ export default function TeamsView({
 
       return newState;
     });
+
+    // Save this individual player status update to the database
+    savePlayerScore(
+      player.id,
+      round,
+      isDisabled,
+      isDisabled ? (cascade ? "eliminated" : "notPlaying") : null,
+      0,
+      undefined
+    ).catch(err => console.error(`Error saving player status: ${err}`));
+
+    // If cascading, also save future rounds
+    if (cascade && isDisabled && round !== "Wild Card") {
+      const subsequentRounds = PLAYOFF_ROUNDS.slice(PLAYOFF_ROUNDS.indexOf(round) + 1);
+
+      // Save each future round status
+      subsequentRounds.forEach(futureRound => {
+        savePlayerScore(
+          player.id,
+          futureRound,
+          true,
+          "eliminated",
+          0,
+          undefined
+        ).catch(err => console.error(`Error saving cascaded player status: ${err}`));
+      });
+    }
   };
 
   // Handler for confirming clear scores
@@ -272,22 +375,26 @@ export default function TeamsView({
     if (!clearScoresPlayer) return;
     const round = clearScoresPlayer.currentRound || activeRound;
 
+    // Update UI state
     setPlayerScores((prev) => {
       const roundScores = prev[round] || {};
 
+      // Create a new state object with the cleared player removed
+      const newRoundScores = { ...roundScores };
+      // Delete the player entry completely instead of just clearing scores
+      delete newRoundScores[clearScoresPlayer.name];
+
       return {
         ...prev,
-        [round]: {
-          ...roundScores,
-          [clearScoresPlayer.name]: {
-            ...clearScoresPlayer,
-            score: 0,
-            scoreData: undefined,
-            isDisabled: false
-          }
-        }
+        [round]: newRoundScores
       };
     });
+
+    // Delete the player score entry from the database
+    deletePlayerScore(
+      clearScoresPlayer.id,
+      round
+    ).catch(err => console.error(`Error deleting player score: ${err}`));
 
     setOpenClearScoresModal(false);
     setClearScoresPlayer(null);
@@ -393,6 +500,16 @@ export default function TeamsView({
       };
     });
 
+    // Save player score to the database
+    savePlayerScore(
+      selectedPlayer.id,
+      round,
+      false, // Not disabled since we're setting a score
+      null,  // No status reason needed
+      score,
+      { ...scoreForm }
+    ).catch(err => console.error(`Error saving player score: ${err}`));
+
     handleCloseModal();
   };
 
@@ -485,6 +602,15 @@ export default function TeamsView({
     return (
       <div className="flex h-32 items-center justify-center text-gray-500">
         Complete draft first
+      </div>
+    );
+  }
+
+  // If data is still loading, show loading message
+  if (isLoading) {
+    return (
+      <div className="flex h-32 items-center justify-center text-gray-500">
+        Loading player scores...
       </div>
     );
   }

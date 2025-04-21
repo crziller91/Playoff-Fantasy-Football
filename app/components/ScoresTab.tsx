@@ -1,6 +1,8 @@
 import { Card } from "flowbite-react";
 import { DraftPicks, Team, PlayerScoresByRound, Player, ExtendedPlayer } from "../types";
 import { PLAYOFF_ROUNDS } from "./TeamsView";
+import { useEffect, useState } from "react";
+import { fetchPlayerScores } from "../services/scoreService";
 
 interface ScoresTabProps {
   teams: Team[];
@@ -9,14 +11,50 @@ interface ScoresTabProps {
 }
 
 export default function ScoresTab({ teams, draftPicks, playerScores }: ScoresTabProps) {
+  const [isLoading, setIsLoading] = useState(true);
+  const [localPlayerScores, setLocalPlayerScores] = useState<PlayerScoresByRound>({
+    "Wild Card": {},
+    "Divisional": {},
+    "Conference": {},
+    "Superbowl": {}
+  });
+
+  // Use prop playerScores if provided, otherwise use local state
+  const activeScores = Object.keys(playerScores).length > 0 ? playerScores : localPlayerScores;
+
+  // Load player scores from database if not provided via props
+  useEffect(() => {
+    // If scores are already provided via props, don't fetch again
+    if (Object.keys(playerScores).length > 0) {
+      setIsLoading(false);
+      return;
+    }
+
+    const loadScores = async () => {
+      try {
+        setIsLoading(true);
+        const scores = await fetchPlayerScores();
+        if (scores && Object.keys(scores).length > 0) {
+          setLocalPlayerScores(scores);
+        }
+      } catch (error) {
+        console.error("Error loading scores:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadScores();
+  }, [playerScores]);
+
   // Function to get ordered team picks
   const getOrderedTeamPicks = (team: string, draftPicks: any) => {
     const positionOrder = ["QB", "RB", "WR", "TE", "DST", "K"];
     const teamPicks = Object.entries(draftPicks[team] || {})
       .filter(([_, player]) => player !== null)
-      .map(([pick, player]) => ({ 
-        pick: Number(pick), 
-        player: player as Player 
+      .map(([pick, player]) => ({
+        pick: Number(pick),
+        player: player as Player
       }));
 
     return teamPicks.sort((a, b) => {
@@ -39,9 +77,9 @@ export default function ScoresTab({ teams, draftPicks, playerScores }: ScoresTab
         const teamPlayers = getOrderedTeamPicks(team, draftPicks);
         teamPlayers.forEach(({ player }) => {
           // Skip disabled players
-          if (playerScores[round]?.[player.name]?.isDisabled) return;
+          if (activeScores[round]?.[player.name]?.isDisabled) return;
           // Add player's score for this round (or 0 if not played)
-          totalScore += playerScores[round]?.[player.name]?.score || 0;
+          totalScore += activeScores[round]?.[player.name]?.score || 0;
         });
       });
 
@@ -58,20 +96,28 @@ export default function ScoresTab({ teams, draftPicks, playerScores }: ScoresTab
 
     teamPlayers.forEach(({ player }) => {
       // Skip disabled players
-      if (playerScores[round]?.[player.name]?.isDisabled) return;
+      if (activeScores[round]?.[player.name]?.isDisabled) return;
       // Add player's score for this round
-      roundScore += playerScores[round]?.[player.name]?.score || 0;
+      roundScore += activeScores[round]?.[player.name]?.score || 0;
     });
 
     return roundScore;
   };
 
   const overallScores = calculateOverallTeamScores();
-  
+
   // Sort teams by overall score (highest first)
   const sortedTeams = [...teams].sort(
     (a, b) => (overallScores[b] || 0) - (overallScores[a] || 0)
   );
+
+  if (isLoading) {
+    return (
+      <div className="flex h-32 items-center justify-center text-gray-500">
+        Loading scores...
+      </div>
+    );
+  }
 
   return (
     <div className="mt-4">

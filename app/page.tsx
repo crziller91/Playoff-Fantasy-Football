@@ -15,13 +15,13 @@ export default function Page() {
     teamBudgets,
     loading,
     error,
+    isDraftFinished,
     setDraftPicks,
     setAvailablePlayers,
     setTeams,
     setSearchTerms,
     setTeamBudgets,
     handleResetBoard,
-    isDraftFinished,
     finishDraft,
   } = useDraft();
 

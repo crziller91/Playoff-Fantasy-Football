@@ -124,3 +124,34 @@ export interface ScoresTabProps {
   draftPicks: DraftPicks;
   playerScores: PlayerScoresByRound;
 }
+
+export interface PlayerScoreRequest {
+  playerId: number;
+  round: string;
+  isDisabled: boolean;
+  statusReason: "eliminated" | "notPlaying" | null;
+  score: number;
+  scoreData?: any;
+}
+
+export interface BulkPlayerScoreRequest {
+  playerScores: PlayerScoreRequest[];
+}
+
+export interface PlayerScoreResponse {
+  id: number;
+  playerId: number;
+  round: string;
+  isDisabled: boolean;
+  statusReason: string | null;
+  score: number;
+  scoreData: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PlayerScoresByRoundResponse {
+  [round: string]: {
+    [playerName: string]: ExtendedPlayer;
+  };
+}

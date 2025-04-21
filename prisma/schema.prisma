@@ -14,17 +14,19 @@ datasource db {
 }
 
 model Player {
-  id        Int      @id
-  name      String
-  position  String
-  teamName  String?
+  id         Int      @id
+  name       String
+  position   String
+  teamName   String?
   draftPicks DraftPick[]
+  // Add relation to PlayerScore
+  playerScores PlayerScore[]
 }
 
 model Team {
-  id       Int      @id @default(autoincrement())
-  name     String
-  budget   Int      @default(200)  // Added budget field with default value of 200
+  id         Int      @id @default(autoincrement())
+  name       String
+  budget     Int      @default(200)  // Added budget field with default value of 200
   draftPicks DraftPick[]
 }
 
@@ -41,6 +43,22 @@ model DraftPick {
 }
 
 model DraftStatus {
-  id            Int     @id @default(autoincrement())
+  id              Int     @id @default(autoincrement())
   isDraftFinished Boolean @default(false)
+}
+
+// New model for player scores
+model PlayerScore {
+  id           Int      @id @default(autoincrement())
+  playerId     Int
+  player       Player   @relation(fields: [playerId], references: [id])
+  round        String   // "Wild Card", "Divisional", "Conference", "Superbowl"
+  isDisabled   Boolean  @default(false)
+  statusReason String?  // "eliminated", "notPlaying", or null
+  score        Int      @default(0)
+  scoreData    String?  // JSON data of all player stats
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([playerId, round])
 }

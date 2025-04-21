@@ -1,9 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { DraftPicks, Player, Team, TeamWithBudget } from "../types";
+import { DraftPicks, Player, Team, TeamWithBudget, PlayerScoresByRound } from "../types";
 import { DraftManager } from "../domain/DraftManager";
-import { fetchPlayers, fetchDraftPicks, fetchTeams, resetDraftPicks, getDraftStatus, setDraftStatus } from "../services/draftService";
+import {
+  fetchPlayers,
+  fetchDraftPicks,
+  fetchTeams,
+  resetDraftPicks,
+  getDraftStatus,
+  setDraftStatus
+} from "../services/draftService";
+import { usePlayerScores } from "./usePlayerScores";
 
 export const useDraft = () => {
   const [teams, setTeams] = useState<Team[]>([]);
@@ -18,6 +26,15 @@ export const useDraft = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isDraftFinished, setIsDraftFinished] = useState(false);
+
+  // Use the player scores hook for managing scores
+  const {
+    playerScores,
+    setPlayerScores,
+    isLoading: loadingScores,
+    error: scoresError,
+    resetScores
+  } = usePlayerScores(isDraftFinished);
 
   useEffect(() => {
     const loadData = async () => {
@@ -74,6 +91,9 @@ export const useDraft = () => {
       setDraftPicks(DraftManager.initializeDraftPicks(teamNames));
       setSearchTerms({});
       setIsDraftFinished(false);
+
+      // Reset player scores
+      resetScores();
     } catch (err) {
       console.error("Failed to reset board:", err);
       alert("Failed to reset board. Please try again.");
@@ -89,6 +109,12 @@ export const useDraft = () => {
     }
   };
 
+  // Combine any errors from both hooks
+  const combinedError = error || scoresError || null;
+
+  // Consider app loading if either data or scores are loading
+  const isLoading = loading || (isDraftFinished && loadingScores);
+
   return {
     teams,
     picks: DraftManager.PICKS,
@@ -96,9 +122,11 @@ export const useDraft = () => {
     draftPicks,
     searchTerms,
     teamBudgets,
-    loading,
-    error,
+    loading: isLoading,
+    error: combinedError,
     isDraftFinished,
+    playerScores,
+    setPlayerScores,
     finishDraft,
     setDraftPicks,
     setAvailablePlayers,

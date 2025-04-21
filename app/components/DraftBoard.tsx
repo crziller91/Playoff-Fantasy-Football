@@ -2,13 +2,14 @@
 
 import { Flowbite, TabItem, Tabs } from "flowbite-react";
 import { DraftPicks, Player, Team, PlayerScoresByRound } from "../types";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { HiUserCircle } from "react-icons/hi";
 import { MdDashboard } from "react-icons/md";
 import DraftDashboard from "./DraftDashboard";
 import TeamsView, { PLAYOFF_ROUNDS } from "./TeamsView";
 import { MdScoreboard } from "react-icons/md";
 import ScoresTab from "./ScoresTab";
+import { fetchPlayerScores } from "../services/scoreService";
 
 interface DraftBoardProps {
   teams: Team[];
@@ -25,6 +26,8 @@ interface DraftBoardProps {
   onResetBoard: () => void;
   isDraftFinished: boolean;
   finishDraft: () => void;
+  playerScores?: PlayerScoresByRound;
+  setPlayerScores?: React.Dispatch<React.SetStateAction<PlayerScoresByRound>>;
 }
 
 export default function DraftBoard({
@@ -44,7 +47,8 @@ export default function DraftBoard({
   finishDraft,
 }: DraftBoardProps) {
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
-  
+  const [isLoading, setIsLoading] = useState(false);
+
   // Initialize playerScores state with all playoff rounds
   const [playerScores, setPlayerScores] = useState<PlayerScoresByRound>({
     "Wild Card": {},
@@ -52,6 +56,27 @@ export default function DraftBoard({
     "Conference": {},
     "Superbowl": {}
   });
+
+  // Load player scores from the database when draft is finished
+  useEffect(() => {
+    if (isDraftFinished) {
+      const loadScores = async () => {
+        try {
+          setIsLoading(true);
+          const scores = await fetchPlayerScores();
+          if (scores && Object.keys(scores).length > 0) {
+            setPlayerScores(scores);
+          }
+        } catch (error) {
+          console.error("Error loading player scores:", error);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      loadScores();
+    }
+  }, [isDraftFinished]);
 
   // Check if all dropdowns are filled
   const isDraftComplete = useMemo(() => {
@@ -62,6 +87,13 @@ export default function DraftBoard({
 
   const handleReset = () => {
     onResetBoard();
+    // Clear scores when resetting
+    setPlayerScores({
+      "Wild Card": {},
+      "Divisional": {},
+      "Conference": {},
+      "Superbowl": {}
+    });
   };
 
   return (
@@ -90,21 +122,33 @@ export default function DraftBoard({
                 />
               </TabItem>
               <TabItem title="Teams" icon={HiUserCircle}>
-                <TeamsView
-                  teams={teams}
-                  draftPicks={draftPicks}
-                  isDraftFinished={isDraftFinished}
-                  playerScores={playerScores}
-                  setPlayerScores={setPlayerScores}
-                />
-              </TabItem>
-              <TabItem title="Scores" icon={MdScoreboard}>
-              {isDraftFinished ? (
-                  <ScoresTab
+                {isLoading ? (
+                  <div className="flex h-32 items-center justify-center text-gray-500">
+                    Loading player scores...
+                  </div>
+                ) : (
+                  <TeamsView
                     teams={teams}
                     draftPicks={draftPicks}
+                    isDraftFinished={isDraftFinished}
                     playerScores={playerScores}
+                    setPlayerScores={setPlayerScores}
                   />
+                )}
+              </TabItem>
+              <TabItem title="Scores" icon={MdScoreboard}>
+                {isDraftFinished ? (
+                  isLoading ? (
+                    <div className="flex h-32 items-center justify-center text-gray-500">
+                      Loading scores...
+                    </div>
+                  ) : (
+                    <ScoresTab
+                      teams={teams}
+                      draftPicks={draftPicks}
+                      playerScores={playerScores}
+                    />
+                  )
                 ) : (
                   <div className="flex h-32 items-center justify-center text-gray-500">
                     Complete draft first
