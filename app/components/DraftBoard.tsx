@@ -6,11 +6,12 @@ import { useState, useRef, useMemo, useEffect } from "react";
 import { HiUserCircle } from "react-icons/hi";
 import { MdDashboard } from "react-icons/md";
 import DraftDashboard from "./DraftDashboard";
-import TeamsView, { PLAYOFF_ROUNDS } from "./TeamsView";
+import TeamsView from "./TeamsView";
 import { MdScoreboard } from "react-icons/md";
 import ScoresTab from "./ScoresTab";
 import { fetchPlayerScores } from "../services/scoreService";
 import { useRouter, useSearchParams } from "next/navigation";
+import { PLAYOFF_ROUNDS } from "../constants/playoffs";
 
 // Define constants outside the component
 const TAB_NAMES = ["draft", "teams", "scores"] as const;

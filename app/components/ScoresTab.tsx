@@ -1,8 +1,9 @@
 import { Card } from "flowbite-react";
-import { DraftPicks, Team, PlayerScoresByRound, Player, ExtendedPlayer } from "../types";
-import { PLAYOFF_ROUNDS } from "./TeamsView";
+import { DraftPicks, Team, PlayerScoresByRound, ExtendedPlayer } from "../types";
+import { PLAYOFF_ROUNDS } from "../constants/playoffs";
 import { useEffect, useState } from "react";
 import { fetchPlayerScores } from "../services/scoreService";
+import { getOrderedTeamPicks } from "../utils/teamUtils";
 
 interface ScoresTabProps {
   teams: Team[];
@@ -47,22 +48,19 @@ export default function ScoresTab({ teams, draftPicks, playerScores }: ScoresTab
     loadScores();
   }, [playerScores]);
 
-  // Function to get ordered team picks
-  const getOrderedTeamPicks = (team: string, draftPicks: any) => {
-    const positionOrder = ["QB", "RB", "WR", "TE", "DST", "K"];
-    const teamPicks = Object.entries(draftPicks[team] || {})
-      .filter(([_, player]) => player !== null)
-      .map(([pick, player]) => ({
-        pick: Number(pick),
-        player: player as Player
-      }));
+  // Calculate round scores for a team
+  const calculateRoundScore = (team: string, round: string) => {
+    let roundScore = 0;
+    const teamPlayers = getOrderedTeamPicks(team, draftPicks);
 
-    return teamPicks.sort((a, b) => {
-      const posA = positionOrder.indexOf(a.player.position);
-      const posB = positionOrder.indexOf(b.player.position);
-      if (posA !== posB) return posA - posB;
-      return a.pick - b.pick;
+    teamPlayers.forEach(({ player }) => {
+      // Skip disabled players
+      if (activeScores[round]?.[player.name]?.isDisabled) return;
+      // Add player's score for this round
+      roundScore += activeScores[round]?.[player.name]?.score || 0;
     });
+
+    return roundScore;
   };
 
   // Calculate overall team scores across all rounds
@@ -87,21 +85,6 @@ export default function ScoresTab({ teams, draftPicks, playerScores }: ScoresTab
     });
 
     return overallScores;
-  };
-
-  // Calculate round scores for a team
-  const calculateRoundScore = (team: string, round: string) => {
-    let roundScore = 0;
-    const teamPlayers = getOrderedTeamPicks(team, draftPicks);
-
-    teamPlayers.forEach(({ player }) => {
-      // Skip disabled players
-      if (activeScores[round]?.[player.name]?.isDisabled) return;
-      // Add player's score for this round
-      roundScore += activeScores[round]?.[player.name]?.score || 0;
-    });
-
-    return roundScore;
   };
 
   const overallScores = calculateOverallTeamScores();
