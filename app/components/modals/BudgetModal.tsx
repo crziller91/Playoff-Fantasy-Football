@@ -1,6 +1,6 @@
 import { Modal, Button, Label, TextInput, Alert } from "flowbite-react";
 import { useState, useEffect } from "react";
-import { BudgetModalProps } from "../types";
+import { BudgetModalProps } from "../../types";
 import { HiExclamation, HiX } from "react-icons/hi";
 
 export default function BudgetModal({

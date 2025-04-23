@@ -1,5 +1,5 @@
 import { Table } from "flowbite-react";
-import { legendColors } from "../data/positionColors";
+import { legendColors } from "../../data/positionColors";
 
 export default function PositionLegend() {
   const legend = Object.keys(legendColors) as (keyof typeof legendColors)[];

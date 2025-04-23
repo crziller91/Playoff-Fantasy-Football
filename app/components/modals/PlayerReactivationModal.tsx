@@ -1,5 +1,5 @@
 import { Modal, Button } from "flowbite-react";
-import { ExtendedPlayer } from "../types";
+import { ExtendedPlayer } from "../../types";
 import { HiOutlineExclamationCircle } from "react-icons/hi";
 
 interface PlayerReactivationModalProps {

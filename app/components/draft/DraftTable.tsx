@@ -2,11 +2,11 @@
 
 import { Table } from "flowbite-react";
 import { useState } from "react";
-import { DraftPicks, Player, Team } from "../types";
-import TeamHeader from "./TeamHeader";
-import PlayerDropdown from "./PlayerDropdown";
-import { DraftManager } from "../domain/DraftManager";
-import { saveDraftPick } from "../services/draftService";
+import { DraftPicks, Player, Team } from "../../types";
+import TeamHeader from "../layout/TeamHeader";
+import PlayerDropdown from "../players/PlayerDropdown";
+import { DraftManager } from "../../domain/DraftManager";
+import { saveDraftPick } from "../../services/draftService";
 import BudgetModal from "../modals/BudgetModal";
 
 interface DraftTableProps {
@@ -47,10 +47,10 @@ export default function DraftTable({
     if (DraftManager.canSelectPlayer(team, draftPicks, picks.length)) {
       // Close the dropdown immediately
       setOpenDropdown(null);
-      
+
       // Reset any previous budget errors
       setBudgetError("");
-      
+
       // Then open the budget modal
       setCurrentTeam(team);
       setCurrentPick(pick);
@@ -61,12 +61,12 @@ export default function DraftTable({
 
   const handleBudgetConfirm = async (cost: number) => {
     if (!selectedPlayerForBudget) return;
-    
+
     try {
       const team = currentTeam;
       const pick = currentPick;
       const player = selectedPlayerForBudget;
-      
+
       // Check if team has enough budget
       const currentBudget = teamBudgets.get(team) || 0;
       if (cost > currentBudget) {
@@ -74,22 +74,22 @@ export default function DraftTable({
         setBudgetError(`Insufficient budget! ${team} only has $${currentBudget} remaining.`);
         return;
       }
-      
+
       const sanitizedKey = `${team}-${pick}`.replace(/[^a-zA-Z0-9-]/g, "-");
-      
+
       // Update UI state
       setDraftPicks({ ...draftPicks, [team]: { ...draftPicks[team], [pick]: player } });
       setAvailablePlayers(availablePlayers.filter((p) => p.id !== player.id));
       setSearchTerms({ ...searchTerms, [sanitizedKey]: "" });
-      
+
       // Update budget in UI
       const newBudgets = new Map(teamBudgets);
       newBudgets.set(team, currentBudget - cost);
       setTeamBudgets(newBudgets);
-      
+
       // Save to backend
       await saveDraftPick(team, pick, player.id, cost);
-      
+
       // Close dropdowns and modal
       setOpenDropdown(null);
       setBudgetModalOpen(false);
@@ -114,11 +114,11 @@ export default function DraftTable({
       setDraftPicks({ ...draftPicks, [team]: { ...draftPicks[team], [pick]: null } });
       setAvailablePlayers([...availablePlayers, removedPlayer].sort((a, b) => a.id - b.id));
       setOpenDropdown(null);
-      
+
       try {
         // Remove the pick and refund the cost
         await saveDraftPick(team, pick, null);
-        
+
         // Fetch updated team budgets (the API will handle refunding)
         const response = await fetch("/api/teams");
         if (response.ok) {

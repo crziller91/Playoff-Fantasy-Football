@@ -1,8 +1,8 @@
 import { Card, Button, Badge } from "flowbite-react"; // Added Badge import
-import { TeamCardProps, ExtendedPlayer } from "../types";
-import { getOrderedTeamPicks, getTeamScore } from "../utils/scoreCalculator";
+import { TeamCardProps, ExtendedPlayer } from "../../types";
+import { getOrderedTeamPicks, getTeamScore } from "../../utils/scoreCalculator";
 import { HiX } from "react-icons/hi";
-import { positionColors } from "../data/positionColors";
+import { positionColors } from "../../data/positionColors";
 
 // Map position to badge color
 const positionBadgeColors: Record<string, "info" | "gray" | "failure" | "success" | "warning" | "indigo" | "purple" | "pink"> = {
@@ -26,7 +26,7 @@ export default function TeamCard({
     // Helper function to safely check if a player's score is greater than 0
     const hasPositiveScore = (playerName: string): boolean => {
         if (!playerScores || !playerScores[playerName]) return false;
-        
+
         const score = playerScores[playerName].score;
         return typeof score === 'number' && score > 0;
     };
@@ -91,7 +91,7 @@ export default function TeamCard({
                                             </p>
                                         )}
                                         {showScore && (
-                                            <p className="text-xs text-green-600 font-semibold">
+                                            <p className="text-xs font-semibold text-green-600">
                                                 {playerScores[player.name]?.score} pts
                                             </p>
                                         )}
@@ -122,7 +122,7 @@ export default function TeamCard({
                                                 color={isDisabled ? "failure" : "light"}
                                                 onClick={() => onTogglePlayerDisabled(player as ExtendedPlayer)}
                                             >
-                                                <HiX className="h-4 w-4" />
+                                                <HiX className="size-4" />
                                             </Button>
                                         )}
                                     </div>

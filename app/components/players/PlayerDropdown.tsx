@@ -1,8 +1,8 @@
 "use client";
 
 import { Button } from "flowbite-react";
-import { Player, Team } from "../types";
-import { positionColors } from "../data/positionColors";
+import { Player, Team } from "../../types";
+import { positionColors } from "../../data/positionColors";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 

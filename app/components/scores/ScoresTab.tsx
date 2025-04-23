@@ -1,9 +1,9 @@
 import { Card } from "flowbite-react";
-import { DraftPicks, Team, PlayerScoresByRound, ExtendedPlayer } from "../types";
-import { PLAYOFF_ROUNDS } from "../constants/playoffs";
+import { DraftPicks, Team, PlayerScoresByRound, ExtendedPlayer } from "../../types";
+import { PLAYOFF_ROUNDS } from "../../constants/playoffs";
 import { useEffect, useState } from "react";
-import { fetchPlayerScores } from "../services/scoreService";
-import { getOrderedTeamPicks } from "../utils/teamUtils";
+import { fetchPlayerScores } from "../../services/scoreService";
+import { getOrderedTeamPicks } from "../../utils/teamUtils";
 
 interface ScoresTabProps {
   teams: Team[];
@@ -104,7 +104,7 @@ export default function ScoresTab({ teams, draftPicks, playerScores }: ScoresTab
 
   return (
     <div className="mt-4">
-      <h2 className="mb-4 text-xl font-bold text-center">Overall Standings</h2>
+      <h2 className="mb-4 text-center text-xl font-bold">Overall Standings</h2>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {sortedTeams.map((team) => (
           <Card key={`overall-${team}`} className="w-full">
@@ -124,7 +124,7 @@ export default function ScoresTab({ teams, draftPicks, playerScores }: ScoresTab
                 return (
                   <div
                     key={`${team}-${round}`}
-                    className="flex justify-between items-center"
+                    className="flex items-center justify-between"
                   >
                     <span className="text-sm text-gray-700">{round}:</span>
                     <span className="text-sm font-semibold">

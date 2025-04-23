@@ -3,7 +3,7 @@ import ScoreModal from "../modals/ScoreModal";
 import ClearScoresModal from "../modals/ClearScoresModal";
 import PlayerStatusModal from "../modals/PlayerStatusModal";
 import PlayerReactivationModal from "../modals/PlayerReactivationModal";
-import { ExtendedPlayer, ScoreForm, FormErrors } from "../types";
+import { ExtendedPlayer, ScoreForm, FormErrors } from "../../types";
 
 interface PlayerModalsProps {
     modalsState: {

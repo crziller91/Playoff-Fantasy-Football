@@ -1,7 +1,7 @@
 import { Table, Dropdown } from "flowbite-react";
-import { Player } from "../types";
+import { Player } from "../../types";
 import { useState, useRef, useEffect } from "react";
-import { legendColors } from "../data/positionColors";
+import { legendColors } from "../../data/positionColors";
 import { HiFilter } from "react-icons/hi";
 
 interface AvailablePlayersProps {
@@ -35,12 +35,12 @@ export default function AvailablePlayers({ availablePlayers }: AvailablePlayersP
     }, [positionFilter]);
 
     return (
-        <div className="w-full h-full rounded-lg border-0 bg-white shadow-xl">
+        <div className="size-full rounded-lg border-0 bg-white shadow-xl">
             <Table className="w-full rounded-lg border-0 bg-white shadow-xl">
                 <Table.Head>
                     <Table.HeadCell
                         colSpan={8}
-                        className="bg-gray-200 p-2 flex justify-between items-center text-sm"
+                        className="flex items-center justify-between bg-gray-200 p-2 text-sm"
                     >
                         <div className="flex-1">
                             <span className="pl-4">Available Players</span>
@@ -70,7 +70,7 @@ export default function AvailablePlayers({ availablePlayers }: AvailablePlayersP
                                         className="flex items-center font-normal"
                                     >
                                         <div
-                                            className="w-3 h-3 rounded-full mr-2"
+                                            className="mr-2 size-3 rounded-full"
                                             style={{ backgroundColor: legendColors[pos] }}
                                         ></div>
                                         {pos}
@@ -115,10 +115,10 @@ export default function AvailablePlayers({ availablePlayers }: AvailablePlayersP
                                             key={player.id}
                                             className={`w-36 shrink-0 border-r ${index === 0 ? 'bg-yellow-200' : ''}`}
                                         >
-                                            <Table.Cell className={`flex items-center justify-between p-2 text-sm ${index === 0 ? 'text-black font-bold' : ''}`}>
+                                            <Table.Cell className={`flex items-center justify-between p-2 text-sm ${index === 0 ? 'font-bold text-black' : ''}`}>
                                                 <span className="truncate">{player.name}</span>
                                                 <span
-                                                    className={`ml-2 ${index === 0 ? 'text-black font-bold' : 'text-gray-500'}`}
+                                                    className={`ml-2 ${index === 0 ? 'font-bold text-black' : 'text-gray-500'}`}
                                                     style={{ color: index === 0 ? 'black' : legendColors[player.position] }}
                                                 >
                                                     {player.position}

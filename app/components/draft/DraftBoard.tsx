@@ -1,17 +1,17 @@
 "use client";
 
 import { Flowbite, TabItem, Tabs, type TabsRef } from "flowbite-react";
-import { DraftPicks, Player, Team, PlayerScoresByRound } from "../types";
+import { DraftPicks, Player, Team, PlayerScoresByRound } from "../../types";
 import { useState, useRef, useMemo, useEffect } from "react";
 import { HiUserCircle } from "react-icons/hi";
 import { MdDashboard } from "react-icons/md";
 import DraftDashboard from "./DraftDashboard";
-import TeamsView from "./TeamsView";
+import TeamsView from "../teams/TeamsView";
 import { MdScoreboard } from "react-icons/md";
-import ScoresTab from "./ScoresTab";
-import { fetchPlayerScores } from "../services/scoreService";
+import ScoresTab from "../scores/ScoresTab";
+import { fetchPlayerScores } from "../../services/scoreService";
 import { useRouter, useSearchParams } from "next/navigation";
-import { PLAYOFF_ROUNDS } from "../constants/playoffs";
+import { PLAYOFF_ROUNDS } from "../../constants/playoffs";
 
 // Define constants outside the component
 const TAB_NAMES = ["draft", "teams", "scores"] as const;

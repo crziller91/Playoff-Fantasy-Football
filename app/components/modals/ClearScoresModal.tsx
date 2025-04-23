@@ -1,24 +1,20 @@
 import { Modal, Button } from "flowbite-react";
-import { ExtendedPlayer } from "../types";
+import { ExtendedPlayer } from "../../types";
 import { HiOutlineExclamationCircle } from "react-icons/hi";
 
-interface PlayerStatusModalProps {
+interface ClearScoresModalProps {
     isOpen: boolean;
     player: ExtendedPlayer | null;
-    round: string;
     onClose: () => void;
-    onConfirmEliminated: () => void;
-    onConfirmNotPlaying: () => void;
+    onConfirm: () => void;
 }
 
-export default function PlayerStatusModal({
+export default function ClearScoresModal({
     isOpen,
     player,
-    round,
     onClose,
-    onConfirmEliminated,
-    onConfirmNotPlaying,
-}: PlayerStatusModalProps) {
+    onConfirm,
+}: ClearScoresModalProps) {
     if (!player) return null;
 
     return (
@@ -28,17 +24,14 @@ export default function PlayerStatusModal({
                 <div className="text-center">
                     <HiOutlineExclamationCircle className="mx-auto mb-4 size-14 text-gray-400 dark:text-gray-200" />
                     <h3 className="mb-5 text-lg font-normal text-gray-500 dark:text-gray-400">
-                        What is {player.name}&apos;s status for the {round} round?
+                        Are you sure you want to clear the scores for {player.name}?
                     </h3>
-                    <div className="flex flex-col space-y-3">
-                        <Button color="failure" onClick={onConfirmEliminated}>
-                            Eliminated from playoffs
-                        </Button>
-                        <Button color="warning" onClick={onConfirmNotPlaying}>
-                            Not playing this round only (injury/inactive)
+                    <div className="flex justify-center gap-4">
+                        <Button color="failure" onClick={onConfirm}>
+                            Yes, clear scores
                         </Button>
                         <Button color="gray" onClick={onClose}>
-                            Cancel
+                            No, cancel
                         </Button>
                     </div>
                 </div>

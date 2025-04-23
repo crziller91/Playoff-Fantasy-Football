@@ -1,11 +1,11 @@
 import { Tabs, type TabsRef } from "flowbite-react";
 import { useEffect, useRef } from "react";
-import { TeamsViewProps } from "../types";
-import { PLAYOFF_ROUNDS } from "../constants/playoffs";
-import { useTeamsViewState } from "../hooks/useTeamsViewState";
-import { usePlayerModals } from "../hooks/usePlayerModals";
-import PlayerModals from "./PlayerModals";
-import RoundDisabledMessage from "./RoundDisabledMessage";
+import { TeamsViewProps } from "../../types";
+import { PLAYOFF_ROUNDS } from "../../constants/playoffs";
+import { useTeamsViewState } from "../../hooks/useTeamsViewState";
+import { usePlayerModals } from "../../hooks/usePlayerModals";
+import PlayerModals from "../players/PlayerModals";
+import RoundDisabledMessage from "../ui/RoundDisabledMessage";
 import TeamCardList from "./TeamCardList";
 
 export default function TeamsView({

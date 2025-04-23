@@ -1,7 +1,7 @@
 import React from "react";
 import TeamCard from "./TeamCard";
-import { Team, DraftPicks, ExtendedPlayer } from "../types";
-import { calculateTeamRoundScore } from "../utils/teamUtils";
+import { Team, DraftPicks, ExtendedPlayer } from "../../types";
+import { calculateTeamRoundScore } from "../../utils/teamUtils";
 
 interface TeamCardListProps {
     teams: Team[];

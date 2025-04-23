@@ -3,8 +3,8 @@
 import { Table, Button } from "flowbite-react";
 import { useState, useRef, useEffect, useMemo, useCallback } from "react"; // Add useCallback
 import { createPortal } from "react-dom";
-import { Player } from "../types";
-import { positionColors } from "../data/positionColors";
+import { Player } from "../../types";
+import { positionColors } from "../../data/positionColors";
 
 interface SelectedPlayerTableProps {
     availablePlayers: Player[];

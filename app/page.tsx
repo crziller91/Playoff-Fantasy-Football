@@ -1,8 +1,8 @@
 "use client";
 
 import { Flowbite, Spinner } from "flowbite-react";
-import DraftBoard from "./components/DraftBoard";
-import NavigationBar from "./components/Navbar";
+import DraftBoard from "./components/draft/DraftBoard";
+import NavigationBar from "./components/layout/Navbar";
 import { useDraft } from "./hooks/useDraft";
 
 export default function Page() {

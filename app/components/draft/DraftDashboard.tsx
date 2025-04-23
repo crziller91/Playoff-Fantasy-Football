@@ -1,9 +1,9 @@
 import { Button } from "flowbite-react";
 import DraftTable from "./DraftTable";
-import { DraftPicks, Player, Team } from "../types";
+import { DraftPicks, Player, Team } from "../../types";
 import PositionLegend from "./PositionLegend";
 import AvailablePlayers from "./AvailablePlayers";
-import SelectedPlayerTable from "./SelectedPlayerTable";
+import SelectedPlayerTable from "../players/SelectedPlayerTable";
 
 interface DraftDashboardProps {
     teams: Team[];

@@ -1,20 +1,24 @@
 import { Modal, Button } from "flowbite-react";
-import { ExtendedPlayer } from "../types";
+import { ExtendedPlayer } from "../../types";
 import { HiOutlineExclamationCircle } from "react-icons/hi";
 
-interface ClearScoresModalProps {
+interface PlayerStatusModalProps {
     isOpen: boolean;
     player: ExtendedPlayer | null;
+    round: string;
     onClose: () => void;
-    onConfirm: () => void;
+    onConfirmEliminated: () => void;
+    onConfirmNotPlaying: () => void;
 }
 
-export default function ClearScoresModal({
+export default function PlayerStatusModal({
     isOpen,
     player,
+    round,
     onClose,
-    onConfirm,
-}: ClearScoresModalProps) {
+    onConfirmEliminated,
+    onConfirmNotPlaying,
+}: PlayerStatusModalProps) {
     if (!player) return null;
 
     return (
@@ -24,14 +28,17 @@ export default function ClearScoresModal({
                 <div className="text-center">
                     <HiOutlineExclamationCircle className="mx-auto mb-4 size-14 text-gray-400 dark:text-gray-200" />
                     <h3 className="mb-5 text-lg font-normal text-gray-500 dark:text-gray-400">
-                        Are you sure you want to clear the scores for {player.name}?
+                        What is {player.name}&apos;s status for the {round} round?
                     </h3>
-                    <div className="flex justify-center gap-4">
-                        <Button color="failure" onClick={onConfirm}>
-                            Yes, clear scores
+                    <div className="flex flex-col space-y-3">
+                        <Button color="failure" onClick={onConfirmEliminated}>
+                            Eliminated from playoffs
+                        </Button>
+                        <Button color="warning" onClick={onConfirmNotPlaying}>
+                            Not playing this round only (injury/inactive)
                         </Button>
                         <Button color="gray" onClick={onClose}>
-                            No, cancel
+                            Cancel
                         </Button>
                     </div>
                 </div>

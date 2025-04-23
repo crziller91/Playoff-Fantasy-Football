@@ -1,5 +1,5 @@
 import { Modal, Button, Label, TextInput } from "flowbite-react";
-import { ScoreForm, FormErrors, ScoreModalProps } from "../types/index";
+import { ScoreForm, FormErrors, ScoreModalProps } from "../../types";
 
 export default function ScoreModal({
     isOpen,
