@@ -104,6 +104,7 @@ export interface TeamCardProps {
   onEditScore: (player: ExtendedPlayer) => void;
   onTogglePlayerDisabled: (player: ExtendedPlayer, isClearScores?: boolean) => void;
   round?: string; // Optional property to indicate which playoff round is being displayed
+  ranking?: number; // Optional property to indicate team ranking for medal display
 }
 
 export interface ScoreModalProps {

@@ -33,8 +33,8 @@ export default function TeamCardList({
     const sortedTeams = [...teams].sort((a, b) => teamScores[b] - teamScores[a]);
 
     return (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {sortedTeams.map((team) => (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            {sortedTeams.map((team, index) => (
                 <TeamCard
                     key={`${team}-${round}`}
                     team={team}
@@ -43,6 +43,7 @@ export default function TeamCardList({
                     onEditScore={onEditScore}
                     onTogglePlayerDisabled={onTogglePlayerDisabled}
                     round={round}
+                    ranking={index} // Pass the ranking to display medals
                 />
             ))}
         </div>

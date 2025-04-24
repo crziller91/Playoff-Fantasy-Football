@@ -14,14 +14,22 @@ const positionBadgeColors: Record<string, "info" | "gray" | "failure" | "success
     DST: "gray"       // Dark
 };
 
+// Array of rank labels with medals
+const rankLabels = [
+    "🥇",   // 0 - Gold medal
+    "🥈",  // 1 - Silver medal
+    "🥉",   // 2 - Bronze medal
+];
+
 export default function TeamCard({
     team,
     draftPicks,
     playerScores,
     onEditScore,
     onTogglePlayerDisabled,
-    round // Optional prop to display which round we're showing
-}: TeamCardProps & { round?: string }) {
+    round, // Optional prop to display which round we're showing
+    ranking // New prop for team ranking
+}: TeamCardProps & { round?: string; ranking?: number }) {
 
     // Helper function to safely check if a player's score is greater than 0
     const hasPositiveScore = (playerName: string): boolean => {
@@ -37,12 +45,12 @@ export default function TeamCard({
                 <div>
                     <h5 className="text-xl font-bold leading-none text-gray-900 dark:text-white">
                         {team}
+                        {ranking !== undefined && ranking < 3 && (
+                            <span>
+                                {rankLabels[ranking]}
+                            </span>
+                        )}
                     </h5>
-                    {round && (
-                        <span className="text-sm text-gray-500">
-                            {round} Round
-                        </span>
-                    )}
                 </div>
                 <Badge size="lg" color="gray">{getTeamScore(team, draftPicks, playerScores)} pts</Badge>
             </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ExtendedPlayer, ScoreForm, FormErrors, PlayerScoresByRound } from '../types';
 import { validateForm, calculatePlayerScore } from '../utils/scoreCalculator';
 import { savePlayerScore, deletePlayerScore } from '../services/scoreService';
@@ -20,9 +20,11 @@ export function usePlayerModals({
 
     // Score form state
     const [scoreForm, setScoreForm] = useState<ScoreForm>({});
+    const [initialScoreForm, setInitialScoreForm] = useState<ScoreForm>({}); // Track initial state
     const [formErrors, setFormErrors] = useState<FormErrors>({});
     const [submitAttempted, setSubmitAttempted] = useState(false);
     const [fgCount, setFgCount] = useState(0);
+    const [initialFgCount, setInitialFgCount] = useState(0); // Track initial state
 
     // Modal visibility states
     const [openScoreModal, setOpenScoreModal] = useState(false);
@@ -35,12 +37,54 @@ export function usePlayerModals({
     const [statusPlayer, setStatusPlayer] = useState<ExtendedPlayer | null>(null);
     const [reactivationPlayer, setReactivationPlayer] = useState<ExtendedPlayer | null>(null);
 
+    // Helper function to check if scores have been modified
+    const hasScoresChanged = () => {
+        // Compare each field in current form with initial form
+        const formKeys = Array.from(new Set([
+            ...Object.keys(scoreForm),
+            ...Object.keys(initialScoreForm)
+        ]));
+
+        for (let i = 0; i < formKeys.length; i++) {
+            const key = formKeys[i];
+            // Skip the fgYardages array - we'll check that separately
+            if (key === 'fgYardages') continue;
+
+            if (scoreForm[key as keyof ScoreForm] !== initialScoreForm[key as keyof ScoreForm]) {
+                return true;
+            }
+        }
+
+        // Check if fg count changed
+        if (fgCount !== initialFgCount) return true;
+
+        // Check if any yardage values changed
+        if (scoreForm.fgYardages && initialScoreForm.fgYardages) {
+            if (scoreForm.fgYardages.length !== initialScoreForm.fgYardages.length) return true;
+
+            for (let i = 0; i < scoreForm.fgYardages.length; i++) {
+                if (scoreForm.fgYardages[i] !== initialScoreForm.fgYardages[i]) return true;
+            }
+        } else if (scoreForm.fgYardages || initialScoreForm.fgYardages) {
+            // One has yardages and the other doesn't
+            return true;
+        }
+
+        return false;
+    };
+
     // Handler for opening the score editing modal
     const handleEditScore = (player: ExtendedPlayer) => {
         setSelectedPlayer({ ...player, currentRound: activeRound });
         // Load existing score data if available
-        setScoreForm(playerScores[activeRound]?.[player.name]?.scoreData || {});
-        setFgCount(parseInt(playerScores[activeRound]?.[player.name]?.scoreData?.fg || "0", 10) || 0);
+        const currentScoreData = playerScores[activeRound]?.[player.name]?.scoreData || {};
+        setScoreForm(currentScoreData);
+        setInitialScoreForm(JSON.parse(JSON.stringify(currentScoreData))); // Deep copy for comparison
+
+        const fgCountValue = parseInt(currentScoreData?.fg || "0", 10) || 0;
+        setFgCount(fgCountValue);
+        setInitialFgCount(fgCountValue);
+
         setOpenScoreModal(true);
         setFormErrors({});
         setSubmitAttempted(false);
@@ -51,7 +95,9 @@ export function usePlayerModals({
         setOpenScoreModal(false);
         setSelectedPlayer(null);
         setScoreForm({});
+        setInitialScoreForm({});
         setFgCount(0);
+        setInitialFgCount(0);
         setFormErrors({});
         setSubmitAttempted(false);
     };
@@ -173,12 +219,6 @@ export function usePlayerModals({
         setClearScoresPlayer(null);
     };
 
-    // Handler for closing clear scores modal
-    const handleCloseClearScoresModal = () => {
-        setOpenClearScoresModal(false);
-        setClearScoresPlayer(null);
-    };
-
     // Handler for input field changes
     const handleInputChange = (field: keyof ScoreForm, value: string) => {
         if (value === "" || /^-?\d*$/.test(value)) {
@@ -249,6 +289,13 @@ export function usePlayerModals({
         setFormErrors(newErrors);
 
         if (Object.keys(newErrors).length > 0) {
+            return;
+        }
+
+        // Check if anything actually changed
+        if (!hasScoresChanged()) {
+            // Nothing changed, just close the modal without saving
+            handleCloseScoreModal();
             return;
         }
 
@@ -419,7 +466,7 @@ export function usePlayerModals({
                 onSubmit: handleSubmitScore
             },
             clearScoresModal: {
-                onClose: handleCloseClearScoresModal,
+                onClose: handleCloseScoreModal,
                 onConfirm: handleConfirmClearScores
             },
             statusModal: {
