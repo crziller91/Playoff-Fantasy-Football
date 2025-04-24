@@ -192,6 +192,8 @@ const playerData = [
 const teamNames = [
     "Christian",
     "Peter",
+    "Sill",
+    "Dougie"
 ]
 
 async function seedDatabase() {
