@@ -1,28 +1,25 @@
-import React from "react";
+import { observer } from "mobx-react-lite";
 import TeamCard from "./TeamCard";
-import { Team, DraftPicks, ExtendedPlayer } from "../../types";
+import { ExtendedPlayer } from "../../types";
 import { calculateTeamRoundScore } from "../../utils/teamUtils";
+import { useStore } from "../../stores/StoreContext";
 
 interface TeamCardListProps {
-    teams: Team[];
-    draftPicks: DraftPicks;
     round: string;
-    playerScores: { [key: string]: ExtendedPlayer };
     onEditScore: (player: ExtendedPlayer) => void;
     onTogglePlayerDisabled: (player: ExtendedPlayer, isClearScores?: boolean) => void;
 }
 
-/**
- * Component to display a list of team cards sorted by score
- */
-export default function TeamCardList({
-    teams,
-    draftPicks,
+const TeamCardList = observer(({
     round,
-    playerScores,
     onEditScore,
     onTogglePlayerDisabled
-}: TeamCardListProps) {
+}: TeamCardListProps) => {
+    const { teamsStore, playersStore, scoresStore } = useStore();
+    const { teams } = teamsStore;
+    const { draftPicks } = playersStore;
+    const playerScores = scoresStore.playerScores[round] || {};
+
     // Get team scores for sorting
     const teamScores = teams.reduce((acc, team) => {
         const score = calculateTeamRoundScore(team, draftPicks, playerScores);
@@ -38,7 +35,6 @@ export default function TeamCardList({
                 <TeamCard
                     key={`${team}-${round}`}
                     team={team}
-                    draftPicks={draftPicks}
                     playerScores={playerScores}
                     onEditScore={onEditScore}
                     onTogglePlayerDisabled={onTogglePlayerDisabled}
@@ -48,4 +44,6 @@ export default function TeamCardList({
             ))}
         </div>
     );
-}
+});
+
+export default TeamCardList;

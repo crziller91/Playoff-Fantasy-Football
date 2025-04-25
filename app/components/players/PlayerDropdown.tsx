@@ -1,5 +1,6 @@
 "use client";
 
+import { observer } from "mobx-react-lite";
 import { Button } from "flowbite-react";
 import { Player, Team } from "../../types";
 import { positionColors } from "../../data/positionColors";
@@ -20,7 +21,7 @@ interface PlayerDropdownProps {
   isDraftFinished: boolean;
 }
 
-export default function PlayerDropdown({
+const PlayerDropdown = observer(({
   team,
   pick,
   selectedPlayer,
@@ -32,7 +33,7 @@ export default function PlayerDropdown({
   onPlayerSelect,
   onRemovePick,
   isDraftFinished,
-}: PlayerDropdownProps) {
+}: PlayerDropdownProps) => {
   const dropdownKey = `${team}-${pick}`.replace(/[^a-zA-Z0-9-]/g, "-");
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [dropdownPosition, setDropdownPosition] = useState<{
@@ -159,6 +160,9 @@ export default function PlayerDropdown({
   return (
     <div className="relative">
       <Button
+        theme={{
+          disabled: 'opacity-100',
+        }}
         ref={buttonRef}
         onClick={handleButtonClick}
         color={
@@ -180,4 +184,6 @@ export default function PlayerDropdown({
         )}
     </div>
   );
-}
+});
+
+export default PlayerDropdown;

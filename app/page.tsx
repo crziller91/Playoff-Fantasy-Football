@@ -1,29 +1,26 @@
 "use client";
 
+import { observer } from "mobx-react-lite";
 import { Flowbite, Spinner } from "flowbite-react";
 import DraftBoard from "./components/draft/DraftBoard";
 import NavigationBar from "./components/layout/Navbar";
-import { useDraft } from "./hooks/useDraft";
+import { useStore } from "./stores/StoreContext";
+import { useEffect } from "react";
 
-export default function Page() {
-  const {
-    teams,
-    picks,
-    availablePlayers,
-    draftPicks,
-    searchTerms,
-    teamBudgets,
-    loading,
-    error,
-    isDraftFinished,
-    setDraftPicks,
-    setAvailablePlayers,
-    setTeams,
-    setSearchTerms,
-    setTeamBudgets,
-    handleResetBoard,
-    finishDraft,
-  } = useDraft();
+const Page = observer(() => {
+  const store = useStore();
+  const { draftStore, teamsStore, playersStore, scoresStore } = store;
+
+  // The initial load is now distributed across stores
+  const loading = draftStore.loading || teamsStore.loading || playersStore.loading;
+  const error = draftStore.error || teamsStore.error || playersStore.error;
+
+  // Load scores if draft is finished
+  useEffect(() => {
+    if (draftStore.isDraftFinished && !scoresStore.scoresLoaded) {
+      scoresStore.loadPlayerScores();
+    }
+  }, [draftStore.isDraftFinished, scoresStore]);
 
   if (loading) {
     return (
@@ -50,23 +47,10 @@ export default function Page() {
 
   return (
     <Flowbite>
-      <NavigationBar onResetBoard={handleResetBoard} />
-      <DraftBoard
-        teams={teams}
-        picks={picks}
-        draftPicks={draftPicks}
-        setDraftPicks={setDraftPicks}
-        availablePlayers={availablePlayers}
-        setAvailablePlayers={setAvailablePlayers}
-        setTeams={setTeams}
-        searchTerms={searchTerms}
-        setSearchTerms={setSearchTerms}
-        teamBudgets={teamBudgets}
-        setTeamBudgets={setTeamBudgets}
-        onResetBoard={handleResetBoard}
-        isDraftFinished={isDraftFinished}
-        finishDraft={finishDraft}
-      />
+      <NavigationBar />
+      <DraftBoard />
     </Flowbite>
   );
-}
+});
+
+export default Page;

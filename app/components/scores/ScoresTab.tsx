@@ -1,52 +1,15 @@
+import { observer } from "mobx-react-lite";
 import { Card } from "flowbite-react";
-import { DraftPicks, Team, PlayerScoresByRound, ExtendedPlayer } from "../../types";
 import { PLAYOFF_ROUNDS } from "../../constants/playoffs";
-import { useEffect, useState } from "react";
-import { fetchPlayerScores } from "../../services/scoreService";
+import { useState, useEffect } from "react";
 import { getOrderedTeamPicks } from "../../utils/teamUtils";
+import { useStore } from "../../stores/StoreContext";
 
-interface ScoresTabProps {
-  teams: Team[];
-  draftPicks: DraftPicks;
-  playerScores: PlayerScoresByRound;
-}
-
-export default function ScoresTab({ teams, draftPicks, playerScores }: ScoresTabProps) {
-  const [isLoading, setIsLoading] = useState(true);
-  const [localPlayerScores, setLocalPlayerScores] = useState<PlayerScoresByRound>({
-    "Wild Card": {},
-    "Divisional": {},
-    "Conference": {},
-    "Superbowl": {}
-  });
-
-  // Use prop playerScores if provided, otherwise use local state
-  const activeScores = Object.keys(playerScores).length > 0 ? playerScores : localPlayerScores;
-
-  // Load player scores from database if not provided via props
-  useEffect(() => {
-    // If scores are already provided via props, don't fetch again
-    if (Object.keys(playerScores).length > 0) {
-      setIsLoading(false);
-      return;
-    }
-
-    const loadScores = async () => {
-      try {
-        setIsLoading(true);
-        const scores = await fetchPlayerScores();
-        if (scores && Object.keys(scores).length > 0) {
-          setLocalPlayerScores(scores);
-        }
-      } catch (error) {
-        console.error("Error loading scores:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadScores();
-  }, [playerScores]);
+const ScoresTab = observer(() => {
+  const { teamsStore, playersStore, scoresStore } = useStore();
+  const { teams } = teamsStore;
+  const { draftPicks } = playersStore;
+  const { playerScores, isLoading } = scoresStore;
 
   // Calculate round scores for a team
   const calculateRoundScore = (team: string, round: string) => {
@@ -55,9 +18,9 @@ export default function ScoresTab({ teams, draftPicks, playerScores }: ScoresTab
 
     teamPlayers.forEach(({ player }) => {
       // Skip disabled players
-      if (activeScores[round]?.[player.name]?.isDisabled) return;
+      if (playerScores[round]?.[player.name]?.isDisabled) return;
       // Add player's score for this round
-      roundScore += activeScores[round]?.[player.name]?.score || 0;
+      roundScore += playerScores[round]?.[player.name]?.score || 0;
     });
 
     return roundScore;
@@ -75,9 +38,9 @@ export default function ScoresTab({ teams, draftPicks, playerScores }: ScoresTab
         const teamPlayers = getOrderedTeamPicks(team, draftPicks);
         teamPlayers.forEach(({ player }) => {
           // Skip disabled players
-          if (activeScores[round]?.[player.name]?.isDisabled) return;
+          if (playerScores[round]?.[player.name]?.isDisabled) return;
           // Add player's score for this round (or 0 if not played)
-          totalScore += activeScores[round]?.[player.name]?.score || 0;
+          totalScore += playerScores[round]?.[player.name]?.score || 0;
         });
       });
 
@@ -187,4 +150,6 @@ export default function ScoresTab({ teams, draftPicks, playerScores }: ScoresTab
       )}
     </div>
   );
-}
+});
+
+export default ScoresTab;

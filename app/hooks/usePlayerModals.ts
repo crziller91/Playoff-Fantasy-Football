@@ -1,3 +1,4 @@
+// app/hooks/usePlayerModals.ts
 import { useState, useEffect } from 'react';
 import { ExtendedPlayer, ScoreForm, FormErrors, PlayerScoresByRound } from '../types';
 import { validateForm, calculatePlayerScore } from '../utils/scoreCalculator';
@@ -6,7 +7,7 @@ import { PLAYOFF_ROUNDS } from '../constants/playoffs';
 
 interface UsePlayerModalsProps {
     playerScores: PlayerScoresByRound;
-    setPlayerScores: React.Dispatch<React.SetStateAction<PlayerScoresByRound>>;
+    setPlayerScores: (scores: PlayerScoresByRound) => void;
     activeRound: string;
 }
 
@@ -20,11 +21,11 @@ export function usePlayerModals({
 
     // Score form state
     const [scoreForm, setScoreForm] = useState<ScoreForm>({});
-    const [initialScoreForm, setInitialScoreForm] = useState<ScoreForm>({}); // Track initial state
+    const [initialScoreForm, setInitialScoreForm] = useState<ScoreForm>({});
     const [formErrors, setFormErrors] = useState<FormErrors>({});
     const [submitAttempted, setSubmitAttempted] = useState(false);
     const [fgCount, setFgCount] = useState(0);
-    const [initialFgCount, setInitialFgCount] = useState(0); // Track initial state
+    const [initialFgCount, setInitialFgCount] = useState(0);
 
     // Modal visibility states
     const [openScoreModal, setOpenScoreModal] = useState(false);
@@ -37,7 +38,7 @@ export function usePlayerModals({
     const [statusPlayer, setStatusPlayer] = useState<ExtendedPlayer | null>(null);
     const [reactivationPlayer, setReactivationPlayer] = useState<ExtendedPlayer | null>(null);
 
-    // Helper function to check if scores have been modified
+    // Helper function to check if scores have changed
     const hasScoresChanged = () => {
         // Compare each field in current form with initial form
         const formKeys = Array.from(new Set([
@@ -79,7 +80,7 @@ export function usePlayerModals({
         // Load existing score data if available
         const currentScoreData = playerScores[activeRound]?.[player.name]?.scoreData || {};
         setScoreForm(currentScoreData);
-        setInitialScoreForm(JSON.parse(JSON.stringify(currentScoreData))); // Deep copy for comparison
+        setInitialScoreForm(JSON.parse(JSON.stringify(currentScoreData)));
 
         const fgCountValue = parseInt(currentScoreData?.fg || "0", 10) || 0;
         setFgCount(fgCountValue);
@@ -165,17 +166,12 @@ export function usePlayerModals({
         const round = reactivationPlayer.currentRound || activeRound;
 
         // Update UI state by removing the player from the disabled state
-        setPlayerScores((prev) => {
-            // Create a deep copy of the previous state
-            const newState: PlayerScoresByRound = JSON.parse(JSON.stringify(prev));
-
-            // Remove the player's disabled status entry completely
-            if (newState[round]?.[reactivationPlayer.name]) {
-                delete newState[round][reactivationPlayer.name];
-            }
-
-            return newState;
-        });
+        // Here's the fixed version using a plain object instead of a callback:
+        const newScores = JSON.parse(JSON.stringify(playerScores)); // Deep copy
+        if (newScores[round]?.[reactivationPlayer.name]) {
+            delete newScores[round][reactivationPlayer.name];
+        }
+        setPlayerScores(newScores);
 
         // Delete the player's score entry from the database
         savePlayerScore(
@@ -203,17 +199,12 @@ export function usePlayerModals({
         if (!clearScoresPlayer) return;
         const round = clearScoresPlayer.currentRound || activeRound;
 
-        // Update UI state
-        setPlayerScores((prev) => {
-            const roundScores = prev[round] || {};
-            const newRoundScores = { ...roundScores };
-            delete newRoundScores[clearScoresPlayer.name];
-
-            return {
-                ...prev,
-                [round]: newRoundScores
-            };
-        });
+        // Update UI state using a plain object rather than a callback
+        const newScores = JSON.parse(JSON.stringify(playerScores)); // Deep copy
+        if (newScores[round] && newScores[round][clearScoresPlayer.name]) {
+            delete newScores[round][clearScoresPlayer.name];
+        }
+        setPlayerScores(newScores);
 
         // Delete the player score entry from the database
         deletePlayerScore(
@@ -308,23 +299,18 @@ export function usePlayerModals({
         // Calculate score
         const score = calculatePlayerScore(selectedPlayer, scoreForm);
 
-        // Update playerScores state
-        setPlayerScores((prev) => {
-            const roundScores = prev[round] || {};
-
-            return {
-                ...prev,
-                [round]: {
-                    ...roundScores,
-                    [selectedPlayer.name]: {
-                        ...selectedPlayer,
-                        score,
-                        scoreData: { ...scoreForm },
-                        isDisabled: false, // Ensure player is enabled when scores are submitted
-                    }
-                }
-            };
-        });
+        // Update playerScores state - using direct object instead of callback
+        const newScores = JSON.parse(JSON.stringify(playerScores));
+        if (!newScores[round]) {
+            newScores[round] = {};
+        }
+        newScores[round][selectedPlayer.name] = {
+            ...selectedPlayer,
+            score,
+            scoreData: { ...scoreForm },
+            isDisabled: false
+        };
+        setPlayerScores(newScores);
 
         // Save player score to the database
         savePlayerScore(
@@ -343,62 +329,61 @@ export function usePlayerModals({
     const updatePlayerStatus = (player: ExtendedPlayer, isDisabled: boolean, cascade: boolean) => {
         const round = player.currentRound || activeRound;
 
-        setPlayerScores((prev) => {
-            // Create a deep copy of the previous state
-            const newState: PlayerScoresByRound = JSON.parse(JSON.stringify(prev));
+        // Create a deep copy of the current state
+        const newState = JSON.parse(JSON.stringify(playerScores));
 
-            // Initialize the round if it doesn't exist
-            if (!newState[round]) {
-                newState[round] = {};
-            }
+        // Initialize the round if it doesn't exist
+        if (!newState[round]) {
+            newState[round] = {};
+        }
 
-            // Get or create the player entry
-            const currentPlayer = newState[round][player.name] || { ...player, currentRound: round };
+        // Get or create the player entry
+        const currentPlayer = newState[round][player.name] || { ...player, currentRound: round };
 
-            // If the player already has scores, don't allow toggling disabled status
-            if (currentPlayer.scoreData && isDisabled) {
-                return prev;
-            }
+        // If the player already has scores, don't allow toggling disabled status
+        if (currentPlayer.scoreData && isDisabled) {
+            return;
+        }
 
-            // Update status for this round
-            const statusReason = isDisabled ? (cascade ? "eliminated" : "notPlaying") : null;
+        // Update status for this round
+        const statusReason = isDisabled ? (cascade ? "eliminated" : "notPlaying") : null;
 
-            // Update player in current round
-            newState[round][player.name] = {
-                ...currentPlayer,
-                isDisabled: isDisabled,
-                statusReason: statusReason,
-                score: isDisabled ? 0 : currentPlayer.score,
-                scoreData: isDisabled ? undefined : currentPlayer.scoreData
-            };
+        // Update player in current round
+        newState[round][player.name] = {
+            ...currentPlayer,
+            isDisabled: isDisabled,
+            statusReason: statusReason,
+            score: isDisabled ? 0 : currentPlayer.score,
+            scoreData: isDisabled ? undefined : currentPlayer.scoreData
+        };
 
-            // If cascade is true and we're not in Wild Card round,
-            // then also disable this player for all subsequent rounds
-            if (cascade && isDisabled && round !== "Wild Card") {
-                const roundIndex = PLAYOFF_ROUNDS.indexOf(round);
-                const subsequentRounds = PLAYOFF_ROUNDS.slice(roundIndex + 1);
+        // If cascade is true and we're not in Wild Card round,
+        // then also disable this player for all subsequent rounds
+        if (cascade && isDisabled && round !== "Wild Card") {
+            const roundIndex = PLAYOFF_ROUNDS.indexOf(round);
+            const subsequentRounds = PLAYOFF_ROUNDS.slice(roundIndex + 1);
 
-                subsequentRounds.forEach(futureRound => {
-                    // Initialize the round if it doesn't exist
-                    if (!newState[futureRound]) {
-                        newState[futureRound] = {};
-                    }
+            subsequentRounds.forEach(futureRound => {
+                // Initialize the round if it doesn't exist
+                if (!newState[futureRound]) {
+                    newState[futureRound] = {};
+                }
 
-                    const futurePlayer = newState[futureRound][player.name] || { ...player, currentRound: futureRound };
+                const futurePlayer = newState[futureRound][player.name] || { ...player, currentRound: futureRound };
 
-                    // Update player in future round
-                    newState[futureRound][player.name] = {
-                        ...futurePlayer,
-                        isDisabled: true,
-                        statusReason: "eliminated", // Mark as eliminated in future rounds
-                        score: 0,
-                        scoreData: undefined
-                    };
-                });
-            }
+                // Update player in future round
+                newState[futureRound][player.name] = {
+                    ...futurePlayer,
+                    isDisabled: true,
+                    statusReason: "eliminated", // Mark as eliminated in future rounds
+                    score: 0,
+                    scoreData: undefined
+                };
+            });
+        }
 
-            return newState;
-        });
+        // Update the scores state
+        setPlayerScores(newState);
 
         // Save this individual player status update to the database
         savePlayerScore(

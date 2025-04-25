@@ -1,17 +1,17 @@
 "use client";
 
+import { observer } from "mobx-react-lite";
 import { Flowbite, TabItem, Tabs, type TabsRef } from "flowbite-react";
-import { DraftPicks, Player, Team, PlayerScoresByRound } from "../../types";
-import { useState, useRef, useMemo, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { HiUserCircle } from "react-icons/hi";
-import { MdDashboard } from "react-icons/md";
+import { MdDashboard, MdScoreboard } from "react-icons/md";
+import { useStore } from "../../stores/StoreContext";
 import DraftDashboard from "./DraftDashboard";
 import TeamsView from "../teams/TeamsView";
-import { MdScoreboard } from "react-icons/md";
 import ScoresTab from "../scores/ScoresTab";
-import { fetchPlayerScores } from "../../services/scoreService";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PLAYOFF_ROUNDS } from "../../constants/playoffs";
+import { DraftManager } from "../../domain/DraftManager";
 
 // Define constants outside the component
 const TAB_NAMES = ["draft", "teams", "scores"] as const;
@@ -36,44 +36,12 @@ const ROUND_TO_URL_PARAM: Record<string, string> = {
   "Superbowl": "superbowl"
 };
 
-interface DraftBoardProps {
-  teams: Team[];
-  picks: number[];
-  draftPicks: DraftPicks;
-  setDraftPicks: (picks: DraftPicks) => void;
-  availablePlayers: Player[];
-  setAvailablePlayers: (players: Player[]) => void;
-  setTeams: (teams: Team[]) => void;
-  searchTerms: { [key: string]: string };
-  setSearchTerms: (terms: { [key: string]: string }) => void;
-  teamBudgets: Map<string, number>;
-  setTeamBudgets: (budgets: Map<string, number>) => void;
-  onResetBoard: () => void;
-  isDraftFinished: boolean;
-  finishDraft: () => void;
-  playerScores?: PlayerScoresByRound;
-  setPlayerScores?: React.Dispatch<React.SetStateAction<PlayerScoresByRound>>;
-}
-
-export default function DraftBoard({
-  teams,
-  picks,
-  draftPicks,
-  setDraftPicks,
-  availablePlayers,
-  setAvailablePlayers,
-  setTeams,
-  searchTerms,
-  setSearchTerms,
-  teamBudgets,
-  setTeamBudgets,
-  onResetBoard,
-  isDraftFinished,
-  finishDraft,
-}: DraftBoardProps) {
+const DraftBoard = observer(() => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tabsRef = useRef<TabsRef>(null);
+
+  const { draftStore, teamsStore, playersStore, scoresStore } = useStore();
 
   // Get tab and subtab from URL query parameters
   const tabParam = searchParams.get("tab");
@@ -87,28 +55,21 @@ export default function DraftBoard({
     return 0; // Default to Draft Board
   });
 
-  // Initialize activeSubTab for Teams view
-  const [activeSubTab, setActiveSubTab] = useState(() => {
-    // Convert from URL parameter to display name if available
-    if (subtabParam && subtabParam in URL_PARAM_TO_ROUND) {
-      return URL_PARAM_TO_ROUND[subtabParam];
+  useEffect(() => {
+    if (draftStore.isDraftFinished && !scoresStore.scoresLoaded) {
+      scoresStore.loadPlayerScores();
     }
-    return "Wild Card"; // Default
-  });
+  }, [draftStore.isDraftFinished, scoresStore]);
 
-  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-
-  // State to track if data has been loaded
-  const [scoresLoaded, setScoresLoaded] = useState(false);
-
-  // Initialize playerScores state with all playoff rounds
-  const [playerScores, setPlayerScores] = useState<PlayerScoresByRound>({
-    "Wild Card": {},
-    "Divisional": {},
-    "Conference": {},
-    "Superbowl": {}
-  });
+  // Set the active round in the scores store based on URL parameters
+  useEffect(() => {
+    if (subtabParam && subtabParam in URL_PARAM_TO_ROUND) {
+      const roundName = URL_PARAM_TO_ROUND[subtabParam];
+      if (PLAYOFF_ROUNDS.includes(roundName)) {
+        scoresStore.setActiveRound(roundName);
+      }
+    }
+  }, [subtabParam, scoresStore]);
 
   // Update URL when tabs change
   useEffect(() => {
@@ -117,12 +78,12 @@ export default function DraftBoard({
     // Only include subtab param for teams tab
     if (currentTab === "teams") {
       // Convert display name to URL parameter
-      const subtabParam = ROUND_TO_URL_PARAM[activeSubTab] || "wildCard";
+      const subtabParam = ROUND_TO_URL_PARAM[scoresStore.activeRound] || "wildCard";
       router.push(`?tab=${currentTab}&subtab=${subtabParam}`);
     } else {
       router.push(`?tab=${currentTab}`);
     }
-  }, [activeTab, activeSubTab, router]);
+  }, [activeTab, scoresStore.activeRound, router]);
 
   // Set active tab based on URL params when component mounts
   useEffect(() => {
@@ -136,62 +97,8 @@ export default function DraftBoard({
 
       // Update active tab state
       setActiveTab(tabIndex);
-
-      // Handle subtab if we're on the teams tab
-      if (tabParam === 'teams' && subtabParam) {
-        // Convert URL parameter to display name
-        const roundDisplayName = URL_PARAM_TO_ROUND[subtabParam];
-
-        // Only update if it's a valid round name
-        if (roundDisplayName && PLAYOFF_ROUNDS.includes(roundDisplayName)) {
-          setActiveSubTab(roundDisplayName);
-        }
-      }
     }
-  }, [tabParam, subtabParam]);
-
-  // Load player scores from the database only once when draft is finished
-  useEffect(() => {
-    if (isDraftFinished && !scoresLoaded) {
-      const loadScores = async () => {
-        try {
-          setIsLoading(true);
-          const scores = await fetchPlayerScores();
-          if (scores && Object.keys(scores).length > 0) {
-            setPlayerScores(scores);
-          }
-          // Mark scores as loaded to prevent future fetches
-          setScoresLoaded(true);
-        } catch (error) {
-          console.error("Error loading player scores:", error);
-        } finally {
-          setIsLoading(false);
-        }
-      };
-
-      loadScores();
-    }
-  }, [isDraftFinished, scoresLoaded]);
-
-  // Check if all dropdowns are filled
-  const isDraftComplete = useMemo(() => {
-    return teams.every((team) =>
-      picks.every((pick) => draftPicks[team]?.[pick] !== null && draftPicks[team]?.[pick] !== undefined)
-    );
-  }, [teams, picks, draftPicks]);
-
-  const handleReset = () => {
-    onResetBoard();
-    // Clear scores when resetting
-    setPlayerScores({
-      "Wild Card": {},
-      "Divisional": {},
-      "Conference": {},
-      "Superbowl": {}
-    });
-    // Reset scores loaded state
-    setScoresLoaded(false);
-  };
+  }, [tabParam]);
 
   // Handle tab change
   const handleTabChange = (tab: number) => {
@@ -200,8 +107,17 @@ export default function DraftBoard({
 
   // Handle round change from TeamsView
   const handleRoundChange = (round: string) => {
-    setActiveSubTab(round);
+    scoresStore.setActiveRound(round);
   };
+
+  // Determine if draft is complete (all teams have made all picks)
+  const isDraftComplete = playersStore.draftPicks &&
+    teamsStore.teams.every((team) =>
+      DraftManager.PICKS.every((pick) =>
+        playersStore.draftPicks[team]?.[pick] !== null &&
+        playersStore.draftPicks[team]?.[pick] !== undefined
+      )
+    );
 
   return (
     <Flowbite>
@@ -215,54 +131,29 @@ export default function DraftBoard({
               onActiveTabChange={handleTabChange}
             >
               <TabItem active={activeTab === 0} title="Draft Board" icon={MdDashboard}>
-                <DraftDashboard
-                  teams={teams}
-                  picks={picks}
-                  availablePlayers={availablePlayers}
-                  draftPicks={draftPicks}
-                  searchTerms={searchTerms}
-                  teamBudgets={teamBudgets}
-                  setDraftPicks={setDraftPicks}
-                  setAvailablePlayers={setAvailablePlayers}
-                  setSearchTerms={setSearchTerms}
-                  setTeamBudgets={setTeamBudgets}
-                  isDraftFinished={isDraftFinished}
-                  isDraftComplete={isDraftComplete}
-                  finishDraft={finishDraft}
-                  selectedPlayer={selectedPlayer}
-                  setSelectedPlayer={setSelectedPlayer}
-                />
+                <DraftDashboard isDraftComplete={isDraftComplete} />
               </TabItem>
               <TabItem active={activeTab === 1} title="Teams" icon={HiUserCircle}>
-                {isLoading ? (
+                {scoresStore.isLoading ? (
                   <div className="flex h-32 items-center justify-center text-gray-500">
                     Loading player scores...
                   </div>
                 ) : (
                   <TeamsView
-                    key={`teams-view-${isDraftFinished ? 'active' : 'inactive'}`} // Only remount when draft status changes
-                    teams={teams}
-                    draftPicks={draftPicks}
-                    isDraftFinished={isDraftFinished}
-                    playerScores={playerScores}
-                    setPlayerScores={setPlayerScores}
-                    initialActiveRound={activeSubTab}
+                    key={`teams-view-${draftStore.isDraftFinished ? 'active' : 'inactive'}`}
+                    initialActiveRound={scoresStore.activeRound}
                     onRoundChange={handleRoundChange}
                   />
                 )}
               </TabItem>
               <TabItem active={activeTab === 2} title="Scores" icon={MdScoreboard}>
-                {isDraftFinished ? (
-                  isLoading ? (
+                {draftStore.isDraftFinished ? (
+                  scoresStore.isLoading ? (
                     <div className="flex h-32 items-center justify-center text-gray-500">
                       Loading scores...
                     </div>
                   ) : (
-                    <ScoresTab
-                      teams={teams}
-                      draftPicks={draftPicks}
-                      playerScores={playerScores}
-                    />
+                    <ScoresTab />
                   )
                 ) : (
                   <div className="flex h-32 items-center justify-center text-gray-500">
@@ -276,4 +167,6 @@ export default function DraftBoard({
       </main>
     </Flowbite>
   );
-}
+});
+
+export default DraftBoard;

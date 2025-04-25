@@ -1,11 +1,11 @@
+import { observer } from "mobx-react-lite";
 import { Table } from "flowbite-react";
+import { useStore } from "../../stores/StoreContext";
 
-interface TeamHeaderProps {
-  teams: string[];
-  teamBudgets: Map<string, number>;
-}
+const TeamHeader = observer(() => {
+  const { teamsStore } = useStore();
+  const { teams, teamBudgets } = teamsStore;
 
-export default function TeamHeader({ teams, teamBudgets }: TeamHeaderProps) {
   return (
     <>
       <Table.HeadCell className="w-20 shrink-0 bg-gray-200 px-4 text-center">
@@ -26,4 +26,6 @@ export default function TeamHeader({ teams, teamBudgets }: TeamHeaderProps) {
       })}
     </>
   );
-}
+});
+
+export default TeamHeader;

@@ -1,16 +1,16 @@
+import { observer } from "mobx-react-lite";
 import { Table, Dropdown } from "flowbite-react";
-import { Player } from "../../types";
 import { useState, useRef, useEffect } from "react";
 import { legendColors } from "../../data/positionColors";
 import { HiFilter } from "react-icons/hi";
-
-interface AvailablePlayersProps {
-    availablePlayers: Player[];
-}
+import { useStore } from "../../stores/StoreContext";
 
 type PositionType = "QB" | "RB" | "WR" | "TE" | "K" | "DST" | "ALL";
 
-export default function AvailablePlayers({ availablePlayers }: AvailablePlayersProps) {
+const AvailablePlayers = observer(() => {
+    const { playersStore } = useStore();
+    const { availablePlayers } = playersStore;
+
     // Add state for the position filter
     const [positionFilter, setPositionFilter] = useState<PositionType>("ALL");
     const containerRef = useRef<HTMLDivElement>(null);
@@ -140,4 +140,6 @@ export default function AvailablePlayers({ availablePlayers }: AvailablePlayersP
             </div>
         </div>
     );
-}
+});
+
+export default AvailablePlayers;

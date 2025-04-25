@@ -1,22 +1,18 @@
+// app/components/players/SelectedPlayerTable.tsx
 "use client";
 
+import { observer } from "mobx-react-lite";
 import { Table, Button } from "flowbite-react";
-import { useState, useRef, useEffect, useMemo, useCallback } from "react"; // Add useCallback
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { Player } from "../../types";
 import { positionColors } from "../../data/positionColors";
+import { useStore } from "../../stores/StoreContext";
+import { Player } from "../../types";
 
-interface SelectedPlayerTableProps {
-    availablePlayers: Player[];
-    selectedPlayer: Player | null;
-    setSelectedPlayer: (player: Player | null) => void;
-}
+const SelectedPlayerTable = observer(() => {
+    const { playersStore } = useStore();
+    const { availablePlayers, selectedPlayer, setSelectedPlayer } = playersStore;
 
-export default function SelectedPlayerTable({
-    availablePlayers,
-    selectedPlayer,
-    setSelectedPlayer,
-}: SelectedPlayerTableProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
     const buttonRef = useRef<HTMLButtonElement>(null);
@@ -85,20 +81,17 @@ export default function SelectedPlayerTable({
     }, [isOpen, searchTerm]);
 
     // Memoize handlePlayerSelect
-    const handlePlayerSelect = useCallback(
-        (player: Player) => {
-            setSelectedPlayer(player);
-            setIsOpen(false);
-            setSearchTerm("");
-        },
-        [setSelectedPlayer] // Dependencies
-    );
+    const handlePlayerSelect = useCallback((player : Player) => {
+        setSelectedPlayer(player);
+        setIsOpen(false);
+        setSearchTerm("");
+    }, [setSelectedPlayer]);
 
     // Memoize handleRemovePick
     const handleRemovePick = useCallback(() => {
         setSelectedPlayer(null);
         setIsOpen(false);
-    }, [setSelectedPlayer]); // Dependencies
+    }, [setSelectedPlayer]);
 
     const filteredPlayers = availablePlayers.filter((player) =>
         player.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -160,8 +153,8 @@ export default function SelectedPlayerTable({
             isOpen,
             searchTerm,
             selectedPlayer,
-            handlePlayerSelect, // Now stable
-            handleRemovePick, // Now stable
+            handlePlayerSelect, // Add these to the dependency array
+            handleRemovePick,  // Add these to the dependency array
         ]
     );
 
@@ -202,4 +195,6 @@ export default function SelectedPlayerTable({
             </Table.Body>
         </Table>
     );
-}
+});
+
+export default SelectedPlayerTable;

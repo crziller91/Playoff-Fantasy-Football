@@ -1,28 +1,24 @@
+import { observer } from "mobx-react-lite";
 import { Button, DropdownItem, Navbar, NavbarBrand, Dropdown } from "flowbite-react";
 import Link from "next/link";
 import { useState } from "react";
 import { HiMenu } from "react-icons/hi";
+import { useStore } from "../../stores/StoreContext";
 import ResetConfirmationModal from "../modals/ResetConfirmationModal";
 
-interface NavigationBarProps {
-  onResetBoard?: () => void;
-}
-
-export default function NavigationBar({ onResetBoard }: NavigationBarProps) {
+const NavigationBar = observer(() => {
+  const { draftStore } = useStore();
   const [openModal, setOpenModal] = useState(false);
 
   const handleResetConfirm = () => {
-    if (onResetBoard) {
-      onResetBoard();
-    }
+    draftStore.resetDraft();
     setOpenModal(false);
   };
 
   return (
     <Navbar
       fluid
-      // eslint-disable-next-line tailwindcss/no-unnecessary-arbitrary-value
-      className="sticky top-0 z-50 border-b-[1px] border-gray-300 bg-gray-100 py-4" // Thicker navbar with underline and padding
+      className="sticky top-0 z-50 border-b border-gray-300 bg-gray-100 py-4"
     >
       <div className="flex w-full items-center justify-between">
         <NavbarBrand as={Link} href="/" className="px-1">
@@ -62,4 +58,6 @@ export default function NavigationBar({ onResetBoard }: NavigationBarProps) {
       />
     </Navbar>
   );
-}
+});
+
+export default NavigationBar;

@@ -1,35 +1,43 @@
-import { Card, Button, Badge } from "flowbite-react"; // Added Badge import
-import { TeamCardProps, ExtendedPlayer } from "../../types";
+import { observer } from "mobx-react-lite";
+import { Card, Button, Badge } from "flowbite-react";
+import { ExtendedPlayer } from "../../types";
 import { getOrderedTeamPicks, getTeamScore } from "../../utils/scoreCalculator";
 import { HiX } from "react-icons/hi";
 import { positionColors } from "../../data/positionColors";
+import { useStore } from "../../stores/StoreContext";
 
 // Map position to badge color
 const positionBadgeColors: Record<string, "info" | "gray" | "failure" | "success" | "warning" | "indigo" | "purple" | "pink"> = {
-    QB: "success",    // Green
-    RB: "purple",     // Purple
-    WR: "warning",    // Yellow
-    TE: "failure",    // Red
-    K: "info",        // Blue
-    DST: "gray"       // Dark
+    QB: "success",
+    RB: "purple",
+    WR: "warning",
+    TE: "failure",
+    K: "info",
+    DST: "gray"
 };
 
 // Array of rank labels with medals
-const rankLabels = [
-    "🥇",   // 0 - Gold medal
-    "🥈",  // 1 - Silver medal
-    "🥉",   // 2 - Bronze medal
-];
+const rankLabels = ["🥇", "🥈", "🥉"];
 
-export default function TeamCard({
+interface TeamCardProps {
+    team: string;
+    playerScores: { [key: string]: ExtendedPlayer };
+    onEditScore: (player: ExtendedPlayer) => void;
+    onTogglePlayerDisabled: (player: ExtendedPlayer, isClearScores?: boolean) => void;
+    round?: string;
+    ranking?: number;
+}
+
+const TeamCard = observer(({
     team,
-    draftPicks,
     playerScores,
     onEditScore,
     onTogglePlayerDisabled,
-    round, // Optional prop to display which round we're showing
-    ranking // New prop for team ranking
-}: TeamCardProps & { round?: string; ranking?: number }) {
+    round,
+    ranking
+}: TeamCardProps) => {
+    const { playersStore } = useStore();
+    const { draftPicks } = playersStore;
 
     // Helper function to safely check if a player's score is greater than 0
     const hasPositiveScore = (playerName: string): boolean => {
@@ -142,4 +150,6 @@ export default function TeamCard({
             </div>
         </Card>
     );
-}
+});
+
+export default TeamCard;
