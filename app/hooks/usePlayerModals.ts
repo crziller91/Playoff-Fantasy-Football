@@ -102,6 +102,12 @@ export function usePlayerModals({
         setSubmitAttempted(false);
     };
 
+    // Handler for closing the clear scores modal
+    const handleCloseClearScoresModal = () => {
+        setOpenClearScoresModal(false);
+        setClearScoresPlayer(null);
+    };
+
     // Handler for toggling player disabled status
     const handleTogglePlayerDisabled = (player: ExtendedPlayer, isClearScores?: boolean) => {
         const round = activeRound;
@@ -466,7 +472,7 @@ export function usePlayerModals({
                 onSubmit: handleSubmitScore
             },
             clearScoresModal: {
-                onClose: handleCloseScoreModal,
+                onClose: handleCloseClearScoresModal,
                 onConfirm: handleConfirmClearScores
             },
             statusModal: {

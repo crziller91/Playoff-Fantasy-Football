@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { PlayerScoresByRound } from '../types';
 import { fetchPlayerScores } from '../services/scoreService';
 import { PLAYOFF_ROUNDS } from '../constants/playoffs';
@@ -35,6 +35,9 @@ export function useTeamsViewState({
     // Loading state
     const [isLoading, setIsLoading] = useState(true);
 
+    // Track if we've already loaded data
+    const hasLoadedData = useRef(false);
+
     // Use external state if provided, otherwise use local state
     const playerScores = externalPlayerScores || localPlayerScores;
     const setPlayerScores = externalSetPlayerScores || setLocalPlayerScores;
@@ -47,9 +50,15 @@ export function useTeamsViewState({
         "Superbowl": false
     });
 
-    // Load player scores from the database on component mount
+    // Load player scores from the database on component mount, but only once
     useEffect(() => {
         if (!isDraftFinished) {
+            setIsLoading(false);
+            return;
+        }
+
+        // If we have external scores OR we've already loaded data, don't fetch again
+        if (externalPlayerScores || hasLoadedData.current) {
             setIsLoading(false);
             return;
         }
@@ -61,6 +70,8 @@ export function useTeamsViewState({
                 // Only update if we have scores and aren't using external state management
                 if (scores && Object.keys(scores).length > 0 && !externalPlayerScores) {
                     setLocalPlayerScores(scores);
+                    // Mark that we've loaded data
+                    hasLoadedData.current = true;
                 }
             } catch (error) {
                 console.error("Error loading player scores:", error);

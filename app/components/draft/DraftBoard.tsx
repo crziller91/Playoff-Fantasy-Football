@@ -99,6 +99,9 @@ export default function DraftBoard({
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  // State to track if data has been loaded
+  const [scoresLoaded, setScoresLoaded] = useState(false);
+
   // Initialize playerScores state with all playoff rounds
   const [playerScores, setPlayerScores] = useState<PlayerScoresByRound>({
     "Wild Card": {},
@@ -147,9 +150,9 @@ export default function DraftBoard({
     }
   }, [tabParam, subtabParam]);
 
-  // Load player scores from the database when draft is finished
+  // Load player scores from the database only once when draft is finished
   useEffect(() => {
-    if (isDraftFinished) {
+    if (isDraftFinished && !scoresLoaded) {
       const loadScores = async () => {
         try {
           setIsLoading(true);
@@ -157,6 +160,8 @@ export default function DraftBoard({
           if (scores && Object.keys(scores).length > 0) {
             setPlayerScores(scores);
           }
+          // Mark scores as loaded to prevent future fetches
+          setScoresLoaded(true);
         } catch (error) {
           console.error("Error loading player scores:", error);
         } finally {
@@ -166,7 +171,7 @@ export default function DraftBoard({
 
       loadScores();
     }
-  }, [isDraftFinished]);
+  }, [isDraftFinished, scoresLoaded]);
 
   // Check if all dropdowns are filled
   const isDraftComplete = useMemo(() => {
@@ -184,6 +189,8 @@ export default function DraftBoard({
       "Conference": {},
       "Superbowl": {}
     });
+    // Reset scores loaded state
+    setScoresLoaded(false);
   };
 
   // Handle tab change
@@ -233,7 +240,7 @@ export default function DraftBoard({
                   </div>
                 ) : (
                   <TeamsView
-                    key={`teams-view-${activeSubTab}`} // Add a key prop to force remounting
+                    key={`teams-view-${isDraftFinished ? 'active' : 'inactive'}`} // Only remount when draft status changes
                     teams={teams}
                     draftPicks={draftPicks}
                     isDraftFinished={isDraftFinished}
