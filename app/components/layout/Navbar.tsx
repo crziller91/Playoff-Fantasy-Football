@@ -2,20 +2,70 @@ import { observer } from "mobx-react-lite";
 import { Button, DropdownItem, Navbar, NavbarBrand, Dropdown, Avatar } from "flowbite-react";
 import Link from "next/link";
 import { useState } from "react";
-import { HiMenu, HiOutlineLogin, HiOutlineUserAdd, HiOutlineLogout } from "react-icons/hi";
+import { HiOutlineChevronLeft, HiOutlineLogin, HiOutlineLogout, HiOutlineTrash } from "react-icons/hi";
 import { useStore } from "../../stores/StoreContext";
 import ResetConfirmationModal from "../modals/ResetConfirmationModal";
+import DeleteAccountModal from "../modals/DeleteAccountModal";
+import SignOutModal from "../modals/SignOutModal";
 import { useSession, signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 const NavigationBar = observer(() => {
+  const router = useRouter();
   const { draftStore } = useStore();
-  const [openModal, setOpenModal] = useState(false);
+  const [openResetModal, setOpenResetModal] = useState(false);
+  const [openDeleteModal, setOpenDeleteModal] = useState(false);
+  const [openSignOutModal, setOpenSignOutModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
   const { data: session, status } = useSession();
   const isAuthenticated = status === "authenticated";
 
   const handleResetConfirm = () => {
     draftStore.resetDraft();
-    setOpenModal(false);
+    setOpenResetModal(false);
+  };
+
+  const handleDeleteAccount = async () => {
+    try {
+      setIsDeleting(true);
+
+      // Call the API to delete the account
+      const response = await fetch("/api/user/delete", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json"
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete account");
+      }
+
+      // Sign the user out
+      await signOut({ redirect: false });
+
+      // Redirect to home page
+      router.push("/");
+
+    } catch (error) {
+      console.error("Error deleting account:", error);
+      alert("There was a problem deleting your account. Please try again.");
+    } finally {
+      setIsDeleting(false);
+      setOpenDeleteModal(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      setIsSigningOut(true);
+      await signOut({ callbackUrl: "/" });
+    } catch (error) {
+      console.error("Error signing out:", error);
+      setIsSigningOut(false);
+      setOpenSignOutModal(false);
+    }
   };
 
   return (
@@ -46,24 +96,26 @@ const NavigationBar = observer(() => {
                 arrowIcon={false}
                 inline
                 label={
-                  session.user?.image ? (
-                    <Avatar img={session.user.image} rounded size="sm" />
-                  ) : (
-                    <div className="flex size-8 items-center justify-center rounded-full bg-blue-500 text-white">
-                      {(session.user?.name || 'U').charAt(0).toUpperCase()}
-                    </div>
-                  )
+                  <div className="flex size-8 items-center justify-center rounded-full bg-blue-500 text-white">
+                    {(session.user?.name || 'U').charAt(0).toUpperCase()}
+                  </div>
                 }
               >
                 <DropdownItem as={Link} href="/profile">
                   Profile
                 </DropdownItem>
                 {/* Only show reset if needed */}
-                <DropdownItem onClick={() => setOpenModal(true)}>Reset All</DropdownItem>
-                <DropdownItem onClick={() => signOut({ callbackUrl: "/" })}>
+                <DropdownItem onClick={() => setOpenResetModal(true)}>Reset All</DropdownItem>
+                <DropdownItem onClick={() => setOpenSignOutModal(true)}>
                   <div className="flex items-center gap-2">
                     <HiOutlineLogout />
                     <span>Sign out</span>
+                  </div>
+                </DropdownItem>
+                <DropdownItem onClick={() => setOpenDeleteModal(true)}>
+                  <div className="flex items-center gap-2 text-red-600">
+                    <HiOutlineTrash />
+                    <span>Delete Account</span>
                   </div>
                 </DropdownItem>
               </Dropdown>
@@ -83,9 +135,25 @@ const NavigationBar = observer(() => {
 
       {/* Reset Confirmation Modal */}
       <ResetConfirmationModal
-        isOpen={openModal}
-        onClose={() => setOpenModal(false)}
+        isOpen={openResetModal}
+        onClose={() => setOpenResetModal(false)}
         onConfirm={handleResetConfirm}
+      />
+
+      {/* Delete Account Confirmation Modal */}
+      <DeleteAccountModal
+        isOpen={openDeleteModal}
+        onClose={() => setOpenDeleteModal(false)}
+        onConfirm={handleDeleteAccount}
+        isLoading={isDeleting}
+      />
+
+      {/* Sign Out Confirmation Modal */}
+      <SignOutModal
+        isOpen={openSignOutModal}
+        onClose={() => setOpenSignOutModal(false)}
+        onConfirm={handleSignOut}
+        isLoading={isSigningOut}
       />
     </Navbar>
   );

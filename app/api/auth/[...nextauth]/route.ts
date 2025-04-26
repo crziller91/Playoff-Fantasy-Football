@@ -1,5 +1,4 @@
 import NextAuth from "next-auth";
-import GithubProvider from "next-auth/providers/github";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import prisma from "@/lib/prisma";
@@ -9,10 +8,6 @@ import bcrypt from "bcryptjs";
 export const authOptions: NextAuthOptions = {
     adapter: PrismaAdapter(prisma),
     providers: [
-        GithubProvider({
-            clientId: process.env.GITHUB_ID || "",
-            clientSecret: process.env.GITHUB_SECRET || "",
-        }),
         CredentialsProvider({
             name: "Credentials",
             credentials: {
@@ -21,7 +16,7 @@ export const authOptions: NextAuthOptions = {
             },
             async authorize(credentials) {
                 if (!credentials?.email || !credentials.password) {
-                    return null;
+                    throw new Error("Please enter both email and password");
                 }
 
                 // Find the user by email
@@ -31,7 +26,7 @@ export const authOptions: NextAuthOptions = {
 
                 // If no user or no hashed password, return null
                 if (!user || !user.hashedPassword) {
-                    return null;
+                    throw new Error("Invalid email or password");
                 }
 
                 // Check if the password matches
@@ -42,7 +37,7 @@ export const authOptions: NextAuthOptions = {
 
                 // If the password doesn't match, return null
                 if (!passwordMatch) {
-                    return null;
+                    throw new Error("Invalid email or password");
                 }
 
                 // Return the user without the hashed password
@@ -58,7 +53,7 @@ export const authOptions: NextAuthOptions = {
     pages: {
         signIn: '/auth/signin',
         // signOut: '/auth/signout',
-        // error: '/auth/error', // Error code passed in query string as ?error=
+        error: '/auth/signin', // Redirect to signin page with error code
         // verifyRequest: '/auth/verify-request', // (used for check email message)
         // newUser: '/auth/new-user' // New users will be directed here on first sign in
     },
