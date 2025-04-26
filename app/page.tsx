@@ -6,13 +6,15 @@ import DraftBoard from "./components/draft/DraftBoard";
 import NavigationBar from "./components/layout/Navbar";
 import { useStore } from "./stores/StoreContext";
 import { useEffect } from "react";
+import { useSession } from "next-auth/react";
 
 const Page = observer(() => {
   const store = useStore();
   const { draftStore, teamsStore, playersStore, scoresStore } = store;
+  const { status: authStatus } = useSession();
 
   // The initial load is now distributed across stores
-  const loading = draftStore.loading || teamsStore.loading || playersStore.loading;
+  const loading = draftStore.loading || teamsStore.loading || playersStore.loading || authStatus === "loading";
   const error = draftStore.error || teamsStore.error || playersStore.error;
 
   // Load scores if draft is finished

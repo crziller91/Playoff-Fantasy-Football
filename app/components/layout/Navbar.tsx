@@ -1,14 +1,17 @@
 import { observer } from "mobx-react-lite";
-import { Button, DropdownItem, Navbar, NavbarBrand, Dropdown } from "flowbite-react";
+import { Button, DropdownItem, Navbar, NavbarBrand, Dropdown, Avatar } from "flowbite-react";
 import Link from "next/link";
 import { useState } from "react";
-import { HiMenu } from "react-icons/hi";
+import { HiMenu, HiOutlineLogin, HiOutlineUserAdd, HiOutlineLogout } from "react-icons/hi";
 import { useStore } from "../../stores/StoreContext";
 import ResetConfirmationModal from "../modals/ResetConfirmationModal";
+import { useSession, signOut } from "next-auth/react";
 
 const NavigationBar = observer(() => {
   const { draftStore } = useStore();
   const [openModal, setOpenModal] = useState(false);
+  const { data: session, status } = useSession();
+  const isAuthenticated = status === "authenticated";
 
   const handleResetConfirm = () => {
     draftStore.resetDraft();
@@ -36,17 +39,62 @@ const NavigationBar = observer(() => {
           >
             NFL Bracket
           </Button>
-          <div className="ml-2">
-            <Dropdown
-              arrowIcon={false}
-              inline
-              label={
-                <HiMenu className="size-6" />
-              }
-            >
-              <DropdownItem onClick={() => setOpenModal(true)}>Reset All</DropdownItem>
-            </Dropdown>
-          </div>
+          
+          {isAuthenticated ? (
+            <div className="ml-4 flex items-center gap-4">
+              <span className="hidden text-sm font-medium md:inline">
+                Welcome, {session.user?.name || 'User'}
+              </span>
+              <Dropdown
+                arrowIcon={false}
+                inline
+                label={
+                  session.user?.image ? (
+                    <Avatar img={session.user.image} rounded size="sm" />
+                  ) : (
+                    <div className="flex size-8 items-center justify-center rounded-full bg-blue-500 text-white">
+                      {(session.user?.name || 'U').charAt(0).toUpperCase()}
+                    </div>
+                  )
+                }
+              >
+                <DropdownItem as={Link} href="/profile">
+                  Profile
+                </DropdownItem>
+                <DropdownItem onClick={() => signOut({ callbackUrl: "/" })}>
+                  <div className="flex items-center gap-2">
+                    <HiOutlineLogout />
+                    <span>Sign out</span>
+                  </div>
+                </DropdownItem>
+                {/* Only show reset if needed */}
+                <DropdownItem onClick={() => setOpenModal(true)}>Reset All</DropdownItem>
+              </Dropdown>
+            </div>
+          ) : (
+            <div className="ml-4 flex items-center gap-2">
+              <Button
+                as={Link}
+                href="/auth/signin"
+                color="light"
+                size="sm"
+                className="flex items-center gap-1"
+              >
+                <HiOutlineLogin className="size-4" />
+                <span>Sign In</span>
+              </Button>
+              <Button
+                as={Link}
+                href="/auth/register"
+                color="dark"
+                size="sm"
+                className="flex items-center gap-1"
+              >
+                <HiOutlineUserAdd className="size-4" />
+                <span>Register</span>
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
