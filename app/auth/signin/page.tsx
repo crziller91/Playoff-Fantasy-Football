@@ -80,15 +80,6 @@ export default function SignIn() {
                         </Link>
                     </p>
                 </div>
-                <div className="mt-4">
-                    <Button
-                        color="alternative"
-                        className="w-full"
-                        onClick={() => signIn("github", { callbackUrl: "/" })}
-                    >
-                        Sign in with GitHub
-                    </Button>
-                </div>
             </Card>
         </div>
     );

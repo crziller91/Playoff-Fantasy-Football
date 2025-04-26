@@ -1,9 +1,9 @@
-// app/hooks/usePlayerModals.ts
 import { useState, useEffect } from 'react';
 import { ExtendedPlayer, ScoreForm, FormErrors, PlayerScoresByRound } from '../types';
 import { validateForm, calculatePlayerScore } from '../utils/scoreCalculator';
 import { savePlayerScore, deletePlayerScore } from '../services/scoreService';
 import { PLAYOFF_ROUNDS } from '../constants/playoffs';
+import { usePermissions } from './usePermissions';
 
 interface UsePlayerModalsProps {
     playerScores: PlayerScoresByRound;
@@ -16,6 +16,9 @@ export function usePlayerModals({
     setPlayerScores,
     activeRound
 }: UsePlayerModalsProps) {
+    // Get permissions
+    const { canEditScores } = usePermissions();
+
     // Selected player for editing scores
     const [selectedPlayer, setSelectedPlayer] = useState<ExtendedPlayer | null>(null);
 
@@ -76,6 +79,9 @@ export function usePlayerModals({
 
     // Handler for opening the score editing modal
     const handleEditScore = (player: ExtendedPlayer) => {
+        // Check permissions before proceeding
+        if (!canEditScores) return;
+
         setSelectedPlayer({ ...player, currentRound: activeRound });
         // Load existing score data if available
         const currentScoreData = playerScores[activeRound]?.[player.name]?.scoreData || {};
@@ -111,6 +117,9 @@ export function usePlayerModals({
 
     // Handler for toggling player disabled status
     const handleTogglePlayerDisabled = (player: ExtendedPlayer, isClearScores?: boolean) => {
+        // Check permissions before proceeding
+        if (!canEditScores) return;
+
         const round = activeRound;
 
         // If this is a clear scores action, open the confirmation modal
@@ -140,7 +149,7 @@ export function usePlayerModals({
 
     // Handler for player being eliminated
     const handlePlayerEliminated = () => {
-        if (!statusPlayer) return;
+        if (!canEditScores || !statusPlayer) return;
         updatePlayerStatus(statusPlayer, true, true);
         setOpenStatusModal(false);
         setStatusPlayer(null);
@@ -148,7 +157,7 @@ export function usePlayerModals({
 
     // Handler for player just not playing this round
     const handlePlayerNotPlaying = () => {
-        if (!statusPlayer) return;
+        if (!canEditScores || !statusPlayer) return;
         updatePlayerStatus(statusPlayer, true, false);
         setOpenStatusModal(false);
         setStatusPlayer(null);
@@ -162,7 +171,7 @@ export function usePlayerModals({
 
     // Handler for confirming player reactivation
     const handlePlayerReactivation = () => {
-        if (!reactivationPlayer) return;
+        if (!canEditScores || !reactivationPlayer) return;
         const round = reactivationPlayer.currentRound || activeRound;
 
         // Update UI state by removing the player from the disabled state
@@ -196,7 +205,7 @@ export function usePlayerModals({
 
     // Handler for confirming clear scores
     const handleConfirmClearScores = () => {
-        if (!clearScoresPlayer) return;
+        if (!canEditScores || !clearScoresPlayer) return;
         const round = clearScoresPlayer.currentRound || activeRound;
 
         // Update UI state using a plain object rather than a callback
@@ -218,6 +227,8 @@ export function usePlayerModals({
 
     // Handler for input field changes
     const handleInputChange = (field: keyof ScoreForm, value: string) => {
+        if (!canEditScores) return;
+
         if (value === "" || /^-?\d*$/.test(value)) {
             setScoreForm((prev) => ({ ...prev, [field]: value }));
 
@@ -234,6 +245,8 @@ export function usePlayerModals({
 
     // Handler for field goal count changes
     const handleFgCountChange = (value: string) => {
+        if (!canEditScores) return;
+
         if (value === "" || /^-?\d*$/.test(value)) {
             const count = parseInt(value) || 0;
             setFgCount(count);
@@ -256,6 +269,8 @@ export function usePlayerModals({
 
     // Handler for field goal yardage changes
     const handleFgYardageChange = (index: number, value: string) => {
+        if (!canEditScores) return;
+
         if (value === "" || /^-?\d*$/.test(value)) {
             setScoreForm((prev) => {
                 const newYardages = [...(prev.fgYardages || [])];
@@ -276,7 +291,7 @@ export function usePlayerModals({
 
     // Form submission handler
     const handleSubmitScore = () => {
-        if (!selectedPlayer) return;
+        if (!canEditScores || !selectedPlayer) return;
         const round = selectedPlayer.currentRound || activeRound;
 
         setSubmitAttempted(true);
@@ -327,10 +342,12 @@ export function usePlayerModals({
 
     // Shared function to update player status
     const updatePlayerStatus = (player: ExtendedPlayer, isDisabled: boolean, cascade: boolean) => {
+        if (!canEditScores) return;
+
         const round = player.currentRound || activeRound;
 
         // Create a deep copy of the current state
-        const newState = JSON.parse(JSON.stringify(playerScores));
+        const newState = JSON.parse(JSON.stringify(playerScores)); // Deep copy
 
         // Initialize the round if it doesn't exist
         if (!newState[round]) {

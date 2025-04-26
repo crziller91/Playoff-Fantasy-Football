@@ -39,12 +39,9 @@ const NavigationBar = observer(() => {
           >
             NFL Bracket
           </Button>
-          
+
           {isAuthenticated ? (
-            <div className="ml-4 flex items-center gap-4">
-              <span className="hidden text-sm font-medium md:inline">
-                Welcome, {session.user?.name || 'User'}
-              </span>
+            <div className="ml-3 flex items-center gap-4">
               <Dropdown
                 arrowIcon={false}
                 inline
@@ -61,39 +58,25 @@ const NavigationBar = observer(() => {
                 <DropdownItem as={Link} href="/profile">
                   Profile
                 </DropdownItem>
+                {/* Only show reset if needed */}
+                <DropdownItem onClick={() => setOpenModal(true)}>Reset All</DropdownItem>
                 <DropdownItem onClick={() => signOut({ callbackUrl: "/" })}>
                   <div className="flex items-center gap-2">
                     <HiOutlineLogout />
                     <span>Sign out</span>
                   </div>
                 </DropdownItem>
-                {/* Only show reset if needed */}
-                <DropdownItem onClick={() => setOpenModal(true)}>Reset All</DropdownItem>
               </Dropdown>
             </div>
           ) : (
-            <div className="ml-4 flex items-center gap-2">
-              <Button
-                as={Link}
-                href="/auth/signin"
-                color="light"
-                size="sm"
-                className="flex items-center gap-1"
-              >
-                <HiOutlineLogin className="size-4" />
-                <span>Sign In</span>
-              </Button>
-              <Button
-                as={Link}
-                href="/auth/register"
-                color="dark"
-                size="sm"
-                className="flex items-center gap-1"
-              >
-                <HiOutlineUserAdd className="size-4" />
-                <span>Register</span>
-              </Button>
-            </div>
+            <Button
+              as={Link}
+              href="/auth/signin"
+              color="light"
+            >
+              <HiOutlineLogin className="mr-1 size-5" />
+              Sign In
+            </Button>
           )}
         </div>
       </div>

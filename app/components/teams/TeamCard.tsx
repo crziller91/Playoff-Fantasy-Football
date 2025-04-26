@@ -26,6 +26,7 @@ interface TeamCardProps {
     onTogglePlayerDisabled: (player: ExtendedPlayer, isClearScores?: boolean) => void;
     round?: string;
     ranking?: number;
+    canEditScores: boolean;
 }
 
 const TeamCard = observer(({
@@ -34,7 +35,8 @@ const TeamCard = observer(({
     onEditScore,
     onTogglePlayerDisabled,
     round,
-    ranking
+    ranking,
+    canEditScores
 }: TeamCardProps) => {
     const { playersStore } = useStore();
     const { draftPicks } = playersStore;
@@ -112,36 +114,47 @@ const TeamCard = observer(({
                                             </p>
                                         )}
                                     </div>
-                                    <div className="flex space-x-2">
-                                        <Button
-                                            size="xs"
-                                            color={playerScores[player.name]?.scoreData ? "success" : "info"}
-                                            disabled={isDisabled}
-                                            onClick={() => onEditScore(player as ExtendedPlayer)}
-                                        >
-                                            {playerScores[player.name]?.scoreData ? "Edit Scores" : "Enter Scores"}
-                                        </Button>
-                                        {/* Show Clear Scores button if scores are entered */}
-                                        {playerScores[player.name]?.scoreData && (
+
+                                    {/* Only show controls if user has permission */}
+                                    {canEditScores ? (
+                                        <div className="flex space-x-2">
                                             <Button
                                                 size="xs"
-                                                color="failure"
-                                                onClick={() => onTogglePlayerDisabled(player as ExtendedPlayer, true)}
+                                                color={playerScores[player.name]?.scoreData ? "success" : "info"}
+                                                disabled={isDisabled}
+                                                onClick={() => onEditScore(player as ExtendedPlayer)}
                                             >
-                                                Clear Scores
+                                                {playerScores[player.name]?.scoreData ? "Edit Scores" : "Enter Scores"}
                                             </Button>
-                                        )}
-                                        {/* Only show X button if no scores entered */}
-                                        {!playerScores[player.name]?.scoreData && (
-                                            <Button
-                                                size="xs"
-                                                color={isDisabled ? "failure" : "light"}
-                                                onClick={() => onTogglePlayerDisabled(player as ExtendedPlayer)}
-                                            >
-                                                <HiX className="size-4" />
-                                            </Button>
-                                        )}
-                                    </div>
+                                            {/* Show Clear Scores button if scores are entered */}
+                                            {playerScores[player.name]?.scoreData && (
+                                                <Button
+                                                    size="xs"
+                                                    color="failure"
+                                                    onClick={() => onTogglePlayerDisabled(player as ExtendedPlayer, true)}
+                                                >
+                                                    Clear Scores
+                                                </Button>
+                                            )}
+                                            {/* Only show X button if no scores entered */}
+                                            {!playerScores[player.name]?.scoreData && (
+                                                <Button
+                                                    size="xs"
+                                                    color={isDisabled ? "failure" : "light"}
+                                                    onClick={() => onTogglePlayerDisabled(player as ExtendedPlayer)}
+                                                >
+                                                    <HiX className="size-4" />
+                                                </Button>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        // Read-only indicator for users without edit permissions
+                                        playerScores[player.name]?.isDisabled && (
+                                            <Badge color="gray" size="xs">
+                                                {statusReason === "eliminated" ? "Eliminated" : "Not Playing"}
+                                            </Badge>
+                                        )
+                                    )}
                                 </div>
                             </li>
                         );

@@ -9,6 +9,7 @@ import RoundDisabledMessage from "../ui/RoundDisabledMessage";
 import TeamCardList from "./TeamCardList";
 import { PlayerScoresByRound } from "../../types";
 import { getOrderedTeamPicks } from "../../utils/teamUtils";
+import { usePermissions } from "../../hooks/usePermissions";
 
 interface TeamsViewProps {
   initialActiveRound?: string;
@@ -19,6 +20,7 @@ const TeamsView = observer(({ initialActiveRound, onRoundChange }: TeamsViewProp
   const store = useStore();
   const { draftStore, teamsStore, playersStore, scoresStore } = store;
   const tabsRef = useRef<TabsRef>(null);
+  const { canEditScores } = usePermissions();
 
   // Create a wrapper function for MobX action to make it compatible with the hook
   const setPlayerScoresWrapper = (scores: PlayerScoresByRound) => {
@@ -133,6 +135,7 @@ const TeamsView = observer(({ initialActiveRound, onRoundChange }: TeamsViewProp
                 round={round}
                 onEditScore={handleEditScore}
                 onTogglePlayerDisabled={handleTogglePlayerDisabled}
+                canEditScores={canEditScores}
               />
             ) : (
               <RoundDisabledMessage round={round} />
@@ -141,12 +144,14 @@ const TeamsView = observer(({ initialActiveRound, onRoundChange }: TeamsViewProp
         ))}
       </Tabs>
 
-      {/* All modals grouped in a single component */}
-      <PlayerModals
-        modalsState={modalsState}
-        modalsHandlers={modalsHandlers}
-        activeRound={scoresStore.activeRound}
-      />
+      {/* Only render modals if user can edit scores */}
+      {canEditScores && (
+        <PlayerModals
+          modalsState={modalsState}
+          modalsHandlers={modalsHandlers}
+          activeRound={scoresStore.activeRound}
+        />
+      )}
     </div>
   );
 });
