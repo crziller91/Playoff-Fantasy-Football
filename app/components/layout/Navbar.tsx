@@ -91,19 +91,16 @@ const NavigationBar = observer(() => {
           </Button>
 
           {isAuthenticated ? (
-            <div className="ml-3 flex items-center gap-4">
+            <div className="ml-2 flex items-center gap-4">
               <Dropdown
                 arrowIcon={false}
                 inline
                 label={
-                  <div className="flex size-8 items-center justify-center rounded-full bg-blue-500 text-white">
+                  <div className="flex size-8 items-center justify-center rounded-full bg-[#1a748f] text-white">
                     {(session.user?.name || 'U').charAt(0).toUpperCase()}
                   </div>
                 }
               >
-                <DropdownItem as={Link} href="/profile">
-                  Profile
-                </DropdownItem>
                 {/* Only show reset if needed */}
                 <DropdownItem onClick={() => setOpenResetModal(true)}>Reset All</DropdownItem>
                 <DropdownItem onClick={() => setOpenSignOutModal(true)}>
