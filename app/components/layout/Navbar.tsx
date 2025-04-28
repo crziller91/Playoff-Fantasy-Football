@@ -2,13 +2,14 @@ import { observer } from "mobx-react-lite";
 import { Button, DropdownItem, Navbar, NavbarBrand, Dropdown, Avatar } from "flowbite-react";
 import Link from "next/link";
 import { useState } from "react";
-import { HiOutlineChevronLeft, HiOutlineLogin, HiOutlineLogout, HiOutlineTrash } from "react-icons/hi";
+import { HiOutlineChevronLeft, HiOutlineLogin, HiOutlineLogout, HiOutlineTrash, HiShieldCheck } from "react-icons/hi";
 import { useStore } from "../../stores/StoreContext";
 import ResetConfirmationModal from "../modals/ResetConfirmationModal";
 import DeleteAccountModal from "../modals/DeleteAccountModal";
 import SignOutModal from "../modals/SignOutModal";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { usePermissions } from "../../hooks/usePermissions";
 
 const NavigationBar = observer(() => {
   const router = useRouter();
@@ -19,6 +20,7 @@ const NavigationBar = observer(() => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const { data: session, status } = useSession();
+  const { canEditScores } = usePermissions(); // Add the permissions hook
   const isAuthenticated = status === "authenticated";
 
   const handleResetConfirm = () => {
@@ -28,6 +30,13 @@ const NavigationBar = observer(() => {
 
   const handleDeleteAccount = async () => {
     try {
+      // Check if user is an admin - block deletion if they are
+      if (canEditScores) {
+        alert("Admin accounts cannot be deleted. Please transfer admin rights to another user first.");
+        setOpenDeleteModal(false);
+        return;
+      }
+
       setIsDeleting(true);
 
       // Call the API to delete the account
@@ -101,6 +110,19 @@ const NavigationBar = observer(() => {
                   </div>
                 }
               >
+                {/* Add admin permissions link if user has rights */}
+                {canEditScores && (
+                  <>
+                    <DropdownItem as={Link} href="/admin/permissions">
+                      <div className="flex items-center gap-2">
+                        <HiShieldCheck />
+                        <span>Manage Permissions</span>
+                      </div>
+                    </DropdownItem>
+                    <Dropdown.Divider />
+                  </>
+                )}
+
                 {/* Only show reset if needed */}
                 <DropdownItem onClick={() => setOpenResetModal(true)}>Reset All</DropdownItem>
                 <DropdownItem onClick={() => setOpenSignOutModal(true)}>
@@ -109,12 +131,15 @@ const NavigationBar = observer(() => {
                     <span>Sign out</span>
                   </div>
                 </DropdownItem>
-                <DropdownItem onClick={() => setOpenDeleteModal(true)}>
-                  <div className="flex items-center gap-2 text-red-600">
-                    <HiOutlineTrash />
-                    <span>Delete Account</span>
-                  </div>
-                </DropdownItem>
+                {/* Only show delete account option for non-admin users */}
+                {!canEditScores && (
+                  <DropdownItem onClick={() => setOpenDeleteModal(true)}>
+                    <div className="flex items-center gap-2 text-red-600">
+                      <HiOutlineTrash />
+                      <span>Delete Account</span>
+                    </div>
+                  </DropdownItem>
+                )}
               </Dropdown>
             </div>
           ) : (
