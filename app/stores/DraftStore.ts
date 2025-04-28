@@ -49,6 +49,7 @@ export class DraftStore {
         this.searchTerms = terms;
     };
 
+    // This function should only be called if user is admin
     resetDraft = async () => {
         try {
             this.loading = true;

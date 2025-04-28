@@ -40,15 +40,29 @@ export class DraftManager {
         const draftedPlayerIds = new Set<number>();
         for (const team of Object.keys(draftPicks)) {
             const teamPicks = draftPicks[team];
-            for (const round of this.PICKS) {
-                const player = teamPicks[round];
-                if (player) draftedPlayerIds.add(player.id);
+            if (teamPicks) { // Check if teamPicks exists
+                for (const round of this.PICKS) {
+                    const player = teamPicks[round];
+                    if (player) draftedPlayerIds.add(player.id);
+                }
             }
         }
         return players.filter((player) => !draftedPlayerIds.has(player.id));
     }
 
     static getTeamPositionCounts(team: Team, draftPicks: DraftPicks) {
+        // Add null check to handle undefined or non-existent teams
+        if (!draftPicks[team]) {
+            return {
+                QB: 0,
+                RB: 0,
+                WR: 0,
+                TE: 0,
+                DST: 0,
+                K: 0,
+            };
+        }
+
         const picks = Object.values(draftPicks[team]).filter(Boolean) as Player[];
         return {
             QB: picks.filter((p) => p.position === "QB").length,
@@ -61,11 +75,21 @@ export class DraftManager {
     }
 
     static canSelectPlayer(team: Team, draftPicks: DraftPicks, totalRounds: number): boolean {
+        // Add null check here too
+        if (!draftPicks[team]) {
+            return false;
+        }
+
         const picked = Object.values(draftPicks[team]).filter(Boolean).length;
         return picked < totalRounds;
     }
 
     static filterPlayers(players: Player[], team: Team, draftPicks: DraftPicks, searchTerm: string): Player[] {
+        // Add null check here as well
+        if (!draftPicks[team]) {
+            return [];
+        }
+
         const counts = this.getTeamPositionCounts(team, draftPicks);
         const hasTE = counts.TE > 0;
         const hasDST = counts.DST > 0;

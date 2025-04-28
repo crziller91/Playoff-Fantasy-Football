@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
 
             // Find if any admin exists
             const adminExists = await tx.permission.findFirst({
-                where: { editScores: true }
+                where: { isAdmin: true }
             });
 
             // If this is the first user or no admin exists, make this user an admin
@@ -54,7 +54,8 @@ export async function POST(request: NextRequest) {
                 await tx.permission.create({
                     data: {
                         userId: user.id,
-                        editScores: true, // Grant admin privileges
+                        editScores: true, // Grant score editing privileges
+                        isAdmin: true,    // Grant admin privileges
                     }
                 });
             } else {
@@ -63,6 +64,7 @@ export async function POST(request: NextRequest) {
                     data: {
                         userId: user.id,
                         editScores: false,
+                        isAdmin: false,
                     }
                 });
             }

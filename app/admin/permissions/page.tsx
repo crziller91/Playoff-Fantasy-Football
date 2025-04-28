@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { Card, Table, Spinner, Alert, Checkbox, Button } from "flowbite-react";
 import { usePermissions } from "@/app/hooks/usePermissions";
 import { redirect } from "next/navigation";
-import { HiCheckCircle } from "react-icons/hi";
+import { HiCheckCircle, HiLockClosed } from "react-icons/hi";
 import Link from "next/link";
 
 interface User {
@@ -19,6 +19,7 @@ interface Permission {
     id: number;
     userId: string;
     editScores: boolean;
+    isAdmin: boolean;
 }
 
 export default function PermissionsPage() {
@@ -29,7 +30,7 @@ export default function PermissionsPage() {
         },
     });
 
-    const { canEditScores, isLoading: permissionsLoading } = usePermissions();
+    const { isAdmin, isLoading: permissionsLoading } = usePermissions();
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -39,7 +40,7 @@ export default function PermissionsPage() {
     // Fetch all users with their permissions
     useEffect(() => {
         const fetchUsers = async () => {
-            if (!canEditScores) return;
+            if (!isAdmin) return;
 
             try {
                 setLoading(true);
@@ -60,18 +61,18 @@ export default function PermissionsPage() {
             }
         };
 
-        if (!permissionsLoading && canEditScores) {
+        if (!permissionsLoading && isAdmin) {
             fetchUsers();
         }
-    }, [canEditScores, permissionsLoading]);
+    }, [isAdmin, permissionsLoading]);
 
     // Update user permission
-    const handleTogglePermission = async (userId: string, currentValue: boolean) => {
+    const handleTogglePermission = async (userId: string, field: 'editScores' | 'isAdmin', currentValue: boolean) => {
         // Prevent multiple clicks
         if (processingUsers.has(userId)) return;
 
         // Prevent admin from removing their own admin permissions
-        if (userId === session?.user?.id && currentValue === true) {
+        if (userId === session?.user?.id && field === 'isAdmin' && currentValue === true) {
             setError("You cannot remove admin permissions from yourself");
 
             // Auto-hide error message after 3 seconds
@@ -96,7 +97,7 @@ export default function PermissionsPage() {
                 },
                 body: JSON.stringify({
                     userId,
-                    editScores: !currentValue,
+                    [field]: !currentValue,
                 }),
             });
 
@@ -109,12 +110,24 @@ export default function PermissionsPage() {
             setUsers((prevUsers) =>
                 prevUsers.map((user) => {
                     if (user.id === userId) {
+                        const updatedPermission = {
+                            ...(user.permission || { id: 0, userId, editScores: false, isAdmin: false }),
+                            [field]: !currentValue,
+                        };
+
+                        // If user becomes admin, they automatically get editScores
+                        if (field === 'isAdmin' && !currentValue) {
+                            updatedPermission.editScores = true;
+                        }
+
+                        // If user loses editScores and they're admin, prevent it
+                        if (field === 'editScores' && !currentValue && updatedPermission.isAdmin) {
+                            updatedPermission.editScores = true;
+                        }
+
                         return {
                             ...user,
-                            permission: {
-                                ...(user.permission || { id: 0, userId }),
-                                editScores: !currentValue,
-                            },
+                            permission: updatedPermission,
                         };
                     }
                     return user;
@@ -142,12 +155,18 @@ export default function PermissionsPage() {
     };
 
     // Redirect if not admin
-    if (!permissionsLoading && !canEditScores) {
+    if (!permissionsLoading && !isAdmin) {
         return (
             <div className="container mx-auto my-8 px-4">
                 <Alert color="failure">
                     <p>You do not have permission to access this page.</p>
+                    <p>Only administrators can manage user permissions.</p>
                 </Alert>
+                <div className="mt-4">
+                    <Button as={Link} href="/" color="light">
+                        Return Home
+                    </Button>
+                </div>
             </div>
         );
     }
@@ -181,37 +200,73 @@ export default function PermissionsPage() {
                     <Table.Head>
                         <Table.HeadCell>Name</Table.HeadCell>
                         <Table.HeadCell>Email</Table.HeadCell>
+                        <Table.HeadCell className="text-center">Admin</Table.HeadCell>
                         <Table.HeadCell className="text-center">Can Edit Scores</Table.HeadCell>
-                        {/* Add more permission columns here as needed */}
                     </Table.Head>
                     <Table.Body>
-                        {users.map((user) => (
-                            <Table.Row key={user.id} className="hover:bg-gray-50">
-                                <Table.Cell>{user.name || "N/A"}</Table.Cell>
-                                <Table.Cell>{user.email || "N/A"}</Table.Cell>
-                                <Table.Cell className="text-center">
-                                    <div className="flex justify-center">
-                                        <Checkbox
-                                            checked={user.permission?.editScores || false}
-                                            onChange={() => handleTogglePermission(user.id, user.permission?.editScores || false)}
-                                            disabled={processingUsers.has(user.id) || (user.id === session?.user?.id && user.permission?.editScores === true)}
-                                            className={`cursor-pointer ${user.id === session?.user?.id && user.permission?.editScores ? "opacity-60" : ""}`}
-                                        />
-                                    </div>
-                                    {processingUsers.has(user.id) && (
-                                        <div className="mt-1 flex justify-center">
-                                            <Spinner size="xs" />
+                        {users.map((user) => {
+                            const isCurrentUser = user.id === session?.user?.id;
+                            const isUserAdmin = user.permission?.isAdmin || false;
+
+                            return (
+                                <Table.Row key={user.id} className="hover:bg-gray-50">
+                                    <Table.Cell>{user.name || "N/A"}</Table.Cell>
+                                    <Table.Cell>{user.email || "N/A"}</Table.Cell>
+
+                                    {/* Admin Permission */}
+                                    <Table.Cell className="text-center">
+                                        <div className="flex justify-center">
+                                            <Checkbox
+                                                checked={isUserAdmin}
+                                                onChange={() => handleTogglePermission(
+                                                    user.id,
+                                                    'isAdmin',
+                                                    isUserAdmin
+                                                )}
+                                                disabled={
+                                                    processingUsers.has(user.id) ||
+                                                    (isCurrentUser && isUserAdmin)
+                                                }
+                                                className={`cursor-pointer ${isCurrentUser && isUserAdmin ? "opacity-60" : ""}`}
+                                            />
                                         </div>
-                                    )}
-                                    {user.id === session?.user?.id && user.permission?.editScores && (
-                                        <div className="mt-1 text-xs text-gray-500">
-                                            (your account)
+                                        {processingUsers.has(user.id) && (
+                                            <div className="mt-1 flex justify-center">
+                                                <Spinner size="xs" />
+                                            </div>
+                                        )}
+                                        {isCurrentUser && isUserAdmin && (
+                                            <div className="mt-1 text-xs text-gray-500">
+                                                (your account)
+                                            </div>
+                                        )}
+                                    </Table.Cell>
+
+                                    {/* Edit Scores Permission */}
+                                    <Table.Cell className="text-center">
+                                        <div className="flex justify-center">
+                                            {isUserAdmin ? (
+                                                <div className="flex items-center text-xs text-gray-500">
+                                                    <HiLockClosed className="mr-1" />
+                                                    <span>Included with Admin</span>
+                                                </div>
+                                            ) : (
+                                                <Checkbox
+                                                    checked={user.permission?.editScores || false}
+                                                    onChange={() => handleTogglePermission(
+                                                        user.id,
+                                                        'editScores',
+                                                        user.permission?.editScores || false
+                                                    )}
+                                                    disabled={processingUsers.has(user.id) || isUserAdmin}
+                                                    className={`cursor-pointer ${isCurrentUser && isUserAdmin ? "opacity-60" : ""}`}
+                                                />
+                                            )}
                                         </div>
-                                    )}
-                                </Table.Cell>
-                                {/* Add more permission columns here as needed */}
-                            </Table.Row>
-                        ))}
+                                    </Table.Cell>
+                                </Table.Row>
+                            );
+                        })}
                     </Table.Body>
                 </Table>
             </Card>

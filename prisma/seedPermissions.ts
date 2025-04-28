@@ -16,7 +16,7 @@ async function seedPermissions() {
         }
 
         // Create permissions for each user
-        // For now, we'll grant editScores permission only to the first user (assuming it's the admin)
+        // For now, we'll grant admin privileges only to the first user (assuming it's the admin)
         // You can modify this logic to grant permissions to specific users based on email or other criteria
         for (let i = 0; i < users.length; i++) {
             const user = users[i];
@@ -27,18 +27,30 @@ async function seedPermissions() {
             });
 
             if (existingPermission) {
-                console.log(`Permissions already exist for user ${user.name || user.email || user.id}`);
+                // If permission exists but doesn't have isAdmin set, update it
+                if (existingPermission.isAdmin === undefined) {
+                    await prisma.permission.update({
+                        where: { userId: user.id },
+                        data: {
+                            isAdmin: i === 0, // First user gets admin rights
+                        }
+                    });
+                    console.log(`Updated permissions for user ${user.name || user.email || user.id} (Admin: ${i === 0})`);
+                } else {
+                    console.log(`Permissions already exist for user ${user.name || user.email || user.id}`);
+                }
                 continue;
             }
 
             // Create permission record
-            // Grant editScores permission to the first user only
+            // Grant isAdmin and editScores permission to the first user only
             const isAdmin = i === 0;
 
             await prisma.permission.create({
                 data: {
                     userId: user.id,
-                    editScores: isAdmin, // First user gets admin rights
+                    editScores: isAdmin, // First user gets score editing rights
+                    isAdmin: isAdmin,    // First user gets admin rights
                 }
             });
 

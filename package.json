@@ -16,7 +16,8 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "prisma db seed",
     "prisma:reset": "prisma migrate reset --force",
-    "db:init": "npm run prisma:migrate && npm run prisma:seed"
+    "db:init": "npm run prisma:migrate && npm run prisma:seed",
+    "seed-permissions": "ts-node --transpile-only prisma/seedPermissions.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.9.0",
@@ -47,6 +48,7 @@
     "prettier-plugin-tailwindcss": "^0.6.8",
     "prisma": "^6.6.0",
     "tailwindcss": "^3.4.14",
+    "ts-node": "^10.9.2",
     "tsx": "^4.19.1",
     "typescript": "^5.6.3"
   }

@@ -27,6 +27,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
                 data: {
                     userId: session.user.id,
                     editScores: false, // Default to false
+                    isAdmin: false,    // Default to false
                 },
             });
         }
@@ -55,12 +56,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             );
         }
 
-        // Check if the current user is an admin (has their own editScores permission)
+        // Check if the current user is an admin
         const adminPermission = await prisma.permission.findUnique({
             where: { userId: session.user.id },
         });
 
-        if (!adminPermission?.editScores) {
+        if (!adminPermission?.isAdmin) {
             return NextResponse.json(
                 { error: "Forbidden: You don't have permission to update user permissions" },
                 { status: 403 }
@@ -69,7 +70,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
         // Get the request body
         const data = await request.json();
-        const { userId, editScores } = data;
+        const { userId, editScores, isAdmin } = data;
 
         if (!userId) {
             return NextResponse.json(
@@ -90,15 +91,25 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             );
         }
 
+        // Don't allow removing admin from self
+        if (userId === session.user.id && adminPermission.isAdmin && isAdmin === false) {
+            return NextResponse.json(
+                { error: "You cannot remove your own admin privileges" },
+                { status: 400 }
+            );
+        }
+
         // Update or create permissions for the user
         const permissions = await prisma.permission.upsert({
             where: { userId },
             update: {
                 editScores: editScores === true,
+                isAdmin: isAdmin === true,
             },
             create: {
                 userId,
                 editScores: editScores === true,
+                isAdmin: isAdmin === true,
             },
         });
 

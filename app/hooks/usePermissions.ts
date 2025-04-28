@@ -5,6 +5,7 @@ interface Permission {
     id: number;
     userId: string;
     editScores: boolean;
+    isAdmin: boolean; // Added isAdmin field
     createdAt: string;
     updatedAt: string;
 }
@@ -49,7 +50,8 @@ export function usePermissions() {
     }, [session, status]);
 
     return {
-        canEditScores: permissions?.editScores || false,
+        canEditScores: permissions?.editScores || permissions?.isAdmin || false, // Admin implies editScores
+        isAdmin: permissions?.isAdmin || false,
         isAuthenticated: status === "authenticated",
         isLoading: status === "loading" || isLoadingPermissions,
         error

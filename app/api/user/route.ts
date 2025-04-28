@@ -21,7 +21,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
             where: { userId: session.user.id },
         });
 
-        if (!adminPermission?.editScores) {
+        if (!adminPermission?.isAdmin) {
             return NextResponse.json(
                 { error: "Forbidden: You don't have permission to view users" },
                 { status: 403 }

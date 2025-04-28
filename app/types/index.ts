@@ -6,6 +6,7 @@ export type Player = {
 };
 
 export interface TeamWithBudget {
+  id: number;
   name: string;
   budget: number;
 }

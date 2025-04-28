@@ -3,6 +3,7 @@ import { Button, DropdownItem, Navbar, NavbarBrand, Dropdown, Avatar } from "flo
 import Link from "next/link";
 import { useState } from "react";
 import { HiOutlineChevronLeft, HiOutlineLogin, HiOutlineLogout, HiOutlineTrash, HiShieldCheck } from "react-icons/hi";
+import { MdAdminPanelSettings } from "react-icons/md";
 import { useStore } from "../../stores/StoreContext";
 import ResetConfirmationModal from "../modals/ResetConfirmationModal";
 import DeleteAccountModal from "../modals/DeleteAccountModal";
@@ -20,7 +21,7 @@ const NavigationBar = observer(() => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const { data: session, status } = useSession();
-  const { canEditScores } = usePermissions(); // Add the permissions hook
+  const { canEditScores, isAdmin } = usePermissions(); // Get both permissions
   const isAuthenticated = status === "authenticated";
 
   const handleResetConfirm = () => {
@@ -103,21 +104,35 @@ const NavigationBar = observer(() => {
                   </div>
                 }
               >
-                {/* Add admin permissions link if user has rights */}
-                {canEditScores && (
+                {/* Admin Dashboard link - only for admins */}
+                {isAdmin && (
+                  <DropdownItem as={Link} href="/admin/dashboard">
+                    <div className="flex items-center gap-2">
+                      <MdAdminPanelSettings />
+                      <span>Admin Dashboard</span>
+                    </div>
+                  </DropdownItem>
+                )}
+
+                {/* Permissions management - only for admins */}
+                {isAdmin && (
+                  <DropdownItem as={Link} href="/admin/permissions">
+                    <div className="flex items-center gap-2">
+                      <HiShieldCheck />
+                      <span>Manage Permissions</span>
+                    </div>
+                  </DropdownItem>
+                )}
+
+                {/* Reset All - only for admins */}
+                {isAdmin && (
                   <>
-                    <DropdownItem as={Link} href="/admin/permissions">
-                      <div className="flex items-center gap-2">
-                        <HiShieldCheck />
-                        <span>Manage Permissions</span>
-                      </div>
-                    </DropdownItem>
-                    <Dropdown.Divider />
+                    {isAdmin && <Dropdown.Divider />}
+                    <DropdownItem onClick={() => setOpenResetModal(true)}>Reset All</DropdownItem>
                   </>
                 )}
 
-                {/* Only show reset if needed */}
-                <DropdownItem onClick={() => setOpenResetModal(true)}>Reset All</DropdownItem>
+                <Dropdown.Divider />
                 <DropdownItem onClick={() => setOpenSignOutModal(true)}>
                   <div className="flex items-center gap-2">
                     <HiOutlineLogout />
@@ -158,7 +173,7 @@ const NavigationBar = observer(() => {
         onClose={() => setOpenDeleteModal(false)}
         onConfirm={handleDeleteAccount}
         isLoading={isDeleting}
-        isAdmin={canEditScores}
+        isAdmin={isAdmin}
       />
 
       {/* Sign Out Confirmation Modal */}

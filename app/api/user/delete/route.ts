@@ -22,7 +22,7 @@ export async function DELETE(req: NextRequest) {
         const userPermission = await prisma.permission.findUnique({
             where: { userId },
         });
-        const isAdmin = userPermission?.editScores || false;
+        const isAdmin = userPermission?.isAdmin || false;
 
         // If user is admin, handle admin privilege transfer
         if (isAdmin) {
@@ -57,8 +57,15 @@ export async function DELETE(req: NextRequest) {
                     // Make this user admin
                     await tx.permission.upsert({
                         where: { userId: anotherUser.id },
-                        update: { editScores: true },
-                        create: { userId: anotherUser.id, editScores: true },
+                        update: {
+                            isAdmin: true,
+                            editScores: true // Ensure editScores is also granted with admin
+                        },
+                        create: {
+                            userId: anotherUser.id,
+                            isAdmin: true,
+                            editScores: true
+                        },
                     });
                 }
             });
