@@ -30,13 +30,6 @@ const NavigationBar = observer(() => {
 
   const handleDeleteAccount = async () => {
     try {
-      // Check if user is an admin - block deletion if they are
-      if (canEditScores) {
-        alert("Admin accounts cannot be deleted. Please transfer admin rights to another user first.");
-        setOpenDeleteModal(false);
-        return;
-      }
-
       setIsDeleting(true);
 
       // Call the API to delete the account
@@ -131,15 +124,12 @@ const NavigationBar = observer(() => {
                     <span>Sign out</span>
                   </div>
                 </DropdownItem>
-                {/* Only show delete account option for non-admin users */}
-                {!canEditScores && (
-                  <DropdownItem onClick={() => setOpenDeleteModal(true)}>
-                    <div className="flex items-center gap-2 text-red-600">
-                      <HiOutlineTrash />
-                      <span>Delete Account</span>
-                    </div>
-                  </DropdownItem>
-                )}
+                <DropdownItem onClick={() => setOpenDeleteModal(true)}>
+                  <div className="flex items-center gap-2 text-red-600">
+                    <HiOutlineTrash />
+                    <span>Delete Account</span>
+                  </div>
+                </DropdownItem>
               </Dropdown>
             </div>
           ) : (
@@ -168,6 +158,7 @@ const NavigationBar = observer(() => {
         onClose={() => setOpenDeleteModal(false)}
         onConfirm={handleDeleteAccount}
         isLoading={isDeleting}
+        isAdmin={canEditScores}
       />
 
       {/* Sign Out Confirmation Modal */}

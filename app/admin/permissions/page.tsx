@@ -2,9 +2,11 @@
 
 import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
-import { Card, Table, Spinner, Button, Checkbox, Alert } from "flowbite-react";
+import { Card, Table, Spinner, Alert, Checkbox, Button } from "flowbite-react";
 import { usePermissions } from "@/app/hooks/usePermissions";
 import { redirect } from "next/navigation";
+import { HiCheckCircle } from "react-icons/hi";
+import Link from "next/link";
 
 interface User {
     id: string;
@@ -32,6 +34,7 @@ export default function PermissionsPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
+    const [processingUsers, setProcessingUsers] = useState<Set<string>>(new Set());
 
     // Fetch all users with their permissions
     useEffect(() => {
@@ -64,7 +67,25 @@ export default function PermissionsPage() {
 
     // Update user permission
     const handleTogglePermission = async (userId: string, currentValue: boolean) => {
+        // Prevent multiple clicks
+        if (processingUsers.has(userId)) return;
+
+        // Prevent admin from removing their own admin permissions
+        if (userId === session?.user?.id && currentValue === true) {
+            setError("You cannot remove admin permissions from yourself");
+
+            // Auto-hide error message after 3 seconds
+            setTimeout(() => {
+                setError(null);
+            }, 3000);
+
+            return;
+        }
+
         try {
+            // Add user to processing set
+            setProcessingUsers(prev => new Set(prev).add(userId));
+
             setError(null);
             setSuccessMessage(null);
 
@@ -91,7 +112,7 @@ export default function PermissionsPage() {
                         return {
                             ...user,
                             permission: {
-                                ...user.permission!,
+                                ...(user.permission || { id: 0, userId }),
                                 editScores: !currentValue,
                             },
                         };
@@ -100,10 +121,23 @@ export default function PermissionsPage() {
                 })
             );
 
-            setSuccessMessage("Permission updated successfully");
+            setSuccessMessage(`Permission updated successfully for ${users.find(u => u.id === userId)?.name || userId}`);
+
+            // Auto-hide success message after 3 seconds
+            setTimeout(() => {
+                setSuccessMessage(null);
+            }, 3000);
+
         } catch (err) {
             console.error("Error updating permission:", err);
             setError(err instanceof Error ? err.message : "Failed to update permission");
+        } finally {
+            // Remove user from processing set
+            setProcessingUsers(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(userId);
+                return newSet;
+            });
         }
     };
 
@@ -137,7 +171,7 @@ export default function PermissionsPage() {
             )}
 
             {successMessage && (
-                <Alert color="success" className="mb-4">
+                <Alert color="success" className="mb-4" icon={HiCheckCircle}>
                     {successMessage}
                 </Alert>
             )}
@@ -147,34 +181,46 @@ export default function PermissionsPage() {
                     <Table.Head>
                         <Table.HeadCell>Name</Table.HeadCell>
                         <Table.HeadCell>Email</Table.HeadCell>
-                        <Table.HeadCell>Can Edit Scores</Table.HeadCell>
-                        <Table.HeadCell>Actions</Table.HeadCell>
+                        <Table.HeadCell className="text-center">Can Edit Scores</Table.HeadCell>
+                        {/* Add more permission columns here as needed */}
                     </Table.Head>
                     <Table.Body>
                         {users.map((user) => (
-                            <Table.Row key={user.id}>
+                            <Table.Row key={user.id} className="hover:bg-gray-50">
                                 <Table.Cell>{user.name || "N/A"}</Table.Cell>
                                 <Table.Cell>{user.email || "N/A"}</Table.Cell>
-                                <Table.Cell>
-                                    <Checkbox
-                                        checked={user.permission?.editScores || false}
-                                        readOnly
-                                    />
+                                <Table.Cell className="text-center">
+                                    <div className="flex justify-center">
+                                        <Checkbox
+                                            checked={user.permission?.editScores || false}
+                                            onChange={() => handleTogglePermission(user.id, user.permission?.editScores || false)}
+                                            disabled={processingUsers.has(user.id) || (user.id === session?.user?.id && user.permission?.editScores === true)}
+                                            className={`cursor-pointer ${user.id === session?.user?.id && user.permission?.editScores ? "opacity-60" : ""}`}
+                                        />
+                                    </div>
+                                    {processingUsers.has(user.id) && (
+                                        <div className="mt-1 flex justify-center">
+                                            <Spinner size="xs" />
+                                        </div>
+                                    )}
+                                    {user.id === session?.user?.id && user.permission?.editScores && (
+                                        <div className="mt-1 text-xs text-gray-500">
+                                            (your account)
+                                        </div>
+                                    )}
                                 </Table.Cell>
-                                <Table.Cell>
-                                    <Button
-                                        size="xs"
-                                        color={user.permission?.editScores ? "failure" : "success"}
-                                        onClick={() => handleTogglePermission(user.id, user.permission?.editScores || false)}
-                                    >
-                                        {user.permission?.editScores ? "Remove Permission" : "Grant Permission"}
-                                    </Button>
-                                </Table.Cell>
+                                {/* Add more permission columns here as needed */}
                             </Table.Row>
                         ))}
                     </Table.Body>
                 </Table>
             </Card>
+
+            <div className="mt-6 flex">
+                <Button as={Link} href="/" color="light">
+                    Return Home
+                </Button>
+            </div>
         </div>
     );
 }

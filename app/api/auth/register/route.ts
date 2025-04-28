@@ -29,24 +29,56 @@ export async function POST(request: NextRequest) {
         // Hash the password
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Create the user
-        const user = await prisma.user.create({
-            data: {
-                name,
-                email,
-                // Store hashed password in a custom field
-                // You may need to add this field to your User model
-                hashedPassword,
-            },
+        // Use a transaction to ensure all operations succeed or fail together
+        const result = await prisma.$transaction(async (tx) => {
+            // Create the user
+            const user = await tx.user.create({
+                data: {
+                    name,
+                    email,
+                    hashedPassword,
+                },
+            });
+
+            // Check if this is the first user (no other users exist)
+            const userCount = await tx.user.count();
+            const isFirstUser = userCount === 1;
+
+            // Find if any admin exists
+            const adminExists = await tx.permission.findFirst({
+                where: { editScores: true }
+            });
+
+            // If this is the first user or no admin exists, make this user an admin
+            if (isFirstUser || !adminExists) {
+                await tx.permission.create({
+                    data: {
+                        userId: user.id,
+                        editScores: true, // Grant admin privileges
+                    }
+                });
+            } else {
+                // Create default permissions (no admin rights)
+                await tx.permission.create({
+                    data: {
+                        userId: user.id,
+                        editScores: false,
+                    }
+                });
+            }
+
+            return { user, isAdmin: isFirstUser || !adminExists };
         });
 
         // Remove sensitive information before returning
+        const { user } = result;
         const { hashedPassword: _, ...userWithoutPassword } = user;
 
         return NextResponse.json(
             {
                 message: "User registered successfully",
-                user: userWithoutPassword
+                user: userWithoutPassword,
+                isAdmin: result.isAdmin
             },
             { status: 201 }
         );

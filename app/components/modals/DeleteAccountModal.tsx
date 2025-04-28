@@ -6,13 +6,15 @@ interface DeleteAccountModalProps {
     onClose: () => void;
     onConfirm: () => void;
     isLoading: boolean;
+    isAdmin: boolean;
 }
 
 export default function DeleteAccountModal({
     isOpen,
     onClose,
     onConfirm,
-    isLoading
+    isLoading,
+    isAdmin
 }: DeleteAccountModalProps) {
     return (
         <Modal show={isOpen} size="md" onClose={onClose} popup>
@@ -23,6 +25,14 @@ export default function DeleteAccountModal({
                     <h3 className="mb-5 text-lg font-normal text-gray-500 dark:text-gray-400">
                         Are you sure you want to delete your account?
                     </h3>
+
+                    {isAdmin && (
+                        <div className="mb-5 rounded-lg bg-yellow-50 p-3 text-sm text-yellow-800">
+                            <p><strong>Note:</strong> You currently have admin privileges.</p>
+                            <p>If you delete your account, admin rights will be transferred to another user if any exist.</p>
+                        </div>
+                    )}
+
                     <div className="flex justify-center gap-4">
                         <Button
                             color="failure"

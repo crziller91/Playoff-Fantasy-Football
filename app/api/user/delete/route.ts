@@ -18,24 +18,74 @@ export async function DELETE(req: NextRequest) {
 
         const userId = session.user.id;
 
-        // Delete all related records first
-        // This is necessary to avoid foreign key constraint errors
-        await prisma.$transaction([
-            // Delete all sessions for this user
-            prisma.session.deleteMany({
-                where: { userId },
-            }),
+        // Check if user is an admin
+        const userPermission = await prisma.permission.findUnique({
+            where: { userId },
+        });
+        const isAdmin = userPermission?.editScores || false;
 
-            // Delete all accounts for this user
-            prisma.account.deleteMany({
-                where: { userId },
-            }),
+        // If user is admin, handle admin privilege transfer
+        if (isAdmin) {
+            // Start a transaction to ensure everything happens atomically
+            await prisma.$transaction(async (tx) => {
+                // Delete this user's permission
+                await tx.permission.delete({
+                    where: { userId },
+                });
 
-            // Finally delete the user
-            prisma.user.delete({
-                where: { id: userId },
-            }),
-        ]);
+                // Delete all user-related records
+                await tx.session.deleteMany({
+                    where: { userId },
+                });
+
+                await tx.account.deleteMany({
+                    where: { userId },
+                });
+
+                await tx.user.delete({
+                    where: { id: userId },
+                });
+
+                // Find another user to make admin, if any exists
+                const anotherUser = await tx.user.findFirst({
+                    where: {
+                        NOT: { id: userId }
+                    },
+                });
+
+                if (anotherUser) {
+                    // Make this user admin
+                    await tx.permission.upsert({
+                        where: { userId: anotherUser.id },
+                        update: { editScores: true },
+                        create: { userId: anotherUser.id, editScores: true },
+                    });
+                }
+            });
+        } else {
+            // If not admin, just delete the user and related records
+            await prisma.$transaction([
+                // Delete this user's permission if it exists
+                prisma.permission.deleteMany({
+                    where: { userId },
+                }),
+
+                // Delete all sessions for this user
+                prisma.session.deleteMany({
+                    where: { userId },
+                }),
+
+                // Delete all accounts for this user
+                prisma.account.deleteMany({
+                    where: { userId },
+                }),
+
+                // Finally delete the user
+                prisma.user.delete({
+                    where: { id: userId },
+                }),
+            ]);
+        }
 
         return NextResponse.json(
             { message: "Account successfully deleted" },
