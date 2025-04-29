@@ -1,79 +1,143 @@
 import { ExtendedPlayer, ScoreForm, FormErrors } from "../types/index";
+import { getScoringRule } from "../services/scoringRulesService";
 
 // Helper function to safely parse numbers
 export const parseNum = (val: string | undefined): number => parseInt(val || "0", 10) || 0;
 
 // Calculate score based on player position
-export const calculatePlayerScore = (player: ExtendedPlayer, form: ScoreForm): number => {
+export const calculatePlayerScore = async (player: ExtendedPlayer, form: ScoreForm): Promise<number> => {
     let score = 0;
 
     switch (player.position) {
         case "QB":
-            score += parseNum(form.touchdowns) * 4; // 4 pts per passing TD
-            score += Math.round(parseNum(form.yards) / 25); // 1 pt per 25 yards
-            score += parseNum(form.twoPtConversions) * 2; // 2 pts per 2-pt conversion
-            score -= parseNum(form.interceptions) * 2; // -2 per INT
-            score += Math.round(parseNum(form.completions) / 10); // 1 pt per 10 completions
+            // Use dynamic scoring rules from database
+            const passingTDValue = await getScoringRule("QB", "passingTouchdown");
+            const passingYardDivisor = await getScoringRule("QB", "passingYardDivisor");
+            const qbTwoPtValue = await getScoringRule("QB", "twoPtConversion");
+            const interceptionValue = await getScoringRule("QB", "interception");
+            const completionDivisor = await getScoringRule("QB", "completionDivisor");
+
+            score += parseNum(form.touchdowns) * passingTDValue; // Points per passing TD
+            score += Math.round(parseNum(form.yards) / passingYardDivisor); // Points per yards divisor
+            score += parseNum(form.twoPtConversions) * qbTwoPtValue; // Points per 2-pt conversion
+            score += parseNum(form.interceptions) * interceptionValue; // Points per INT
+            score += Math.round(parseNum(form.completions) / completionDivisor); // Points per completions divisor
             break;
+
         case "RB":
-            score += parseNum(form.touchdowns) * 6; // 6 pts per TD
-            score += Math.floor(parseNum(form.rushingYards) / 10); // 1 pt per 10 rushing yards
-            score += Math.floor(parseNum(form.rushingAttempts) / 5); // 1 pt per 5 attempts
-            score += parseNum(form.twoPtConversions) * 2; // 2 pts per 2-pt conversion
+            // Use dynamic scoring rules from database
+            const rushingTDValue = await getScoringRule("RB", "rushingTouchdown");
+            const rushingYardDivisor = await getScoringRule("RB", "rushingYardDivisor");
+            const rushingAttemptDivisor = await getScoringRule("RB", "rushingAttemptDivisor");
+            const rbTwoPtValue = await getScoringRule("RB", "twoPtConversion");
+
+            score += parseNum(form.touchdowns) * rushingTDValue; // Points per TD
+            score += Math.floor(parseNum(form.rushingYards) / rushingYardDivisor); // Points per rushing yards divisor
+            score += Math.floor(parseNum(form.rushingAttempts) / rushingAttemptDivisor); // Points per attempts divisor
+            score += parseNum(form.twoPtConversions) * rbTwoPtValue; // Points per 2-pt conversion
             break;
+
         case "WR":
         case "TE":
-            score += parseNum(form.touchdowns) * 6; // 6 pts per TD
-            score += Math.floor(parseNum(form.receivingYards) / 10); // 1 pt per 10 receiving yards
-            score += parseNum(form.receptions); // 1 pt per reception
-            score += parseNum(form.twoPtConversions) * 2; // 2 pts per 2-pt conversion
+            // Use dynamic scoring rules from database
+            const receivingTDValue = await getScoringRule(player.position, "receivingTouchdown");
+            const receivingYardDivisor = await getScoringRule(player.position, "receivingYardDivisor");
+            const receptionValue = await getScoringRule(player.position, "reception");
+            const wrTePtValue = await getScoringRule(player.position, "twoPtConversion");
+
+            score += parseNum(form.touchdowns) * receivingTDValue; // Points per TD
+            score += Math.floor(parseNum(form.receivingYards) / receivingYardDivisor); // Points per receiving yards divisor
+            score += parseNum(form.receptions) * receptionValue; // Points per reception
+            score += parseNum(form.twoPtConversions) * wrTePtValue; // Points per 2-pt conversion
             break;
+
         case "K":
-            score += parseNum(form.pat); // 1 pt per PAT
-            score -= parseNum(form.fgMisses); // -1 per FG/PAT miss
+            // Use dynamic scoring rules from database
+            const patValue = await getScoringRule("K", "pat");
+            const fgMissValue = await getScoringRule("K", "fgMiss");
+            const fg0to39Value = await getScoringRule("K", "fg0to39");
+            const fg40to49Value = await getScoringRule("K", "fg40to49");
+            const fg50to59Value = await getScoringRule("K", "fg50to59");
+            const fg60plusValue = await getScoringRule("K", "fg60plus");
+
+            score += parseNum(form.pat) * patValue; // Points per PAT
+            score += parseNum(form.fgMisses) * fgMissValue; // Points per FG/PAT miss
+
             if (form.fgYardages) {
                 form.fgYardages.forEach((yardage) => {
                     const yards = parseNum(yardage);
-                    if (yards >= 60) score += 6;
-                    else if (yards >= 50) score += 5;
-                    else if (yards >= 40) score += 4;
-                    else if (yards >= 0) score += 3;
+                    if (yards >= 60) score += fg60plusValue;
+                    else if (yards >= 50) score += fg50to59Value;
+                    else if (yards >= 40) score += fg40to49Value;
+                    else if (yards >= 0) score += fg0to39Value;
                 });
             }
             break;
+
         case "DST":
-            score += parseNum(form.touchdowns) * 6; // 6 pts per TD
-            score += parseNum(form.sacks) * 2; // 2 pts per sack
-            score += parseNum(form.blockedKicks) * 2; // 2 pts per blocked kick
-            score += parseNum(form.interceptions) * 2; // 2 pts per INT
-            score += parseNum(form.fumblesRecovered) * 2; // 2 pts per fumble recovered
-            score += parseNum(form.safeties) * 2; // 2 pts per safety
+            // Use dynamic scoring rules from database
+            const tdValue = await getScoringRule("DST", "touchdown");
+            const sackValue = await getScoringRule("DST", "sack");
+            const blockedKickValue = await getScoringRule("DST", "blockedKick");
+            const intValue = await getScoringRule("DST", "interception");
+            const fumbleRecoveryValue = await getScoringRule("DST", "fumbleRecovery");
+            const safetyValue = await getScoringRule("DST", "safety");
+
+            // Points allowed values
+            const points0Value = await getScoringRule("DST", "points0");
+            const points1to6Value = await getScoringRule("DST", "points1to6");
+            const points7to13Value = await getScoringRule("DST", "points7to13");
+            const points14to17Value = await getScoringRule("DST", "points14to17");
+            const points18to27Value = await getScoringRule("DST", "points18to27");
+            const points28to34Value = await getScoringRule("DST", "points28to34");
+            const points35to45Value = await getScoringRule("DST", "points35to45");
+            const pointsOver45Value = await getScoringRule("DST", "pointsOver45");
+
+            // Yards allowed values
+            const yards0to99Value = await getScoringRule("DST", "yards0to99");
+            const yards100to199Value = await getScoringRule("DST", "yards100to199");
+            const yards200to299Value = await getScoringRule("DST", "yards200to299");
+            const yards300to399Value = await getScoringRule("DST", "yards300to399");
+            const yards400to449Value = await getScoringRule("DST", "yards400to449");
+            const yards450to499Value = await getScoringRule("DST", "yards450to499");
+            const yards500plusValue = await getScoringRule("DST", "yards500plus");
+
+            score += parseNum(form.touchdowns) * tdValue; // Points per TD
+            score += parseNum(form.sacks) * sackValue; // Points per sack
+            score += parseNum(form.blockedKicks) * blockedKickValue; // Points per blocked kick
+            score += parseNum(form.interceptions) * intValue; // Points per INT
+            score += parseNum(form.fumblesRecovered) * fumbleRecoveryValue; // Points per fumble recovered
+            score += parseNum(form.safeties) * safetyValue; // Points per safety
 
             // Points allowed scoring
             const points = parseNum(form.pointsAllowed);
-            if (points === 0) score += 10;
-            else if (points <= 6) score += 5;
-            else if (points <= 13) score += 3;
-            else if (points <= 17) score += 1;
-            else if (points <= 34) score += -1;
-            else if (points <= 45) score += -3;
-            else score += -5;
+            if (points === 0) score += points0Value;
+            else if (points <= 6) score += points1to6Value;
+            else if (points <= 13) score += points7to13Value;
+            else if (points <= 17) score += points14to17Value;
+            else if (points <= 27) score += points18to27Value;
+            else if (points <= 34) score += points28to34Value;
+            else if (points <= 45) score += points35to45Value;
+            else score += pointsOver45Value;
 
             // Yards allowed scoring
             const yards = parseNum(form.yardsAllowed);
-            if (yards < 100) score += 5;
-            else if (yards <= 199) score += 3;
-            else if (yards <= 299) score += 2;
-            else if (yards <= 399) score += -1;
-            else if (yards <= 449) score += -3;
-            else if (yards <= 499) score += -4;
-            else score += -5;
+            if (yards < 100) score += yards0to99Value;
+            else if (yards <= 199) score += yards100to199Value;
+            else if (yards <= 299) score += yards200to299Value;
+            else if (yards <= 399) score += yards300to399Value;
+            else if (yards <= 449) score += yards400to449Value;
+            else if (yards <= 499) score += yards450to499Value;
+            else score += yards500plusValue;
             break;
+
         default:
             break;
     }
     return score;
 };
+
+// Rest of the file remains the same
 
 // Get team picks in a specific order by position
 export const getOrderedTeamPicks = (team: string, draftPicks: any) => {

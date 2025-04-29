@@ -1,6 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { PlayerScoresByRound, ExtendedPlayer } from '../types';
-import { fetchPlayerScores, savePlayerScore, bulkSavePlayerScores, convertToApiFormat } from '../services/scoreService';
+import {
+    fetchPlayerScores,
+    savePlayerScore,
+    bulkSavePlayerScores,
+    convertToApiFormat,
+    recalculatePlayerScores
+} from '../services/scoreService';
 
 // This hook manages player scores with database persistence
 export const usePlayerScores = (
@@ -113,6 +119,7 @@ export const usePlayerScores = (
         }
     };
 
+
     // Reset scores
     const resetScores = () => {
         setPlayerScores({
@@ -124,12 +131,32 @@ export const usePlayerScores = (
         setLastSavedScores("{}");
     };
 
+    // Recalculate scores after scoring rule changes
+    const recalculateScores = async (position?: string) => {
+        try {
+            const result = await recalculatePlayerScores(position);
+
+            // If scores were recalculated, refresh them from the server
+            if (result.updated > 0) {
+                const refreshedScores = await fetchPlayerScores();
+                setPlayerScores(refreshedScores);
+                setLastSavedScores(JSON.stringify(refreshedScores));
+            }
+
+            return result;
+        } catch (error) {
+            console.error('Error recalculating scores:', error);
+            throw error;
+        }
+    };
+
     return {
         playerScores,
         setPlayerScores,
         isLoading,
         error,
         savePlayerScoreItem,
-        resetScores
+        resetScores,
+        recalculateScores
     };
 };

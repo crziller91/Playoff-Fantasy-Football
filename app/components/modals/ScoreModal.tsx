@@ -1,5 +1,6 @@
-import { Modal, Button, Label, TextInput } from "flowbite-react";
+import { Modal, Button, Label, TextInput, Spinner } from "flowbite-react";
 import { ScoreForm, FormErrors, ScoreModalProps } from "../../types";
+import { useState } from "react";
 
 export default function ScoreModal({
     isOpen,
@@ -14,6 +15,20 @@ export default function ScoreModal({
     onFgYardageChange,
     onSubmit
 }: ScoreModalProps) {
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    
+    // Wrap the onSubmit to handle loading state
+    const handleSubmit = async () => {
+        setIsSubmitting(true);
+        try {
+            await onSubmit();
+        } catch (error) {
+            console.error("Error submitting score:", error);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     if (!player) return null;
 
     const commonProps = (id: string, label: string, field: keyof ScoreForm) => {
@@ -423,8 +438,18 @@ export default function ScoreModal({
                     </h3>
                     {renderPositionFields()}
                     <div className="w-full">
-                        <Button onClick={onSubmit}>
-                            Submit
+                        <Button 
+                            onClick={handleSubmit}
+                            disabled={(submitAttempted && Object.keys(formErrors).length > 0) || isSubmitting}
+                        >
+                            {isSubmitting ? (
+                                <>
+                                    <Spinner size="sm" className="mr-2" />
+                                    Calculating...
+                                </>
+                            ) : (
+                                "Submit"
+                            )}
                         </Button>
                     </div>
                 </div>

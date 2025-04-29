@@ -119,3 +119,15 @@ model Permission {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 }
+
+model ScoringRule {
+  id          Int      @id @default(autoincrement())
+  position    String   // "QB", "RB", "WR", "TE", "K", "DST"
+  category    String   // e.g. "passingTouchdown", "passingYardDivisor", etc.
+  value       Float    // The point value or divisor value
+  description String   // Description of the rule
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([position, category])
+}

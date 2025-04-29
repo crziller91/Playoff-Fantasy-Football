@@ -91,7 +91,9 @@ export const bulkSavePlayerScores = async (playerScores: {
 }[]): Promise<any> => {
   const response = await fetch("/api/player-scores/bulk", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+    },
     body: JSON.stringify({
       playerScores
     }),
@@ -129,4 +131,25 @@ export const convertToApiFormat = (
   });
   
   return apiFormatScores;
+};
+
+// Function to recalculate player scores after scoring rules change
+export const recalculatePlayerScores = async (position?: string): Promise<any> => {
+  const url = position 
+    ? `/api/player-scores/recalculate?position=${position}`
+    : '/api/player-scores/recalculate';
+    
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    }
+  });
+  
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || `Failed to recalculate player scores: ${response.status}`);
+  }
+  
+  return response.json();
 };

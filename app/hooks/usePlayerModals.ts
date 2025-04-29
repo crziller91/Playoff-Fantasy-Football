@@ -290,7 +290,7 @@ export function usePlayerModals({
     };
 
     // Form submission handler
-    const handleSubmitScore = () => {
+    const handleSubmitScore = async () => {
         if (!canEditScores || !selectedPlayer) return;
         const round = selectedPlayer.currentRound || activeRound;
 
@@ -311,33 +311,38 @@ export function usePlayerModals({
             return;
         }
 
-        // Calculate score
-        const score = calculatePlayerScore(selectedPlayer, scoreForm);
+        try {
+            // Calculate score asynchronously
+            const score = await calculatePlayerScore(selectedPlayer, scoreForm);
 
-        // Update playerScores state - using direct object instead of callback
-        const newScores = JSON.parse(JSON.stringify(playerScores));
-        if (!newScores[round]) {
-            newScores[round] = {};
+            // Update playerScores state - using direct object instead of callback
+            const newScores = JSON.parse(JSON.stringify(playerScores));
+            if (!newScores[round]) {
+                newScores[round] = {};
+            }
+            newScores[round][selectedPlayer.name] = {
+                ...selectedPlayer,
+                score,
+                scoreData: { ...scoreForm },
+                isDisabled: false
+            };
+            setPlayerScores(newScores);
+
+            // Save player score to the database
+            savePlayerScore(
+                selectedPlayer.id,
+                round,
+                false, // Not disabled since we're setting a score
+                null,  // No status reason needed
+                score,
+                { ...scoreForm }
+            ).catch(err => console.error(`Error saving player score: ${err}`));
+
+            handleCloseScoreModal();
+        } catch (error) {
+            console.error("Error calculating score:", error);
+            // You may want to set an error state here to show to the user
         }
-        newScores[round][selectedPlayer.name] = {
-            ...selectedPlayer,
-            score,
-            scoreData: { ...scoreForm },
-            isDisabled: false
-        };
-        setPlayerScores(newScores);
-
-        // Save player score to the database
-        savePlayerScore(
-            selectedPlayer.id,
-            round,
-            false, // Not disabled since we're setting a score
-            null,  // No status reason needed
-            score,
-            { ...scoreForm }
-        ).catch(err => console.error(`Error saving player score: ${err}`));
-
-        handleCloseScoreModal();
     };
 
     // Shared function to update player status

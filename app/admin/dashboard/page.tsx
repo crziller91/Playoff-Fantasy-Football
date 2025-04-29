@@ -7,6 +7,7 @@ import { usePermissions } from "@/app/hooks/usePermissions";
 import { redirect } from "next/navigation";
 import { HiCheckCircle, HiPencil, HiTrash, HiPlus } from "react-icons/hi";
 import Link from "next/link";
+import ScoringRulesEditor from "@/app/components/admin/ScoringRulesEditor";
 
 interface Team {
     id: number;
@@ -346,6 +347,9 @@ export default function AdminDashboardPage() {
                     </Table>
                 </Card>
             </div>
+
+            {/* Scoring Rules Editor */}
+            <ScoringRulesEditor />
 
             <div className="mt-6 flex">
                 <Button as={Link} href="/" color="light">

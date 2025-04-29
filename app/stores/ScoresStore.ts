@@ -1,4 +1,3 @@
-// app/stores/ScoresStore.ts
 import { makeAutoObservable, runInAction } from 'mobx';
 import { RootStore } from './RootStore';
 import { PlayerScoresByRound, ExtendedPlayer, ScoreForm } from '../types';
@@ -7,7 +6,8 @@ import {
     savePlayerScore,
     bulkSavePlayerScores,
     deletePlayerScore,
-    convertToApiFormat
+    convertToApiFormat,
+    recalculatePlayerScores
 } from '../services/scoreService';
 import { calculatePlayerScore } from '../utils/scoreCalculator';
 
@@ -100,5 +100,28 @@ export class ScoresStore {
         }
     };
 
-    // Rest of the store methods remain the same...
+    // Recalculate player scores after scoring rules change
+    recalculateScores = async (position?: string): Promise<any> => {
+        try {
+            this.isLoading = true;
+
+            const result = await recalculatePlayerScores(position);
+
+            // If scores were updated, reload all scores from the server
+            if (result.updated > 0) {
+                await this.loadPlayerScores();
+            }
+
+            return result;
+        } catch (err) {
+            runInAction(() => {
+                this.error = err instanceof Error ? err.message : "Failed to recalculate scores";
+            });
+            throw err;
+        } finally {
+            runInAction(() => {
+                this.isLoading = false;
+            });
+        }
+    };
 }

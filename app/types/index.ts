@@ -119,7 +119,7 @@ export interface ScoreModalProps {
   onInputChange: (field: keyof ScoreForm, value: string) => void;
   onFgCountChange: (value: string) => void;
   onFgYardageChange: (index: number, value: string) => void;
-  onSubmit: () => void;
+  onSubmit: () => Promise<void>;
 }
 
 // Props for the Scores tab
