@@ -3,6 +3,10 @@ import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
 
+declare global {
+    var scoringRulesCache: Record<string, Record<string, number>> | null;
+}
+
 // GET handler: Get all scoring rules or filtered by position
 export async function GET(request: NextRequest): Promise<NextResponse> {
     try {
@@ -69,10 +73,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         // Perform updates in a transaction
         const results = await prisma.$transaction(
             scoringRules.map(rule => {
-                // Validate the rule
-                if (!rule.id || !rule.value || rule.value === undefined) {
-                    throw new Error(`Invalid rule data: ${JSON.stringify(rule)}`);
-                }
+                console.log(`Updating rule: ${rule.position}.${rule.category} = ${rule.value}`);
 
                 return prisma.scoringRule.update({
                     where: { id: rule.id },
@@ -83,6 +84,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
                 });
             })
         );
+
+        // Force clear any potential server-side cache
+        // This is an additional safety measure
+        global.scoringRulesCache = null;
 
         return NextResponse.json({
             message: `Successfully updated ${results.length} scoring rules`,

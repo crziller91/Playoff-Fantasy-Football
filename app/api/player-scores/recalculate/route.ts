@@ -1,3 +1,4 @@
+// File: app/api/player-scores/recalculate/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
@@ -33,12 +34,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         const { searchParams } = new URL(request.url);
         const position = searchParams.get("position");
 
+        console.log(`Recalculating scores for position: ${position || 'all positions'}`);
+
         // Get all player scores that need recalculation
-        // (scores with scoreData, not disabled by "eliminated" or "notPlaying")
+        // IMPORTANT: We don't filter by isDisabled to force recalculation of all scores
+        // This ensures even when values are reverted to original values, scores are still recalculated
         const playerScores = await prisma.playerScore.findMany({
             where: {
                 scoreData: { not: null },
-                isDisabled: false,
                 ...(position ? {
                     player: {
                         position: position
@@ -76,27 +79,30 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
                         teamName: score.player.teamName || undefined,
                     };
 
-                    // Recalculate the score with current scoring rules
+                    console.log(`Recalculating score for ${player.name} (${player.position})`);
+
+                    // IMPORTANT: Always recalculate all scores regardless of whether they've changed
+                    // This ensures scores are updated even when scoring rule values revert to original values
                     const newScore = await calculatePlayerScore(player, scoreData);
 
-                    // Only update if the score has changed
-                    if (newScore !== score.score) {
-                        return prisma.playerScore.update({
-                            where: { id: score.id },
-                            data: {
-                                score: newScore,
-                                updatedAt: new Date(),
-                            },
-                        });
-                    }
-                    return null; // No update needed
+                    console.log(`Old score: ${score.score}, New score: ${newScore}`);
+
+                    // Always update the score to trigger a database update
+                    return prisma.playerScore.update({
+                        where: { id: score.id },
+                        data: {
+                            score: newScore,
+                            updatedAt: new Date(),
+                        },
+                    });
+                    updatedCount++;
                 } catch (error) {
                     console.error(`Error recalculating score ID ${score.id}:`, error);
                     return null; // Skip this score on error
                 }
             }));
 
-            // Filter out nulls (scores that didn't need updating)
+            // Filter out nulls (scores that had errors)
             const validUpdates = updates.filter(Boolean);
             updatedCount += validUpdates.length;
         }

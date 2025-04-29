@@ -7,6 +7,7 @@ export const parseNum = (val: string | undefined): number => parseInt(val || "0"
 // Calculate score based on player position
 export const calculatePlayerScore = async (player: ExtendedPlayer, form: ScoreForm): Promise<number> => {
     let score = 0;
+    console.log(`Calculating score for ${player.name} (${player.position})`);
 
     switch (player.position) {
         case "QB":

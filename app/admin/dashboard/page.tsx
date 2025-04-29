@@ -263,7 +263,7 @@ export default function AdminDashboardPage() {
     }
 
     return (
-        <div className="container mx-auto my-8 px-4">
+        <div className="container mx-auto my-8 px-4 pb-8">
             <h1 className="mb-6 text-2xl font-bold">Admin Dashboard</h1>
 
             {/* Draft status warning */}
@@ -352,7 +352,11 @@ export default function AdminDashboardPage() {
             <ScoringRulesEditor />
 
             <div className="mt-6 flex">
-                <Button as={Link} href="/" color="light">
+                <Button
+                    as={Link} href="/?tab=draft"
+                    onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                    color="light"
+                >
                     Return Home
                 </Button>
             </div>

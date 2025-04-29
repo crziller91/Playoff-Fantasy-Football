@@ -272,7 +272,11 @@ export default function PermissionsPage() {
             </Card>
 
             <div className="mt-6 flex">
-                <Button as={Link} href="/" color="light">
+                <Button
+                    as={Link} href="/?tab=draft"
+                    onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                    color="light"
+                >
                     Return Home
                 </Button>
             </div>

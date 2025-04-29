@@ -75,19 +75,26 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
 // Function to fetch scoring rules from the API
 export const fetchScoringRules = async (): Promise<ScoringRulesMap> => {
     try {
-        // Check if cache is still valid
-        const now = Date.now();
-        if (scoringRulesCache && (now - lastFetchTime < CACHE_TTL)) {
-            return scoringRulesCache;
-        }
+        // Determine if we're in a server or client environment
+        const isServer = typeof window === 'undefined';
+        // Use absolute URL in server environment
+        const baseUrl = isServer
+            ? process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
+            : '';
 
-        // Fetch fresh rules from the API
-        const response = await fetch('/api/scoring-rules');
+        // Add timestamp to avoid cache
+        const timestamp = Date.now();
+        // Fetch fresh rules from the API with proper URL and cache busting
+        console.log(`Fetching scoring rules at ${timestamp}`);
+        const response = await fetch(`${baseUrl}/api/scoring-rules?nocache=${timestamp}`);
+
         if (!response.ok) {
+            console.error(`Failed to fetch scoring rules: ${response.status}`);
             throw new Error(`Failed to fetch scoring rules: ${response.status}`);
         }
 
         const rulesArray = await response.json();
+        console.log(`Received ${rulesArray.length} scoring rules`);
 
         // Convert the array to our map format
         const rulesMap: ScoringRulesMap = {};
@@ -97,11 +104,16 @@ export const fetchScoringRules = async (): Promise<ScoringRulesMap> => {
                 rulesMap[rule.position] = {};
             }
             rulesMap[rule.position][rule.category] = rule.value;
+            console.log(`Rule: ${rule.position}.${rule.category} = ${rule.value}`);
         });
 
-        // Update cache
+        // Clear cache
+        scoringRulesCache = null;
+        lastFetchTime = 0;
+
+        // Update cache with fresh data
         scoringRulesCache = rulesMap;
-        lastFetchTime = now;
+        lastFetchTime = Date.now();
 
         return rulesMap;
     } catch (error) {
@@ -111,8 +123,9 @@ export const fetchScoringRules = async (): Promise<ScoringRulesMap> => {
     }
 };
 
-// Function to get a specific rule value
+// Function to get a specific rule value - always get fresh rules
 export const getScoringRule = async (position: string, category: string): Promise<number> => {
+    // Always fetch fresh rules instead of using cache
     const rules = await fetchScoringRules();
 
     if (rules[position] && rules[position][category] !== undefined) {

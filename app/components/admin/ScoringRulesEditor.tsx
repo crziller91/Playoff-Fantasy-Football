@@ -28,7 +28,10 @@ const ScoringRulesEditor = observer(() => {
     const [error, setError] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState(0);
-    const [changedRules, setChangedRules] = useState<{ [ruleId: number]: boolean }>({});
+
+    // Keep both the original values and the changed values separately
+    const [originalValues, setOriginalValues] = useState<Record<number, number>>({});
+    const [changedRules, setChangedRules] = useState<Record<number, boolean>>({});
 
     // Positions in the order we want to display them
     const positions = ["QB", "RB", "WR", "TE", "K", "DST"];
@@ -47,6 +50,14 @@ const ScoringRulesEditor = observer(() => {
 
                 const data = await response.json();
                 setRules(data);
+
+                // Store original values when first loaded
+                const origValues: Record<number, number> = {};
+                data.forEach((rule: ScoringRule) => {
+                    origValues[rule.id] = rule.value;
+                });
+                setOriginalValues(origValues);
+
                 setChangedRules({}); // Reset changed rules tracking
             } catch (err) {
                 console.error("Error fetching scoring rules:", err);
@@ -67,10 +78,15 @@ const ScoringRulesEditor = observer(() => {
                 prevRules.map(rule => {
                     if (rule.id === id) {
                         const newNumValue = newValue === "" ? 0 : Number(newValue);
-                        // Mark this rule as changed if the value is different
-                        if (rule.value !== newNumValue) {
-                            setChangedRules(prev => ({ ...prev, [id]: true }));
-                        }
+                        // Compare with original value to determine if it's changed
+                        const isChanged = newNumValue !== originalValues[id];
+
+                        // Update the changedRules state accordingly
+                        setChangedRules(prev => ({
+                            ...prev,
+                            [id]: isChanged
+                        }));
+
                         return { ...rule, value: newNumValue };
                     }
                     return rule;
@@ -91,7 +107,7 @@ const ScoringRulesEditor = observer(() => {
 
             // Check if any rules for this position have changed
             const hasChanges = positionRules.some(rule => changedRules[rule.id]);
-            
+
             if (!hasChanges) {
                 setSuccessMessage("No changes to save");
                 setTimeout(() => setSuccessMessage(null), 3000);
@@ -119,6 +135,13 @@ const ScoringRulesEditor = observer(() => {
             } finally {
                 setRecalculating(false);
             }
+
+            // After a successful save, update the original values
+            const newOrigValues = { ...originalValues };
+            positionRules.forEach(rule => {
+                newOrigValues[rule.id] = rule.value;
+            });
+            setOriginalValues(newOrigValues);
 
             // Clear the changed flags for this position's rules
             const newChangedRules = { ...changedRules };
@@ -215,7 +238,7 @@ const ScoringRulesEditor = observer(() => {
                         </span>
                     )}
                 </h2>
-                
+
                 <Button
                     onClick={handleSaveChanges}
                     disabled={isProcessing || changedCount === 0}
