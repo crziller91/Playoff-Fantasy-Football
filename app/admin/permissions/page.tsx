@@ -90,15 +90,32 @@ export default function PermissionsPage() {
             setError(null);
             setSuccessMessage(null);
 
+            // Create properly typed update data object
+            const updatedData: {
+                userId: string;
+                editScores?: boolean;
+                isAdmin?: boolean;
+            } = {
+                userId
+            };
+
+            // Set the field that is being toggled
+            updatedData[field] = !currentValue;
+
+            // If removing admin status, we need to explicitly set editScores
+            if (field === 'isAdmin' && currentValue === true) {
+                // When removing admin, keep the current editScores state
+                const user = users.find(u => u.id === userId);
+                const currentEditScores = user?.permission?.editScores || false;
+                updatedData.editScores = currentEditScores;
+            }
+
             const response = await fetch("/api/permissions", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify({
-                    userId,
-                    [field]: !currentValue,
-                }),
+                body: JSON.stringify(updatedData),
             });
 
             if (!response.ok) {
@@ -120,9 +137,10 @@ export default function PermissionsPage() {
                             updatedPermission.editScores = true;
                         }
 
-                        // If user loses editScores and they're admin, prevent it
-                        if (field === 'editScores' && !currentValue && updatedPermission.isAdmin) {
-                            updatedPermission.editScores = true;
+                        // If user loses admin status, keep their current editScores permission
+                        if (field === 'isAdmin' && currentValue) {
+                            // Make sure we're assigning a boolean value
+                            updatedPermission.editScores = updatedData.editScores === true;
                         }
 
                         return {

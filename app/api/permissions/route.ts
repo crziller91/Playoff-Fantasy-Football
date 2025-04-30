@@ -43,7 +43,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
 }
 
-// POST handler: Update a user's permissions (admin only)
+// POST handler section in app/api/permissions/route.ts
 export async function POST(request: NextRequest): Promise<NextResponse> {
     try {
         const session = await getServerSession(authOptions);
@@ -79,33 +79,31 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             );
         }
 
-        // Make sure the user exists
-        const userExists = await prisma.user.findUnique({
-            where: { id: userId },
-        });
+        // Explicitly define what we're updating to ensure we handle all fields
+        const updateData: {
+            editScores?: boolean;
+            isAdmin?: boolean;
+        } = {};
 
-        if (!userExists) {
-            return NextResponse.json(
-                { error: `User with ID ${userId} not found` },
-                { status: 404 }
-            );
+        // Only add fields that are explicitly provided in the request
+        // Make sure they are converted to boolean values
+        if (editScores !== undefined) {
+            updateData.editScores = editScores === true;
         }
 
-        // Don't allow removing admin from self
-        if (userId === session.user.id && adminPermission.isAdmin && isAdmin === false) {
-            return NextResponse.json(
-                { error: "You cannot remove your own admin privileges" },
-                { status: 400 }
-            );
+        if (isAdmin !== undefined) {
+            updateData.isAdmin = isAdmin === true;
+
+            // If setting isAdmin to true, automatically set editScores to true
+            if (isAdmin === true) {
+                updateData.editScores = true;
+            }
         }
 
         // Update or create permissions for the user
         const permissions = await prisma.permission.upsert({
             where: { userId },
-            update: {
-                editScores: editScores === true,
-                isAdmin: isAdmin === true,
-            },
+            update: updateData,
             create: {
                 userId,
                 editScores: editScores === true,

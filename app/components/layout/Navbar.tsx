@@ -3,6 +3,7 @@ import { Button, DropdownItem, Navbar, NavbarBrand, Dropdown, Avatar } from "flo
 import Link from "next/link";
 import { useState } from "react";
 import { HiOutlineChevronLeft, HiOutlineLogin, HiOutlineLogout, HiOutlineTrash, HiShieldCheck } from "react-icons/hi";
+import { BiReset } from "react-icons/bi";
 import { MdAdminPanelSettings } from "react-icons/md";
 import { useStore } from "../../stores/StoreContext";
 import ResetConfirmationModal from "../modals/ResetConfirmationModal";
@@ -95,57 +96,82 @@ const NavigationBar = observer(() => {
 
           {isAuthenticated ? (
             <div className="ml-2 flex items-center gap-4">
-              <Dropdown
-                arrowIcon={false}
-                inline
-                label={
-                  <div className="flex size-8 items-center justify-center rounded-full bg-[#1a748f] text-white">
-                    {(session.user?.name || 'U').charAt(0).toUpperCase()}
-                  </div>
-                }
-              >
-                {/* Admin Dashboard link - only for admins */}
-                {isAdmin && (
+              {isAdmin && (
+                <Dropdown
+                  arrowIcon={false}
+                  inline
+                  label={
+                    <div className="flex size-8 items-center justify-center rounded-full bg-[#1a748f] text-white">
+                      {(session.user?.name || 'U').charAt(0).toUpperCase()}
+                    </div>
+                  }
+                >
+                  {/* Admin Dashboard link - only for admins */}
                   <DropdownItem as={Link} href="/admin/dashboard">
                     <div className="flex items-center gap-2">
                       <MdAdminPanelSettings />
                       <span>Admin Dashboard</span>
                     </div>
                   </DropdownItem>
-                )}
 
-                {/* Permissions management - only for admins */}
-                {isAdmin && (
+                  {/* Permissions management - only for admins */}
                   <DropdownItem as={Link} href="/admin/permissions">
                     <div className="flex items-center gap-2">
                       <HiShieldCheck />
                       <span>Manage Permissions</span>
                     </div>
                   </DropdownItem>
-                )}
 
-                {/* Reset All - only for admins */}
-                {isAdmin && (
+                  {/* Reset All - only for admins */}
                   <>
-                    {isAdmin && <Dropdown.Divider />}
-                    <DropdownItem onClick={() => setOpenResetModal(true)}>Reset All</DropdownItem>
+                    <Dropdown.Divider />
+                    <DropdownItem onClick={() => setOpenResetModal(true)}>
+                      <div className="flex items-center gap-2">
+                        <BiReset />
+                        <span>Reset All</span>
+                      </div>
+                    </DropdownItem>
                   </>
-                )}
+                  <DropdownItem onClick={() => setOpenSignOutModal(true)}>
+                    <div className="flex items-center gap-2">
+                      <HiOutlineLogout />
+                      <span>Sign out</span>
+                    </div>
+                  </DropdownItem>
+                  <DropdownItem onClick={() => setOpenDeleteModal(true)}>
+                    <div className="flex items-center gap-2 text-red-600">
+                      <HiOutlineTrash />
+                      <span>Delete Account</span>
+                    </div>
+                  </DropdownItem>
+                </Dropdown>
+              )}
 
-                <Dropdown.Divider />
-                <DropdownItem onClick={() => setOpenSignOutModal(true)}>
-                  <div className="flex items-center gap-2">
-                    <HiOutlineLogout />
-                    <span>Sign out</span>
-                  </div>
-                </DropdownItem>
-                <DropdownItem onClick={() => setOpenDeleteModal(true)}>
-                  <div className="flex items-center gap-2 text-red-600">
-                    <HiOutlineTrash />
-                    <span>Delete Account</span>
-                  </div>
-                </DropdownItem>
-              </Dropdown>
+              {/* Non-admin users get a simpler dropdown */}
+              {!isAdmin && (
+                <Dropdown
+                  arrowIcon={false}
+                  inline
+                  label={
+                    <div className="flex size-8 items-center justify-center rounded-full bg-[#1a748f] text-white">
+                      {(session.user?.name || 'U').charAt(0).toUpperCase()}
+                    </div>
+                  }
+                >
+                  <DropdownItem onClick={() => setOpenSignOutModal(true)}>
+                    <div className="flex items-center gap-2">
+                      <HiOutlineLogout />
+                      <span>Sign out</span>
+                    </div>
+                  </DropdownItem>
+                  <DropdownItem onClick={() => setOpenDeleteModal(true)}>
+                    <div className="flex items-center gap-2 text-red-600">
+                      <HiOutlineTrash />
+                      <span>Delete Account</span>
+                    </div>
+                  </DropdownItem>
+                </Dropdown>
+              )}
             </div>
           ) : (
             <Button

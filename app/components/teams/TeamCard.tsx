@@ -2,8 +2,7 @@ import { observer } from "mobx-react-lite";
 import { Card, Button, Badge } from "flowbite-react";
 import { ExtendedPlayer } from "../../types";
 import { getOrderedTeamPicks, getTeamScore } from "../../utils/scoreCalculator";
-import { HiX } from "react-icons/hi";
-import { positionColors } from "../../data/positionColors";
+import { HiX, HiTrash } from "react-icons/hi";
 import { useStore } from "../../stores/StoreContext";
 
 // Map position to badge color
@@ -133,7 +132,7 @@ const TeamCard = observer(({
                                                     color="failure"
                                                     onClick={() => onTogglePlayerDisabled(player as ExtendedPlayer, true)}
                                                 >
-                                                    Clear Scores
+                                                    <HiTrash className="size-4" />
                                                 </Button>
                                             )}
                                             {/* Only show X button if no scores entered */}
