@@ -4,15 +4,18 @@ import {
     fetchPlayerScores,
     savePlayerScore,
     bulkSavePlayerScores,
+    deletePlayerScore,
     convertToApiFormat,
     recalculatePlayerScores
 } from '../services/scoreService';
+import { useStore } from '../stores/StoreContext';
 
 // This hook manages player scores with database persistence
 export const usePlayerScores = (
     isDraftFinished: boolean,
     initialScores?: PlayerScoresByRound
 ) => {
+    const store = useStore(); // Get the store to access socket
     const [playerScores, setPlayerScores] = useState<PlayerScoresByRound>(
         initialScores || {
             "Wild Card": {},
@@ -111,6 +114,21 @@ export const usePlayerScores = (
                 score,
                 scoreData
             );
+
+            // Emit socket event for real-time update to other clients
+            if (store.socket) {
+                store.socket.emit('playerScoreUpdate', {
+                    round,
+                    playerName: player.name,
+                    scoreData: {
+                        ...player,
+                        score,
+                        isDisabled,
+                        statusReason,
+                        scoreData
+                    }
+                });
+            }
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Unknown error saving player score';
             console.error(`Error saving player score: ${message}`);
@@ -119,6 +137,29 @@ export const usePlayerScores = (
         }
     };
 
+    // Delete player score
+    const deletePlayerScoreItem = async (player: ExtendedPlayer, round: string) => {
+        try {
+            // Call the API service, passing only playerId and round as expected
+            await deletePlayerScore(player.id, round);
+
+            // Emit socket event for real-time update to other clients
+            if (store.socket) {
+                store.socket.emit('playerScoreUpdate', {
+                    round,
+                    playerName: player.name,
+                    isDeleted: true
+                });
+            }
+
+            return true;
+        } catch (err) {
+            const message = err instanceof Error ? err.message : 'Unknown error deleting player score';
+            console.error(`Error deleting player score: ${message}`);
+            setError(message);
+            return false;
+        }
+    };
 
     // Reset scores
     const resetScores = () => {
@@ -156,6 +197,7 @@ export const usePlayerScores = (
         isLoading,
         error,
         savePlayerScoreItem,
+        deletePlayerScoreItem,
         resetScores,
         recalculateScores
     };

@@ -18,7 +18,7 @@ interface TeamsViewProps {
 
 const TeamsView = observer(({ initialActiveRound, onRoundChange }: TeamsViewProps) => {
   const store = useStore();
-  const { draftStore, teamsStore, playersStore, scoresStore } = store;
+  const { draftStore, teamsStore, playersStore, scoresStore, socket } = store;
   const tabsRef = useRef<TabsRef>(null);
   const { canEditScores } = usePermissions();
 
@@ -37,7 +37,36 @@ const TeamsView = observer(({ initialActiveRound, onRoundChange }: TeamsViewProp
   } = usePlayerModals({
     playerScores: scoresStore.playerScores,
     setPlayerScores: setPlayerScoresWrapper,
-    activeRound: scoresStore.activeRound
+    activeRound: scoresStore.activeRound,
+    // Add this line to pass the deletePlayerScore function
+    deletePlayerScore: async (player, round) => {
+      try {
+        // Call the API directly, as scoresStore might not have a deletePlayerScore method
+        await fetch(`/api/player-scores/delete`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            playerId: player.id,
+            round
+          }),
+        });
+
+        // Emit socket event if socket is available
+        if (store.socket) {
+          store.socket.emit('playerScoreUpdate', {
+            round,
+            playerName: player.name,
+            isDeleted: true
+          });
+        }
+
+        return true;
+      } catch (err) {
+        console.error(`Error deleting player score: ${err}`);
+        return false;
+      }
+    },
+    socket: socket // Pass the socket to the hook
   });
 
   // Synchronize tab UI with initialActiveRound prop

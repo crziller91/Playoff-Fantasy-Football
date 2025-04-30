@@ -4,17 +4,22 @@ import { validateForm, calculatePlayerScore } from '../utils/scoreCalculator';
 import { savePlayerScore, deletePlayerScore } from '../services/scoreService';
 import { PLAYOFF_ROUNDS } from '../constants/playoffs';
 import { usePermissions } from './usePermissions';
+import { Socket } from 'socket.io-client';
 
 interface UsePlayerModalsProps {
     playerScores: PlayerScoresByRound;
     setPlayerScores: (scores: PlayerScoresByRound) => void;
     activeRound: string;
+    deletePlayerScore?: (player: ExtendedPlayer, round: string) => Promise<boolean>;
+    socket?: Socket | null; // Add socket as a parameter
 }
 
 export function usePlayerModals({
     playerScores,
     setPlayerScores,
-    activeRound
+    activeRound,
+    deletePlayerScore,
+    socket // Accept socket as a parameter
 }: UsePlayerModalsProps) {
     // Get permissions
     const { canEditScores } = usePermissions();
@@ -170,28 +175,50 @@ export function usePlayerModals({
     };
 
     // Handler for confirming player reactivation
-    const handlePlayerReactivation = () => {
+    const handlePlayerReactivation = async () => {
         if (!canEditScores || !reactivationPlayer) return;
         const round = reactivationPlayer.currentRound || activeRound;
 
-        // Update UI state by removing the player from the disabled state
-        // Here's the fixed version using a plain object instead of a callback:
+        // Update UI state by updating the player's disabled status
         const newScores = JSON.parse(JSON.stringify(playerScores)); // Deep copy
         if (newScores[round]?.[reactivationPlayer.name]) {
-            delete newScores[round][reactivationPlayer.name];
+            // Instead of deleting the player entirely, let's update their state
+            newScores[round][reactivationPlayer.name] = {
+                ...newScores[round][reactivationPlayer.name],
+                isDisabled: false,
+                statusReason: null
+            };
         }
         setPlayerScores(newScores);
 
-        // Delete the player's score entry from the database
-        savePlayerScore(
-            reactivationPlayer.id,
-            round,
-            false,
-            null,
-            0,
-            undefined,
-            true
-        ).catch(err => console.error(`Error deleting player score: ${err}`));
+        try {
+            // Delete the player's score entry from the database
+            await savePlayerScore(
+                reactivationPlayer.id,
+                round,
+                false,  // Not disabled
+                null,   // No status reason
+                0,      // Reset score
+                undefined,
+                true    // This parameter indicates reactivation
+            );
+
+            // Emit socket event for reactivation
+            if (socket) {
+                socket.emit('playerScoreUpdate', {
+                    round,
+                    playerName: reactivationPlayer.name,
+                    scoreData: {
+                        ...reactivationPlayer,
+                        isDisabled: false,
+                        statusReason: null,
+                        score: 0
+                    }
+                });
+            }
+        } catch (err) {
+            console.error(`Error reactivating player: ${err}`);
+        }
 
         setOpenReactivationModal(false);
         setReactivationPlayer(null);
@@ -204,7 +231,7 @@ export function usePlayerModals({
     };
 
     // Handler for confirming clear scores
-    const handleConfirmClearScores = () => {
+    const handleConfirmClearScores = async () => {
         if (!canEditScores || !clearScoresPlayer) return;
         const round = clearScoresPlayer.currentRound || activeRound;
 
@@ -215,11 +242,26 @@ export function usePlayerModals({
         }
         setPlayerScores(newScores);
 
-        // Delete the player score entry from the database
-        deletePlayerScore(
-            clearScoresPlayer.id,
-            round
-        ).catch(err => console.error(`Error deleting player score: ${err}`));
+        // If deletePlayerScore function is provided, use it
+        if (deletePlayerScore) {
+            await deletePlayerScore(clearScoresPlayer, round);
+        } else {
+            // Fallback to the old approach if function isn't provided
+            // This code should not run if you pass the function correctly
+            console.warn('deletePlayerScore function not provided to usePlayerModals');
+            try {
+                await fetch(`/api/player-scores/delete`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        playerId: clearScoresPlayer.id,
+                        round
+                    }),
+                });
+            } catch (err) {
+                console.error(`Error deleting player score: ${err}`);
+            }
+        }
 
         setOpenClearScoresModal(false);
         setClearScoresPlayer(null);

@@ -64,6 +64,7 @@ export class PlayersStore {
         );
     };
 
+    // Update the selectPlayerForTeam method in PlayersStore
     selectPlayerForTeam = async (team: string, pick: number, player: Player, cost: number) => {
         try {
             // Validate budget
@@ -96,6 +97,17 @@ export class PlayersStore {
             // Save to backend
             await saveDraftPick(team, pick, player.id, cost);
 
+            // Emit socket event for real-time update to other clients
+            if (this.rootStore.socket) {
+                this.rootStore.socket.emit('draftPickUpdate', {
+                    action: 'add',
+                    team,
+                    pick,
+                    player,
+                    cost
+                });
+            }
+
             return true;
         } catch (err) {
             runInAction(() => {
@@ -105,10 +117,14 @@ export class PlayersStore {
         }
     };
 
+    // Update the removePlayerFromTeam method in PlayersStore
     removePlayerFromTeam = async (team: string, pick: number) => {
         try {
             const removedPlayer = this.draftPicks[team]?.[pick];
             if (!removedPlayer) return false;
+
+            // Store the cost for refund calculation
+            const removedPlayerCost = await this.getPlayerCost(team, pick);
 
             // Update UI state
             const updatedDraftPicks = {
@@ -128,6 +144,16 @@ export class PlayersStore {
             // Reload team budgets since the server will handle refunding
             await this.rootStore.teamsStore.loadTeams();
 
+            // Emit socket event for real-time update to other clients
+            if (this.rootStore.socket) {
+                this.rootStore.socket.emit('draftPickUpdate', {
+                    action: 'remove',
+                    team,
+                    pick,
+                    refundAmount: removedPlayerCost
+                });
+            }
+
             return true;
         } catch (err) {
             runInAction(() => {
@@ -136,4 +162,59 @@ export class PlayersStore {
             return false;
         }
     };
+
+    // Add a helper method to get the cost of a draft pick
+    private async getPlayerCost(team: string, pick: number): Promise<number> {
+        try {
+            // Fetch the draft pick from the server to get its cost
+            const response = await fetch(`/api/draftpicks/cost?team=${encodeURIComponent(team)}&pick=${pick}`);
+            if (!response.ok) return 0;
+
+            const data = await response.json();
+            return data.cost || 0;
+        } catch (error) {
+            console.error("Error fetching draft pick cost:", error);
+            return 0;
+        }
+    }
+
+    // Add these methods to the PlayersStore class
+    handleRemoteDraftPickUpdate(data: any) {
+        // This will be called when another user adds or updates a draft pick
+        runInAction(() => {
+            // Update local state with the new draft pick
+            if (!this.draftPicks[data.team]) {
+                this.draftPicks[data.team] = {};
+            }
+            this.draftPicks[data.team][data.pick] = data.player;
+
+            // Update available players
+            this.updateAvailablePlayers();
+
+            // Update team budgets if a cost was involved
+            if (data.cost && this.rootStore.teamsStore.teamBudgets.has(data.team)) {
+                const currentBudget = this.rootStore.teamsStore.teamBudgets.get(data.team) || 0;
+                this.rootStore.teamsStore.teamBudgets.set(data.team, currentBudget - data.cost);
+            }
+        });
+    }
+
+    handleRemoteDraftPickRemoval(data: any) {
+        // This will be called when another user removes a draft pick
+        runInAction(() => {
+            if (this.draftPicks[data.team] && this.draftPicks[data.team][data.pick]) {
+                // Remove the draft pick
+                this.draftPicks[data.team][data.pick] = null;
+
+                // Update available players
+                this.updateAvailablePlayers();
+
+                // Update team budgets if a refund was involved
+                if (data.refundAmount && this.rootStore.teamsStore.teamBudgets.has(data.team)) {
+                    const currentBudget = this.rootStore.teamsStore.teamBudgets.get(data.team) || 0;
+                    this.rootStore.teamsStore.teamBudgets.set(data.team, currentBudget + data.refundAmount);
+                }
+            }
+        });
+    }
 }

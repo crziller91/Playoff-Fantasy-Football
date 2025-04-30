@@ -61,16 +61,18 @@ export class ScoresStore {
         this.activeRound = round;
     };
 
+    // Update existing methods to emit socket events
     setPlayerScores = (scores: PlayerScoresByRound) => {
+        const prevScores = this.playerScores;
         this.playerScores = scores;
 
         // Don't immediately save if we're still loading
         if (!this.isLoading && this.rootStore.draftStore.isDraftFinished) {
-            this.saveScoresToServer();
+            this.saveScoresToServer(prevScores);
         }
     };
 
-    saveScoresToServer = async () => {
+    saveScoresToServer = async (prevScores?: PlayerScoresByRound) => {
         // Don't save if there are no player scores
         if (Object.values(this.playerScores).every(round => Object.keys(round).length === 0)) {
             return;
@@ -89,6 +91,13 @@ export class ScoresStore {
             // Only save if we have scores to save
             if (apiFormatScores.length > 0) {
                 await bulkSavePlayerScores(apiFormatScores);
+
+                // Emit socket events for scores that changed
+                if (this.rootStore.socket && prevScores) {
+                    // Find what changed between prevScores and this.playerScores
+                    this.emitScoreChanges(prevScores);
+                }
+
                 runInAction(() => {
                     this.lastSavedScores = currentScoresStr;
                 });
@@ -124,4 +133,79 @@ export class ScoresStore {
             });
         }
     };
+
+    handleRemoteScoreUpdate(data: any) {
+        // This will be called when another user updates player scores
+        runInAction(() => {
+            const { round, playerName, scoreData, isDeleted } = data;
+
+            // Make sure we have the round initialized
+            if (!this.playerScores[round]) {
+                this.playerScores[round] = {};
+            }
+
+            // Update the player score or delete it
+            if (isDeleted) {
+                // Handle score deletion
+                if (this.playerScores[round][playerName]) {
+                    delete this.playerScores[round][playerName];
+                    console.log(`Deleted player score for ${playerName} in ${round} round`);
+                }
+            } else if (scoreData) {
+                // Handle score update or player reactivation
+                // Check if this is a reactivation (isDisabled changing from true to false)
+                const isReactivation = this.playerScores[round]?.[playerName]?.isDisabled === true &&
+                    scoreData.isDisabled === false;
+
+                if (isReactivation) {
+                    console.log(`Reactivated player ${playerName} in ${round} round`);
+                } else {
+                    console.log(`Updated player score for ${playerName} in ${round} round`);
+                }
+
+                // In either case, update the player data
+                this.playerScores[round][playerName] = {
+                    ...scoreData
+                };
+            }
+        });
+    }
+
+    // Helper method to detect and emit score changes
+    private emitScoreChanges(prevScores: PlayerScoresByRound) {
+        if (!this.rootStore.socket) return;
+
+        // Check each round
+        Object.keys(this.playerScores).forEach(round => {
+            const currentRoundScores = this.playerScores[round] || {};
+            const prevRoundScores = prevScores[round] || {};
+
+            // Check each player in current scores
+            Object.entries(currentRoundScores).forEach(([playerName, playerData]) => {
+                // Player was added or updated
+                if (!prevRoundScores[playerName] ||
+                    JSON.stringify(prevRoundScores[playerName]) !== JSON.stringify(playerData)) {
+
+                    // Emit update event
+                    this.rootStore.socket?.emit('playerScoreUpdate', {
+                        round,
+                        playerName,
+                        scoreData: playerData
+                    });
+                }
+            });
+
+            // Check for deleted players
+            Object.keys(prevRoundScores).forEach(playerName => {
+                if (!currentRoundScores[playerName]) {
+                    // Emit delete event
+                    this.rootStore.socket?.emit('playerScoreUpdate', {
+                        round,
+                        playerName,
+                        isDeleted: true
+                    });
+                }
+            });
+        });
+    }
 }

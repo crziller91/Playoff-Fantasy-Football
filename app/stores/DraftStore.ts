@@ -32,12 +32,20 @@ export class DraftStore {
         }
     };
 
+    // Update the finishDraft method to emit a socket event
     finishDraft = async () => {
         try {
             await setDraftStatus(true);
             runInAction(() => {
                 this.isDraftFinished = true;
             });
+
+            // Emit socket event for real-time update to other clients
+            if (this.rootStore.socket) {
+                this.rootStore.socket.emit('draftStatusUpdate', {
+                    isDraftFinished: true
+                });
+            }
         } catch (err) {
             runInAction(() => {
                 this.error = err instanceof Error ? err.message : "Failed to finish draft";
@@ -49,7 +57,7 @@ export class DraftStore {
         this.searchTerms = terms;
     };
 
-    // This function should only be called if user is admin
+    // Update the resetDraft method to emit a socket event
     resetDraft = async () => {
         try {
             this.loading = true;
@@ -66,6 +74,13 @@ export class DraftStore {
                 this.loading = false;
                 this.error = null;
             });
+
+            // Emit socket event for real-time update to other clients
+            if (this.rootStore.socket) {
+                this.rootStore.socket.emit('draftStatusUpdate', {
+                    isDraftFinished: false
+                });
+            }
         } catch (err) {
             runInAction(() => {
                 this.error = err instanceof Error ? err.message : "Failed to reset draft";
@@ -73,4 +88,19 @@ export class DraftStore {
             });
         }
     };
+
+    // New method to handle remote draft status updates
+    handleRemoteDraftStatusUpdate(data: any) {
+        // This will be called when another user changes the draft status
+        runInAction(() => {
+            if (data.isDraftFinished !== undefined) {
+                this.isDraftFinished = data.isDraftFinished;
+
+                // If draft is finished, trigger loading of player scores
+                if (data.isDraftFinished && !this.rootStore.scoresStore.scoresLoaded) {
+                    this.rootStore.scoresStore.loadPlayerScores();
+                }
+            }
+        });
+    }
 }

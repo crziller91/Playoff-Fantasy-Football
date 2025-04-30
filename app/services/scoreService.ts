@@ -22,63 +22,63 @@ export const fetchPlayerScores = async (): Promise<PlayerScoresByRound> => {
 
 // Save a single player's score for a specific round
 export const savePlayerScore = async (
-    playerId: number,
-    round: string,
-    isDisabled: boolean,
-    statusReason: "eliminated" | "notPlaying" | null,
-    score: number,
-    scoreData?: any,
-    deleteIfReactivated: boolean = false // New parameter
-  ): Promise<any> => {
-    // If the player is being reactivated and deleteIfReactivated flag is true,
-    // we'll delete the entry instead of updating it
-    if (!isDisabled && deleteIfReactivated) {
-      return deletePlayerScore(playerId, round);
-    }
-  
-    // Otherwise proceed with normal save/update
-    const response = await fetch("/api/player-scores", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        playerId,
-        round,
-        isDisabled,
-        statusReason,
-        score,
-        scoreData
-      }),
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || `Failed to save player score: ${response.status}`);
-    }
-    
-    return response.json();
-  };
-  
-  // New function to delete a player score entry
-  export const deletePlayerScore = async (
-    playerId: number,
-    round: string
-  ): Promise<any> => {
-    const response = await fetch(`/api/player-scores/delete`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        playerId,
-        round
-      }),
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || `Failed to delete player score: ${response.status}`);
-    }
-    
-    return response.json();
-  };
+  playerId: number,
+  round: string,
+  isDisabled: boolean,
+  statusReason: "eliminated" | "notPlaying" | null,
+  score: number,
+  scoreData?: any,
+  deleteIfReactivated: boolean = false // New parameter
+): Promise<any> => {
+  // If the player is being reactivated and deleteIfReactivated flag is true,
+  // we'll delete the entry instead of updating it
+  if (!isDisabled && deleteIfReactivated) {
+    return deletePlayerScore(playerId, round);
+  }
+
+  // Otherwise proceed with normal save/update
+  const response = await fetch("/api/player-scores", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      playerId,
+      round,
+      isDisabled,
+      statusReason,
+      score,
+      scoreData
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || `Failed to save player score: ${response.status}`);
+  }
+
+  return response.json();
+};
+
+// Update the deletePlayerScore function in usePlayerScores hook
+export const deletePlayerScore = async (
+  playerId: number,
+  round: string
+): Promise<any> => {
+  const response = await fetch(`/api/player-scores/delete`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      playerId,
+      round
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || `Failed to delete player score: ${response.status}`);
+  }
+
+  return response.json();
+};
 
 // Bulk save multiple player scores
 export const bulkSavePlayerScores = async (playerScores: {
@@ -98,12 +98,12 @@ export const bulkSavePlayerScores = async (playerScores: {
       playerScores
     }),
   });
-  
+
   if (!response.ok) {
     const errorData = await response.json();
     throw new Error(errorData.error || `Failed to bulk save player scores: ${response.status}`);
   }
-  
+
   return response.json();
 };
 
@@ -112,7 +112,7 @@ export const convertToApiFormat = (
   playerScores: PlayerScoresByRound
 ): any[] => {
   const apiFormatScores: any[] = [];
-  
+
   // For each round
   Object.entries(playerScores).forEach(([round, players]) => {
     // For each player in this round
@@ -129,27 +129,27 @@ export const convertToApiFormat = (
       }
     });
   });
-  
+
   return apiFormatScores;
 };
 
 // Function to recalculate player scores after scoring rules change
 export const recalculatePlayerScores = async (position?: string): Promise<any> => {
-  const url = position 
+  const url = position
     ? `/api/player-scores/recalculate?position=${position}`
     : '/api/player-scores/recalculate';
-    
+
   const response = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     }
   });
-  
+
   if (!response.ok) {
     const errorData = await response.json();
     throw new Error(errorData.error || `Failed to recalculate player scores: ${response.status}`);
   }
-  
+
   return response.json();
 };

@@ -3,6 +3,8 @@ import { Inter } from "next/font/google";
 import { Flowbite } from "flowbite-react";
 import { StoreProvider } from "./stores/StoreContext";
 import Providers from "./providers";
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -23,6 +25,17 @@ export default function RootLayout({
         <Providers>
           <StoreProvider>
             <Flowbite>{children}</Flowbite>
+            <ToastContainer
+              position="bottom-right"
+              autoClose={3000}
+              hideProgressBar
+              newestOnTop={false}
+              closeOnClick
+              rtl={false}
+              pauseOnFocusLoss
+              draggable
+              pauseOnHover
+            />
           </StoreProvider>
         </Providers>
       </body>
