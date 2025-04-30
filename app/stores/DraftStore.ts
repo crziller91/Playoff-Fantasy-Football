@@ -91,14 +91,22 @@ export class DraftStore {
 
     // New method to handle remote draft status updates
     handleRemoteDraftStatusUpdate(data: any) {
-        // This will be called when another user changes the draft status
         runInAction(() => {
             if (data.isDraftFinished !== undefined) {
+                const wasReset = this.isDraftFinished && !data.isDraftFinished;
                 this.isDraftFinished = data.isDraftFinished;
 
                 // If draft is finished, trigger loading of player scores
                 if (data.isDraftFinished && !this.rootStore.scoresStore.scoresLoaded) {
                     this.rootStore.scoresStore.loadPlayerScores();
+                }
+
+                // If draft was reset, reload all relevant data
+                if (wasReset) {
+                    // Reload teams, players, and clear local draft data
+                    this.rootStore.teamsStore.loadTeams();
+                    this.rootStore.playersStore.loadPlayers();
+                    this.searchTerms = {};
                 }
             }
         });
