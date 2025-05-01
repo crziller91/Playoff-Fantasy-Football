@@ -6,6 +6,7 @@ import { Player, Team } from "../../types";
 import { positionColors } from "../../data/positionColors";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useStore } from "../../stores/StoreContext";
 
 interface PlayerDropdownProps {
   team: Team;
@@ -34,6 +35,7 @@ const PlayerDropdown = observer(({
   onRemovePick,
   isDraftFinished,
 }: PlayerDropdownProps) => {
+  const { playersStore } = useStore();
   const dropdownKey = `${team}-${pick}`.replace(/[^a-zA-Z0-9-]/g, "-");
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [dropdownPosition, setDropdownPosition] = useState<{
@@ -46,6 +48,15 @@ const PlayerDropdown = observer(({
     setIsMounted(true);
     return () => setIsMounted(false);
   }, []);
+
+  // If dropdown is opened but players haven't loaded yet, reload them
+  useEffect(() => {
+    if (isOpen && filteredPlayers.length === 0 && !playersStore.loading &&
+      playersStore.allPlayers.length === 0) {
+      console.log("No players available, attempting to reload");
+      playersStore.loadPlayers();
+    }
+  }, [isOpen, filteredPlayers.length, playersStore]);
 
   const calculatePosition = useCallback(() => {
     if (isOpen && buttonRef.current) {
@@ -137,7 +148,11 @@ const PlayerDropdown = observer(({
         />
       </div>
       <div className="max-h-60 overflow-y-auto">
-        {filteredPlayers.length > 0 ? (
+        {playersStore.loading ? (
+          <div className="px-4 py-2 text-sm text-gray-500">
+            Loading players...
+          </div>
+        ) : filteredPlayers && filteredPlayers.length > 0 ? (
           filteredPlayers.map((player) => (
             <div
               key={player.id}
@@ -150,12 +165,26 @@ const PlayerDropdown = observer(({
           ))
         ) : (
           <div className="px-4 py-2 text-sm text-gray-500">
-            No available players
+            {!filteredPlayers || playersStore.allPlayers.length === 0 ?
+              "No players data available - waiting for update" :
+              "No available players for this selection"}
           </div>
         )}
       </div>
     </div>
-  ), [dropdownKey, dropdownPosition, filteredPlayers, isOpen, onPlayerSelect, onRemovePick, onSearchChange, searchTerm, selectedPlayer]);
+  ), [
+    dropdownKey,
+    dropdownPosition,
+    filteredPlayers,
+    isOpen,
+    onPlayerSelect,
+    onRemovePick,
+    onSearchChange,
+    searchTerm,
+    selectedPlayer,
+    playersStore.loading,
+    playersStore.allPlayers.length
+  ]);
 
   return (
     <div className="relative">

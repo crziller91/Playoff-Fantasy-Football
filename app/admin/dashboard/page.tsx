@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { Card, Table, Spinner, Alert, Button, TextInput, Modal, Label } from "flowbite-react";
 import { usePermissions } from "@/app/hooks/usePermissions";
 import { redirect } from "next/navigation";
-import { HiCheckCircle, HiPencil, HiTrash, HiPlus } from "react-icons/hi";
+import { HiCheckCircle, HiPencil, HiTrash, HiPlus, HiHome } from "react-icons/hi";
 import Link from "next/link";
 import ScoringRulesEditor from "@/app/components/admin/ScoringRulesEditor";
 
@@ -357,6 +357,7 @@ export default function AdminDashboardPage() {
                     onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
                     color="light"
                 >
+                    <HiHome className="mr-2 size-5" />
                     Return Home
                 </Button>
             </div>

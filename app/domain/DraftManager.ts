@@ -85,9 +85,20 @@ export class DraftManager {
     }
 
     static filterPlayers(players: Player[], team: Team, draftPicks: DraftPicks, searchTerm: string): Player[] {
-        // Add null check here as well
-        if (!draftPicks[team]) {
+        // ADDED: If no players available, return empty array immediately
+        if (!players || players.length === 0) {
+            console.warn(`No players available to filter for team ${team}`);
             return [];
+        }
+
+        // ADDED: Make sure this team exists in draftPicks
+        if (!draftPicks[team]) {
+            console.warn(`Team ${team} not found in draftPicks - initializing`);
+            // Initialize this team in draftPicks to avoid errors
+            draftPicks[team] = {};
+            this.PICKS.forEach(pick => {
+                draftPicks[team][pick] = null;
+            });
         }
 
         const counts = this.getTeamPositionCounts(team, draftPicks);

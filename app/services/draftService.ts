@@ -1,15 +1,44 @@
 import { DraftPicks, Player, TeamWithBudget } from "../types";
 
 export const fetchPlayers = async (): Promise<Player[]> => {
-  const response = await fetch("/api/players");
-  if (!response.ok) throw new Error(`API returned status: ${response.status}`);
-  return response.json();
+  try {
+    // Check if we're in a server environment
+    const isServer = typeof window === 'undefined';
+    // Use the appropriate base URL
+    const baseUrl = isServer
+      ? process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
+      : '';
+
+    const url = `${baseUrl}/api/players`;
+    console.log("Fetching players from:", url);
+
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`API returned status: ${response.status}`);
+    return response.json();
+  } catch (error) {
+    console.error("Error in fetchPlayers:", error);
+    return []; // Return empty array instead of throwing
+  }
 };
 
+// Do the same for other fetch functions
 export const fetchDraftPicks = async (): Promise<DraftPicks> => {
-  const response = await fetch("/api/draftpicks");
-  if (!response.ok) throw new Error(`API returned status: ${response.status}`);
-  return response.json();
+  try {
+    const isServer = typeof window === 'undefined';
+    const baseUrl = isServer
+      ? process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
+      : '';
+
+    const url = `${baseUrl}/api/draftpicks`;
+    console.log("Fetching draft picks from:", url);
+
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`API returned status: ${response.status}`);
+    return response.json();
+  } catch (error) {
+    console.error("Error in fetchDraftPicks:", error);
+    return {}; // Return empty object instead of throwing
+  }
 };
 
 export const fetchTeams = async (): Promise<TeamWithBudget[]> => {

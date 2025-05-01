@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { Card, Table, Spinner, Alert, Checkbox, Button } from "flowbite-react";
 import { usePermissions } from "@/app/hooks/usePermissions";
 import { redirect } from "next/navigation";
-import { HiCheckCircle, HiLockClosed } from "react-icons/hi";
+import { HiCheckCircle, HiLockClosed, HiHome } from "react-icons/hi";
 import Link from "next/link";
 
 interface User {
@@ -295,6 +295,7 @@ export default function PermissionsPage() {
                     onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
                     color="light"
                 >
+                    <HiHome className="mr-2 size-5" />
                     Return Home
                 </Button>
             </div>

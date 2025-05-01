@@ -172,16 +172,7 @@ export default function Register() {
         <div className="flex min-h-screen items-center justify-center bg-gray-50">
             <Card className="w-full max-w-md">
                 <div className="relative">
-                    <Button
-                        color="light"
-                        size="sm"
-                        className="absolute left-0 top-0"
-                        as={Link}
-                        href="/"
-                    >
-                        <HiHome />
-                    </Button>
-                    <h2 className="mb-4 text-center text-2xl font-bold">Create an account</h2>
+                    <h2 className="mb-4 text-center text-2xl font-bold">Create Account</h2>
                 </div>
 
                 {error && (
@@ -276,8 +267,19 @@ export default function Register() {
                         {isLoading ? "Registering..." : "Register"}
                     </Button>
                 </form>
-                <div className="mt-4">
-                    <p className="text-center text-sm text-gray-600">
+                <div className="mt-6 flex items-center justify-between">
+                    <Button
+                        color="light"
+                        size="sm"
+                        as={Link}
+                        href="/"
+                        className="flex items-center gap-1"
+                    >
+                        <HiHome className="mr-2 size-5" />
+                        Return Home
+                    </Button>
+
+                    <p className="text-sm text-gray-600">
                         Already have an account?{" "}
                         <Link href="/auth/signin" className="text-blue-600 hover:underline">
                             Sign in

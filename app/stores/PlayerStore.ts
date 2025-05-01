@@ -21,30 +21,56 @@ export class PlayersStore {
 
     loadPlayers = async () => {
         try {
+            // Flag to track loading status
             this.loading = true;
-            const [players, picks] = await Promise.all([
-                fetchPlayers(),
-                fetchDraftPicks(),
-            ]);
 
-            // Initialize draft picks with all teams and rounds
-            const initializedPicks = DraftManager.initializeDraftPicks(this.rootStore.teamsStore.teams);
-            const mergedPicks = { ...initializedPicks, ...picks };
-
-            // Calculate available players
-            const available = DraftManager.calculateAvailablePlayers(players, mergedPicks);
-
-            runInAction(() => {
-                this.allPlayers = players;
-                this.availablePlayers = available;
-                this.draftPicks = mergedPicks;
+            // Check if there's already data loaded
+            if (this.allPlayers.length > 0) {
+                console.log("Players already loaded, skipping fetch");
                 this.loading = false;
-            });
+                return;
+            }
+
+            console.log("Attempting to load players and draft picks...");
+
+            try {
+                const [players, picks] = await Promise.all([
+                    fetchPlayers(),
+                    fetchDraftPicks(),
+                ]);
+
+                console.log(`Fetched ${players.length} players and ${Object.keys(picks).length} team picks`);
+
+                // Initialize draft picks with all teams and rounds
+                const initializedPicks = DraftManager.initializeDraftPicks(this.rootStore.teamsStore.teams);
+                const mergedPicks = { ...initializedPicks, ...picks };
+
+                // Calculate available players
+                const available = DraftManager.calculateAvailablePlayers(players, mergedPicks);
+
+                runInAction(() => {
+                    this.allPlayers = players;
+                    this.availablePlayers = available;
+                    this.draftPicks = mergedPicks;
+                    this.loading = false;
+                });
+            } catch (fetchError) {
+                console.error("Error fetching data:", fetchError);
+
+                // If in browser context, try again after a short delay
+                if (typeof window !== 'undefined') {
+                    console.log("Retrying fetch after delay...");
+                    setTimeout(() => this.loadPlayers(), 1500);
+                } else {
+                    throw fetchError; // Re-throw in server context
+                }
+            }
         } catch (err) {
             runInAction(() => {
                 this.error = err instanceof Error ? err.message : "Failed to load players";
                 this.loading = false;
             });
+            console.error("Error in loadPlayers:", err);
         }
     };
 
@@ -180,13 +206,20 @@ export class PlayersStore {
 
     // Add these methods to the PlayersStore class
     handleRemoteDraftPickUpdate(data: any) {
-        // This will be called when another user adds or updates a draft pick
+        // The existing code
         runInAction(() => {
             // Update local state with the new draft pick
             if (!this.draftPicks[data.team]) {
                 this.draftPicks[data.team] = {};
             }
             this.draftPicks[data.team][data.pick] = data.player;
+
+            // ADDED: If we have no players data yet, force reload all players
+            if (this.allPlayers.length === 0) {
+                console.log("Received remote update but no local players - loading all players");
+                setTimeout(() => this.loadPlayers(), 300);
+                return;
+            }
 
             // Update available players
             this.updateAvailablePlayers();

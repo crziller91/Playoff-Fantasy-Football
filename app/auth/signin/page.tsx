@@ -23,14 +23,16 @@ export default function SignIn() {
 
     // Check for error or success in URL params
     useEffect(() => {
-        const errorType = searchParams.get("error");
-        const registered = searchParams.get("registered");
+        if (searchParams) {
+            const errorType = searchParams.get("error");
+            const registered = searchParams.get("registered");
 
-        if (errorType === "CredentialsSignin") {
-            setError("Invalid email or password. Please try again.");
-        } else if (registered === "true") {
-            // Show success message for newly registered users
-            setSuccess("Registration successful! You can now sign in.");
+            if (errorType === "CredentialsSignin") {
+                setError("Invalid email or password. Please try again.");
+            } else if (registered === "true") {
+                // Show success message for newly registered users
+                setSuccess("Registration successful! You can now sign in.");
+            }
         }
     }, [searchParams]);
 
@@ -136,18 +138,7 @@ export default function SignIn() {
     return (
         <div className="flex min-h-screen items-center justify-center bg-gray-50">
             <Card className="w-full max-w-md">
-                <div className="relative">
-                    <Button
-                        color="light"
-                        size="sm"
-                        className="absolute left-0 top-0"
-                        as={Link}
-                        href="/"
-                    >
-                        <HiHome />
-                    </Button>
-                    <h2 className="mb-4 text-center text-2xl font-bold">Sign in to your account</h2>
-                </div>
+                <h2 className="mb-4 text-center text-2xl font-bold">Sign In</h2>
 
                 {error && (
                     <div className="mb-4">
@@ -214,8 +205,19 @@ export default function SignIn() {
                         {isLoading ? "Signing in..." : "Sign in"}
                     </Button>
                 </form>
-                <div className="mt-4">
-                    <p className="text-center text-sm text-gray-600">
+                <div className="mt-6 flex items-center justify-between">
+                    <Button
+                        color="light"
+                        size="sm"
+                        as={Link}
+                        href="/"
+                        className="flex items-center gap-1"
+                    >
+                        <HiHome className="mr-2 size-5" />
+                        Return Home
+                    </Button>
+
+                    <p className="text-sm text-gray-600">
                         Don&apos;t have an account?{" "}
                         <Link href="/auth/register" className="text-blue-600 hover:underline">
                             Register here
