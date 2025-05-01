@@ -1,4 +1,3 @@
-// app/components/players/SelectedPlayerTable.tsx
 "use client";
 
 import { observer } from "mobx-react-lite";
@@ -8,10 +7,15 @@ import { createPortal } from "react-dom";
 import { positionColors } from "../../data/positionColors";
 import { useStore } from "../../stores/StoreContext";
 import { Player } from "../../types";
+import { usePermissions } from "../../hooks/usePermissions"; // Import the permission hook
 
 const SelectedPlayerTable = observer(() => {
     const { playersStore } = useStore();
     const { availablePlayers, selectedPlayer, setSelectedPlayer } = playersStore;
+    const { canEditScores, isAdmin } = usePermissions(); // Get permissions
+
+    // User can edit if they have edit scores permission or admin rights
+    const canEdit = canEditScores || isAdmin;
 
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
@@ -81,17 +85,21 @@ const SelectedPlayerTable = observer(() => {
     }, [isOpen, searchTerm]);
 
     // Memoize handlePlayerSelect
-    const handlePlayerSelect = useCallback((player : Player) => {
+    const handlePlayerSelect = useCallback((player: Player) => {
+        if (!canEdit) return; // Add permission check
+
         setSelectedPlayer(player);
         setIsOpen(false);
         setSearchTerm("");
-    }, [setSelectedPlayer]);
+    }, [setSelectedPlayer, canEdit]);
 
     // Memoize handleRemovePick
     const handleRemovePick = useCallback(() => {
+        if (!canEdit) return; // Add permission check
+
         setSelectedPlayer(null);
         setIsOpen(false);
-    }, [setSelectedPlayer]);
+    }, [setSelectedPlayer, canEdit]);
 
     const filteredPlayers = availablePlayers.filter((player) =>
         player.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -153,10 +161,17 @@ const SelectedPlayerTable = observer(() => {
             isOpen,
             searchTerm,
             selectedPlayer,
-            handlePlayerSelect, // Add these to the dependency array
-            handleRemovePick,  // Add these to the dependency array
+            handlePlayerSelect,
+            handleRemovePick,
         ]
     );
+
+    // Handle button click with permission check
+    const handleButtonClick = () => {
+        if (canEdit) {
+            setIsOpen(!isOpen);
+        }
+    };
 
     return (
         <Table className="w-auto rounded-lg border-0 bg-white shadow-xl">
@@ -171,19 +186,21 @@ const SelectedPlayerTable = observer(() => {
                         <div className="relative">
                             <Button
                                 ref={buttonRef}
-                                onClick={() => setIsOpen(!isOpen)}
+                                onClick={handleButtonClick}
                                 color={
                                     selectedPlayer
                                         ? positionColors[selectedPlayer.position]
                                         : "gray"
                                 }
                                 className="w-48 justify-start text-sm"
+                                disabled={!canEdit} // Disable the button if the user doesn't have permission
                             >
                                 {selectedPlayer?.name || "Select Player"}
                             </Button>
                             {isOpen &&
                                 dropdownPosition &&
                                 isMounted &&
+                                canEdit && // Only render the dropdown if the user has permission
                                 createPortal(
                                     dropdownContent,
                                     document.body,

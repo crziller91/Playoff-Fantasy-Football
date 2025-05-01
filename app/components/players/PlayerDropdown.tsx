@@ -20,6 +20,7 @@ interface PlayerDropdownProps {
   onPlayerSelect: (player: Player) => void;
   onRemovePick: () => void;
   isDraftFinished: boolean;
+  canEdit?: boolean; // Add permission prop
 }
 
 const PlayerDropdown = observer(({
@@ -34,6 +35,7 @@ const PlayerDropdown = observer(({
   onPlayerSelect,
   onRemovePick,
   isDraftFinished,
+  canEdit = false, // Default to false for security
 }: PlayerDropdownProps) => {
   const { playersStore } = useStore();
   const dropdownKey = `${team}-${pick}`.replace(/[^a-zA-Z0-9-]/g, "-");
@@ -113,7 +115,7 @@ const PlayerDropdown = observer(({
   }, [isOpen, onToggle, dropdownKey]);
 
   const handleButtonClick = () => {
-    if (!isDraftFinished) {
+    if (!isDraftFinished && canEdit) {
       onToggle(isOpen ? null : dropdownKey);
     }
   };
@@ -198,7 +200,7 @@ const PlayerDropdown = observer(({
           selectedPlayer ? positionColors[selectedPlayer.position] : "gray"
         }
         className="w-48 justify-start text-sm"
-        disabled={isDraftFinished}
+        disabled={isDraftFinished || !canEdit}
       >
         {selectedPlayer?.name || `Pick ${team} R${pick}`}
       </Button>
@@ -206,6 +208,7 @@ const PlayerDropdown = observer(({
         dropdownPosition &&
         isMounted &&
         !isDraftFinished &&
+        canEdit &&
         createPortal(
           renderDropdownContent,
           document.body,

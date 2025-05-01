@@ -9,6 +9,7 @@ import PlayerDropdown from "../players/PlayerDropdown";
 import { DraftManager } from "../../domain/DraftManager";
 import BudgetModal from "../modals/BudgetModal";
 import { useStore } from "../../stores/StoreContext";
+import { usePermissions } from "../../hooks/usePermissions"; // Import the permission hook
 
 const DraftTable = observer(() => {
   const { draftStore, teamsStore, playersStore } = useStore();
@@ -16,6 +17,10 @@ const DraftTable = observer(() => {
   const { teamBudgets } = teamsStore;
   const { availablePlayers, draftPicks, selectedPlayer, selectPlayerForTeam, removePlayerFromTeam } = playersStore;
   const { isDraftFinished, searchTerms, setSearchTerms } = draftStore;
+  const { canEditScores, isAdmin } = usePermissions(); // Get permissions
+
+  // User can edit if they have edit scores permission or admin rights
+  const canEdit = canEditScores || isAdmin;
 
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [budgetModalOpen, setBudgetModalOpen] = useState(false);
@@ -27,6 +32,9 @@ const DraftTable = observer(() => {
   const picks = DraftManager.PICKS; // Use the picks from DraftManager
 
   const handlePlayerSelect = (team: Team, pick: number, player: Player) => {
+    // Add permission check
+    if (!canEdit) return;
+
     if (DraftManager.canSelectPlayer(team, draftPicks, picks.length)) {
       // Close the dropdown immediately
       setOpenDropdown(null);
@@ -43,7 +51,7 @@ const DraftTable = observer(() => {
   };
 
   const handleBudgetConfirm = async (cost: number) => {
-    if (!selectedPlayerForBudget) return;
+    if (!canEdit || !selectedPlayerForBudget) return;
 
     try {
       // Check if team has enough budget
@@ -77,11 +85,17 @@ const DraftTable = observer(() => {
   };
 
   const handleRemovePick = async (team: Team, pick: number) => {
+    // Add permission check
+    if (!canEdit) return;
+
     await removePlayerFromTeam(team, pick);
     setOpenDropdown(null);
   };
 
   const handleSearchChange = (team: Team, pick: number, value: string) => {
+    // Add permission check
+    if (!canEdit) return;
+
     const sanitizedKey = `${team}-${pick}`.replace(/[^a-zA-Z0-9-]/g, "-");
     setSearchTerms({ ...searchTerms, [sanitizedKey]: value });
   };
@@ -120,6 +134,7 @@ const DraftTable = observer(() => {
                         onPlayerSelect={(player) => handlePlayerSelect(team, pick, player)}
                         onRemovePick={() => handleRemovePick(team, pick)}
                         isDraftFinished={isDraftFinished}
+                        canEdit={canEdit} // Pass the permission prop
                       />
                     </Table.Cell>
                   );
