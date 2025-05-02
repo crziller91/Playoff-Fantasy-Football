@@ -18,7 +18,7 @@ const DraftDashboard = observer(({ isDraftComplete }: DraftDashboardProps) => {
     const { status } = useSession(); // Get auth status
 
     // User can edit if they have edit scores permission or admin rights
-    const canEdit = canEditScores || isAdmin;
+    const canEdit = isAdmin;
 
     return (
         <>

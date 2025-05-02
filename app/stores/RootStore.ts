@@ -21,11 +21,31 @@ export class RootStore {
 
     // Update the socket event listeners in setSocket method
     setSocket(socket: Socket | null) {
+        // First, remove existing listeners from the previous socket if there was one
+        if (this.socket) {
+            this.socket.off('playerScoreUpdate');
+            this.socket.off('draftPickUpdate');
+            this.socket.off('draftStatusUpdate');
+        }
+
         this.socket = socket;
 
         if (socket) {
             // Set up socket event listeners
+            socket.on('playerScoreUpdate', (data) => {
+                this.scoresStore.handleRemoteScoreUpdate(data);
+                if (data.isDeleted) {
+                    toast.info(`Scores cleared for ${data.playerName} in ${data.round} round`);
+                } else if (data.action === 'reactivate') {
+                    toast.info(`${data.playerName} reactivated for ${data.round} round`);
+                } else {
+                    toast.info(`Scores updated for ${data.playerName} in ${data.round} round`);
+                }
+            });
+
             socket.on('draftPickUpdate', (data) => {
+                console.log('Received draftPickUpdate:', data);
+
                 if (data.action === 'add' || data.action === 'update') {
                     this.playersStore.handleRemoteDraftPickUpdate(data);
                     toast.info(`${data.team} selected ${data.player.name} in round ${data.pick}`);
@@ -35,21 +55,26 @@ export class RootStore {
                 }
             });
 
-            socket.on('playerScoreUpdate', (data) => {
-                this.scoresStore.handleRemoteScoreUpdate(data);
-                if (data.isDeleted) {
-                    toast.info(`Scores cleared for ${data.playerName} in ${data.round} round`);
-                } else {
-                    toast.info(`Scores updated for ${data.playerName} in ${data.round} round`);
-                }
-            });
-
             socket.on('draftStatusUpdate', (data) => {
+                console.log('Received draftStatusUpdate:', data);
+
+                // First update the store state
                 this.draftStore.handleRemoteDraftStatusUpdate(data);
+
+                // Then handle UI notifications and potential page reload
                 if (data.isDraftFinished) {
                     toast.success('Draft has been marked as finished');
-                } else {
+                } else if (data.action === 'reset') {
                     toast.info('Draft has been reset');
+
+                    // Only for full reset action, reload the page after a short delay
+                    // to allow the toast to be seen
+                    if (typeof window !== 'undefined') {
+                        setTimeout(() => {
+                            console.log('Reloading page after full draft reset');
+                            window.location.href = '/';
+                        }, 1500);
+                    }
                 }
             });
         }

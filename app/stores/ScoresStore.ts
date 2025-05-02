@@ -171,6 +171,19 @@ export class ScoresStore {
         });
     }
 
+    resetScores = () => {
+        runInAction(() => {
+          this.playerScores = {
+            "Wild Card": {},
+            "Divisional": {},
+            "Conference": {},
+            "Superbowl": {}
+          };
+          this.lastSavedScores = "{}";
+          this.scoresLoaded = false; // Reset the loaded state
+        });
+      };
+
     // Helper method to detect and emit score changes
     private emitScoreChanges(prevScores: PlayerScoresByRound) {
         if (!this.rootStore.socket) return;

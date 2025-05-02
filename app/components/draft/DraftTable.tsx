@@ -20,7 +20,7 @@ const DraftTable = observer(() => {
   const { canEditScores, isAdmin } = usePermissions(); // Get permissions
 
   // User can edit if they have edit scores permission or admin rights
-  const canEdit = canEditScores || isAdmin;
+  const canEdit = isAdmin;
 
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [budgetModalOpen, setBudgetModalOpen] = useState(false);
@@ -88,8 +88,11 @@ const DraftTable = observer(() => {
     // Add permission check
     if (!canEdit) return;
 
-    await removePlayerFromTeam(team, pick);
+    // Close dropdown first
     setOpenDropdown(null);
+
+    // Then remove the pick
+    await removePlayerFromTeam(team, pick);
   };
 
   const handleSearchChange = (team: Team, pick: number, value: string) => {

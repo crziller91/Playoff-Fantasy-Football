@@ -179,20 +179,11 @@ export function usePlayerModals({
         if (!canEditScores || !reactivationPlayer) return;
         const round = reactivationPlayer.currentRound || activeRound;
 
-        // Update UI state by updating the player's disabled status
-        const newScores = JSON.parse(JSON.stringify(playerScores)); // Deep copy
-        if (newScores[round]?.[reactivationPlayer.name]) {
-            // Instead of deleting the player entirely, let's update their state
-            newScores[round][reactivationPlayer.name] = {
-                ...newScores[round][reactivationPlayer.name],
-                isDisabled: false,
-                statusReason: null
-            };
-        }
-        setPlayerScores(newScores);
-
         try {
-            // Delete the player's score entry from the database
+            // We'll let the server handle the score update, rather than updating UI directly
+            // This should prevent duplicate events
+
+            // Save to database with reactivation flag
             await savePlayerScore(
                 reactivationPlayer.id,
                 round,
@@ -203,19 +194,20 @@ export function usePlayerModals({
                 true    // This parameter indicates reactivation
             );
 
-            // Emit socket event for reactivation
-            if (socket) {
-                socket.emit('playerScoreUpdate', {
-                    round,
-                    playerName: reactivationPlayer.name,
-                    scoreData: {
-                        ...reactivationPlayer,
-                        isDisabled: false,
-                        statusReason: null,
-                        score: 0
-                    }
-                });
+            // No need to emit a socket event here as the server will do that
+            // when the savePlayerScore API is called
+
+            // Just for immediate UI feedback, update the local state
+            const newScores = JSON.parse(JSON.stringify(playerScores)); // Deep copy
+            if (newScores[round]?.[reactivationPlayer.name]) {
+                newScores[round][reactivationPlayer.name] = {
+                    ...newScores[round][reactivationPlayer.name],
+                    isDisabled: false,
+                    statusReason: null
+                };
             }
+            setPlayerScores(newScores);
+
         } catch (err) {
             console.error(`Error reactivating player: ${err}`);
         }

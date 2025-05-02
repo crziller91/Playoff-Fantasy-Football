@@ -15,7 +15,7 @@ const SelectedPlayerTable = observer(() => {
     const { canEditScores, isAdmin } = usePermissions(); // Get permissions
 
     // User can edit if they have edit scores permission or admin rights
-    const canEdit = canEditScores || isAdmin;
+    const canEdit = isAdmin;
 
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");

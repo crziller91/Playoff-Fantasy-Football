@@ -32,7 +32,6 @@ export class DraftStore {
         }
     };
 
-    // Update the finishDraft method to emit a socket event
     finishDraft = async () => {
         try {
             await setDraftStatus(true);
@@ -43,6 +42,7 @@ export class DraftStore {
             // Emit socket event for real-time update to other clients
             if (this.rootStore.socket) {
                 this.rootStore.socket.emit('draftStatusUpdate', {
+                    action: 'finish',
                     isDraftFinished: true
                 });
             }
@@ -57,27 +57,55 @@ export class DraftStore {
         this.searchTerms = terms;
     };
 
-    // Update the resetDraft method to emit a socket event
     resetDraft = async () => {
         try {
             this.loading = true;
+
+            // Call the API to reset draft picks and draft status
             await resetDraftPicks();
             await setDraftStatus(false);
 
-            // Reset all related stores
-            await this.rootStore.teamsStore.loadTeams();
-            await this.rootStore.playersStore.loadPlayers();
-
+            // Reset local state immediately
             runInAction(() => {
                 this.isDraftFinished = false;
                 this.searchTerms = {};
+            });
+
+            // Reset player store state
+            runInAction(() => {
+                // Clear draft picks
+                this.rootStore.playersStore.draftPicks = {};
+                // Force refresh of available players
+                this.rootStore.playersStore.updateAvailablePlayers();
+            });
+
+            // Reset scores store state
+            runInAction(() => {
+                this.rootStore.scoresStore.playerScores = {
+                    "Wild Card": {},
+                    "Divisional": {},
+                    "Conference": {},
+                    "Superbowl": {}
+                };
+                this.rootStore.scoresStore.lastSavedScores = "{}";
+                this.rootStore.scoresStore.scoresLoaded = false;
+            });
+
+            // Reload data from server
+            await Promise.all([
+                this.rootStore.teamsStore.loadTeams(),
+                this.rootStore.playersStore.loadPlayers()
+            ]);
+
+            runInAction(() => {
                 this.loading = false;
                 this.error = null;
             });
 
-            // Emit socket event for real-time update to other clients
+            // Emit socket event with a specific action type for full reset
             if (this.rootStore.socket) {
                 this.rootStore.socket.emit('draftStatusUpdate', {
+                    action: 'reset',
                     isDraftFinished: false
                 });
             }
@@ -89,24 +117,46 @@ export class DraftStore {
         }
     };
 
-    // New method to handle remote draft status updates
+    // Handle remote draft status updates
     handleRemoteDraftStatusUpdate(data: any) {
+        console.log("Received remote draft status update:", data);
+
         runInAction(() => {
+            // Update draft status
             if (data.isDraftFinished !== undefined) {
-                const wasReset = this.isDraftFinished && !data.isDraftFinished;
                 this.isDraftFinished = data.isDraftFinished;
+            }
 
-                // If draft is finished, trigger loading of player scores
-                if (data.isDraftFinished && !this.rootStore.scoresStore.scoresLoaded) {
+            // Check if this is a full reset action
+            if (data.action === 'reset') {
+                console.log("Received full draft reset action");
+
+                // Let the RootStore handle the page reload for full resets
+                // Just update local state here
+                this.isDraftFinished = false;
+                this.searchTerms = {};
+
+                // Reset player store state
+                this.rootStore.playersStore.draftPicks = {};
+
+                // Reset scores state
+                this.rootStore.scoresStore.playerScores = {
+                    "Wild Card": {},
+                    "Divisional": {},
+                    "Conference": {},
+                    "Superbowl": {}
+                };
+                this.rootStore.scoresStore.lastSavedScores = "{}";
+                this.rootStore.scoresStore.scoresLoaded = false;
+
+                // Update available players
+                this.rootStore.playersStore.updateAvailablePlayers();
+            }
+            // Handle draft finished action
+            else if (data.action === 'finish' || data.isDraftFinished) {
+                // If draft is finished, load player scores if needed
+                if (!this.rootStore.scoresStore.scoresLoaded) {
                     this.rootStore.scoresStore.loadPlayerScores();
-                }
-
-                // If draft was reset, reload all relevant data
-                if (wasReset) {
-                    // Reload teams, players, and clear local draft data
-                    this.rootStore.teamsStore.loadTeams();
-                    this.rootStore.playersStore.loadPlayers();
-                    this.searchTerms = {};
                 }
             }
         });

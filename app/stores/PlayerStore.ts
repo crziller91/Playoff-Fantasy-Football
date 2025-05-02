@@ -152,23 +152,45 @@ export class PlayersStore {
             // Store the cost for refund calculation
             const removedPlayerCost = await this.getPlayerCost(team, pick);
 
-            // Update UI state
-            const updatedDraftPicks = {
-                ...this.draftPicks,
-                [team]: { ...this.draftPicks[team], [pick]: null }
-            };
-
+            // Update UI state immediately for better responsiveness
             runInAction(() => {
-                this.draftPicks = updatedDraftPicks;
+                // Update draft picks without waiting for the server
+                this.draftPicks = {
+                    ...this.draftPicks,
+                    [team]: { ...this.draftPicks[team], [pick]: null }
+                };
+
+                // Also update the team budget locally to avoid needing a full reload
+                if (removedPlayerCost > 0 && this.rootStore.teamsStore.teamBudgets.has(team)) {
+                    const currentBudget = this.rootStore.teamsStore.teamBudgets.get(team) || 0;
+                    this.rootStore.teamsStore.teamBudgets.set(team, currentBudget + removedPlayerCost);
+                }
+
+                // Update available players list
+                this.updateAvailablePlayers();
             });
 
-            this.updateAvailablePlayers();
-
-            // Save to backend
+            // Now save to backend
             await saveDraftPick(team, pick, null);
 
-            // Reload team budgets since the server will handle refunding
-            await this.rootStore.teamsStore.loadTeams();
+            // REMOVE THIS LINE:
+            // await this.rootStore.teamsStore.loadTeams();
+
+            // Instead of reloading all teams, just fetch the updated budget in background
+            // This can happen asynchronously without blocking the UI
+            fetch(`/api/teams`)
+                .then(response => response.json())
+                .then(teams => {
+                    // Silently update budget values without causing a loading state
+                    runInAction(() => {
+                        teams.forEach((t: any) => {
+                            this.rootStore.teamsStore.teamBudgets.set(t.name, t.budget);
+                        });
+                    });
+                })
+                .catch(error => {
+                    console.error("Error fetching updated team budgets:", error);
+                });
 
             // Emit socket event for real-time update to other clients
             if (this.rootStore.socket) {
