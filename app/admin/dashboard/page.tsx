@@ -15,6 +15,83 @@ interface Team {
     budget: number;
 }
 
+// Internal component for global budget settings
+function GlobalBudgetSettings({
+    currentBudget,
+    onSaveBudget,
+    isLoading,
+    draftFinished
+}: {
+    currentBudget: number,
+    onSaveBudget: (budget: number) => Promise<void>,
+    isLoading: boolean,
+    draftFinished: boolean
+}) {
+    const [budget, setBudget] = useState(currentBudget.toString());
+    const [isValid, setIsValid] = useState(true);
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+
+        // Validate the budget
+        const budgetValue = parseInt(budget, 10);
+        if (isNaN(budgetValue) || budgetValue <= 0) {
+            setIsValid(false);
+            return;
+        }
+
+        // Submit the budget change
+        onSaveBudget(budgetValue);
+    };
+
+    return (
+        <div className="mb-8">
+            <div className="mb-4">
+                <h2 className="text-xl font-semibold">Global Budget Settings</h2>
+                <p className="text-sm text-gray-500">
+                    Set the budget amount for all teams. This will also be the default when resetting teams.
+                </p>
+            </div>
+
+            <Card>
+                <form onSubmit={handleSubmit} className="flex items-end gap-4">
+                    <div className="flex-1">
+                        <div className="mb-2 block">
+                            <Label htmlFor="globalBudget" value="Budget for all teams" />
+                        </div>
+                        <TextInput
+                            id="globalBudget"
+                            placeholder="200"
+                            value={budget}
+                            onChange={(e) => {
+                                setBudget(e.target.value);
+                                setIsValid(true);
+                            }}
+                            disabled={draftFinished || isLoading}
+                            color={isValid ? undefined : "failure"}
+                            helperText={!isValid ? "Budget must be a positive number" : undefined}
+                        />
+                    </div>
+                    <Button
+                        type="submit"
+                        disabled={draftFinished || isLoading}
+                        color={draftFinished ? "gray" : "success"}
+                    >
+                        {isLoading ? (
+                            <>
+                                <Spinner size="sm" className="mr-2" />
+                                Saving...
+                            </>
+                        ) : (
+                            "Save Budget"
+                        )}
+                    </Button>
+                </form>
+            </Card>
+        </div>
+    );
+}
+
 export default function AdminDashboardPage() {
     const { data: session } = useSession({
         required: true,
@@ -25,7 +102,9 @@ export default function AdminDashboardPage() {
 
     const { isAdmin, isLoading: permissionsLoading } = usePermissions();
     const [teams, setTeams] = useState<Team[]>([]);
+    const [globalBudget, setGlobalBudget] = useState(200); // Default budget
     const [loading, setLoading] = useState(true);
+    const [savingBudget, setSavingBudget] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [draftFinished, setDraftFinished] = useState(false);
@@ -39,8 +118,7 @@ export default function AdminDashboardPage() {
 
     // Form states
     const [teamName, setTeamName] = useState("");
-    const [teamBudget, setTeamBudget] = useState("200");
-    const [formErrors, setFormErrors] = useState({ name: false, budget: false });
+    const [formErrors, setFormErrors] = useState({ name: false });
     const [processing, setProcessing] = useState(false);
 
     // Fetch all teams and draft status
@@ -58,6 +136,10 @@ export default function AdminDashboardPage() {
                     throw new Error(`Failed to fetch teams: ${teamsResponse.status}`);
                 }
                 const teamsData = await teamsResponse.json();
+
+                // Extract the budget from the first team (assuming all teams have the same budget)
+                const firstTeamBudget = teamsData.length > 0 ? teamsData[0].budget : 200;
+                setGlobalBudget(firstTeamBudget);
 
                 // Fetch draft status
                 const draftStatusResponse = await fetch("/api/draft-status");
@@ -81,23 +163,73 @@ export default function AdminDashboardPage() {
         }
     }, [isAdmin, permissionsLoading]);
 
+    // Function to update all team budgets
+    const handleSaveGlobalBudget = async (budgetValue: number) => {
+        if (draftFinished) return;
+
+        try {
+            setSavingBudget(true);
+            setError(null);
+            setSuccessMessage(null);
+
+            // Call the API endpoint to update all team budgets
+            const response = await fetch("/api/teams/budget", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    budget: budgetValue
+                }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || `Failed to update team budgets: ${response.status}`);
+            }
+
+            await response.json();
+
+            // Update local state
+            setGlobalBudget(budgetValue);
+
+            // Update team budgets in the teams array
+            setTeams(teams.map(team => ({
+                ...team,
+                budget: budgetValue
+            })));
+
+            setSuccessMessage(`Updated all team budgets to $${budgetValue}`);
+
+            // Auto-hide success message after 3 seconds
+            setTimeout(() => {
+                setSuccessMessage(null);
+            }, 3000);
+        } catch (err) {
+            console.error("Error updating team budgets:", err);
+            setError(err instanceof Error ? err.message : "Failed to update team budgets");
+        } finally {
+            setSavingBudget(false);
+        }
+    };
+
     // Form validation
     const validateForm = () => {
         const errors = {
-            name: !teamName.trim(),
-            budget: !teamBudget.trim() || isNaN(Number(teamBudget)) || Number(teamBudget) <= 0
+            name: !teamName.trim()
         };
         setFormErrors(errors);
-        return !errors.name && !errors.budget;
+        return !errors.name;
     };
 
-    // Handle team add
+    // Handle team add - only needs name, budget comes from global setting
     const handleAddTeam = async () => {
         if (!validateForm() || draftFinished) return;
 
         try {
             setProcessing(true);
             setError(null);
+            setSuccessMessage(null);
 
             const response = await fetch("/api/teams", {
                 method: "POST",
@@ -106,7 +238,7 @@ export default function AdminDashboardPage() {
                 },
                 body: JSON.stringify({
                     name: teamName,
-                    budget: Number(teamBudget)
+                    budget: globalBudget // Use the global budget
                 }),
             });
 
@@ -135,13 +267,14 @@ export default function AdminDashboardPage() {
         }
     };
 
-    // Handle team edit
+    // Handle team edit - only edit name, budget is managed globally
     const handleEditTeam = async () => {
         if (!validateForm() || !editingTeam || draftFinished) return;
 
         try {
             setProcessing(true);
             setError(null);
+            setSuccessMessage(null);
 
             const response = await fetch(`/api/teams/${editingTeam.id}`, {
                 method: "PUT",
@@ -150,7 +283,7 @@ export default function AdminDashboardPage() {
                 },
                 body: JSON.stringify({
                     name: teamName,
-                    budget: Number(teamBudget)
+                    budget: globalBudget // Always use the global budget
                 }),
             });
 
@@ -186,6 +319,7 @@ export default function AdminDashboardPage() {
         try {
             setProcessing(true);
             setError(null);
+            setSuccessMessage(null);
 
             const response = await fetch(`/api/teams/${deletingTeam.id}`, {
                 method: "DELETE"
@@ -213,12 +347,11 @@ export default function AdminDashboardPage() {
         }
     };
 
-    // Open edit modal with team data
+    // Open edit modal with team data - only need the name
     const openEditModal = (team: Team) => {
         setEditingTeam(team);
         setTeamName(team.name);
-        setTeamBudget(team.budget.toString());
-        setFormErrors({ name: false, budget: false });
+        setFormErrors({ name: false });
         setShowEditModal(true);
     };
 
@@ -231,8 +364,7 @@ export default function AdminDashboardPage() {
     // Reset form state
     const resetForm = () => {
         setTeamName("");
-        setTeamBudget("200");
-        setFormErrors({ name: false, budget: false });
+        setFormErrors({ name: false });
         setEditingTeam(null);
         setDeletingTeam(null);
     };
@@ -287,6 +419,14 @@ export default function AdminDashboardPage() {
                 </Alert>
             )}
 
+            {/* Global Budget Settings */}
+            <GlobalBudgetSettings
+                currentBudget={globalBudget}
+                onSaveBudget={handleSaveGlobalBudget}
+                isLoading={savingBudget}
+                draftFinished={draftFinished}
+            />
+
             {/* Teams management */}
             <div className="mb-8">
                 <div className="mb-4 flex items-center justify-between">
@@ -305,7 +445,6 @@ export default function AdminDashboardPage() {
                     <Table>
                         <Table.Head>
                             <Table.HeadCell>Team Name</Table.HeadCell>
-                            <Table.HeadCell>Budget</Table.HeadCell>
                             <Table.HeadCell>Actions</Table.HeadCell>
                         </Table.Head>
                         <Table.Body>
@@ -313,7 +452,6 @@ export default function AdminDashboardPage() {
                                 teams.map((team) => (
                                     <Table.Row key={team.id} className="hover:bg-gray-50">
                                         <Table.Cell>{team.name}</Table.Cell>
-                                        <Table.Cell>${team.budget}</Table.Cell>
                                         <Table.Cell>
                                             <div className="flex gap-2">
                                                 <Button
@@ -362,7 +500,7 @@ export default function AdminDashboardPage() {
                 </Button>
             </div>
 
-            {/* Add Team Modal */}
+            {/* Add Team Modal - Simplified to only include name field */}
             <Modal show={showAddModal} onClose={() => setShowAddModal(false)}>
                 <Modal.Header>Add New Team</Modal.Header>
                 <Modal.Body>
@@ -384,18 +522,11 @@ export default function AdminDashboardPage() {
                         </div>
                         <div>
                             <div className="mb-2 block">
-                                <Label htmlFor="teamBudget" value="Budget" color={formErrors.budget ? "failure" : undefined} />
+                                <Label htmlFor="teamBudgetInfo" value="Budget" />
                             </div>
-                            <TextInput
-                                id="teamBudget"
-                                value={teamBudget}
-                                onChange={(e) => {
-                                    setTeamBudget(e.target.value);
-                                    if (formErrors.budget) setFormErrors({ ...formErrors, budget: false });
-                                }}
-                                color={formErrors.budget ? "failure" : undefined}
-                                helperText={formErrors.budget ? "Budget must be a positive number" : undefined}
-                            />
+                            <div className="text-sm text-gray-500">
+                                All teams use the global budget of ${globalBudget}
+                            </div>
                         </div>
                     </div>
                 </Modal.Body>
@@ -412,9 +543,9 @@ export default function AdminDashboardPage() {
                 </Modal.Footer>
             </Modal>
 
-            {/* Edit Team Modal */}
+            {/* Edit Team Modal - Simplified to only include name field */}
             <Modal show={showEditModal} onClose={() => setShowEditModal(false)}>
-                <Modal.Header>Edit Team</Modal.Header>
+                <Modal.Header>Edit Team Name</Modal.Header>
                 <Modal.Body>
                     <div className="space-y-4">
                         <div>
@@ -430,21 +561,6 @@ export default function AdminDashboardPage() {
                                 }}
                                 color={formErrors.name ? "failure" : undefined}
                                 helperText={formErrors.name ? "Team name is required" : undefined}
-                            />
-                        </div>
-                        <div>
-                            <div className="mb-2 block">
-                                <Label htmlFor="editTeamBudget" value="Budget" color={formErrors.budget ? "failure" : undefined} />
-                            </div>
-                            <TextInput
-                                id="editTeamBudget"
-                                value={teamBudget}
-                                onChange={(e) => {
-                                    setTeamBudget(e.target.value);
-                                    if (formErrors.budget) setFormErrors({ ...formErrors, budget: false });
-                                }}
-                                color={formErrors.budget ? "failure" : undefined}
-                                helperText={formErrors.budget ? "Budget must be a positive number" : undefined}
                             />
                         </div>
                     </div>

@@ -76,6 +76,21 @@ const TeamHeader = observer(() => {
     }
   }, [teams, teamBudgets]);
 
+  // Helper function to determine budget color based on amount
+  const getBudgetColorClasses = (budget: number, isAnimating: boolean) => {
+    if (isAnimating) {
+      return "animate-pulse border-red-300 bg-red-100 text-red-800";
+    }
+
+    if (budget < 25) {
+      return "border-red-300 bg-red-100 text-red-800";
+    } else if (budget < 50) {
+      return "border-yellow-300 bg-yellow-100 text-yellow-800";
+    } else {
+      return "border-green-300 bg-green-100 text-green-800";
+    }
+  };
+
   return (
     <>
       <Table.HeadCell className="w-20 shrink-0 bg-gray-200 px-4 text-center">
@@ -84,6 +99,7 @@ const TeamHeader = observer(() => {
       {teams.map((team) => {
         const budget = teamBudgets.get(team) || 0;
         const isAnimating = team === animatingTeam;
+        const colorClasses = getBudgetColorClasses(budget, isAnimating);
 
         return (
           <Table.HeadCell
@@ -94,10 +110,7 @@ const TeamHeader = observer(() => {
               <div className="flex items-center justify-between gap-1">
                 <span className="font-bold">{team}</span>
                 <span
-                  className={`rounded border px-3 py-1 font-bold shadow-sm transition-colors duration-300 ${isAnimating
-                      ? "animate-pulse border-red-300 bg-red-100 text-red-800"
-                      : "border-green-300 bg-green-100 text-green-800"
-                    }`}
+                  className={`rounded border px-3 py-1 font-bold shadow-sm transition-colors duration-300 ${colorClasses}`}
                 >
                   ${budget}
                 </span>

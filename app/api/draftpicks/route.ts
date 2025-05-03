@@ -100,7 +100,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 }
 
-// DELETE handler: Resets all draft picks by clearing the DraftPick table
+// DELETE handler in app/api/draftpicks/route.ts
 export async function DELETE(): Promise<NextResponse> {
   try {
     console.log("API DELETE /draftpicks: Resetting all draft picks and player scores");
@@ -113,10 +113,14 @@ export async function DELETE(): Promise<NextResponse> {
       // Delete all records from the PlayerScore table
       await prisma.playerScore.deleteMany();
 
-      // Reset all team budgets to 200
+      // Get the current budget value from any team (they should all be the same)
+      const firstTeam = await prisma.team.findFirst();
+      const currentBudget = firstTeam?.budget || 200;
+
+      // Reset all team budgets to the current global value
       await prisma.team.updateMany({
         data: {
-          budget: 200
+          budget: currentBudget
         }
       });
     });
