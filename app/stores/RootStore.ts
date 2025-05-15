@@ -26,6 +26,8 @@ export class RootStore {
             this.socket.off('playerScoreUpdate');
             this.socket.off('draftPickUpdate');
             this.socket.off('draftStatusUpdate');
+            this.socket.off('teamUpdate');
+            this.socket.off('selectedPlayerUpdate');
         }
 
         this.socket = socket;
@@ -34,7 +36,9 @@ export class RootStore {
             // Set up socket event listeners
             socket.on('playerScoreUpdate', (data) => {
                 this.scoresStore.handleRemoteScoreUpdate(data);
-                if (data.isDeleted) {
+                if (data.action === 'scoring_rules_update') {
+                    toast.info(`Scoring rules for ${data.position} position were updated`);
+                } else if (data.isDeleted) {
                     toast.info(`Scores cleared for ${data.playerName} in ${data.round} round`);
                 } else if (data.action === 'reactivate') {
                     toast.info(`${data.playerName} reactivated for ${data.round} round`);
@@ -75,6 +79,38 @@ export class RootStore {
                             window.location.href = '/';
                         }, 1500);
                     }
+                }
+            });
+
+            socket.on('teamUpdate', (data) => {
+                console.log('Received teamUpdate:', data);
+
+                // Update the teams store with the new data
+                this.teamsStore.handleRemoteTeamUpdate(data);
+
+                // Show appropriate toast notification based on action
+                if (data.action === 'update_all_budgets') {
+                    toast.info(`All team budgets updated to $${data.budget}`);
+                } else if (data.action === 'update') {
+                    toast.info(`Team "${data.teamName}" updated`);
+                } else if (data.action === 'add') {
+                    toast.info(`New team "${data.teamName}" added`);
+                } else if (data.action === 'delete') {
+                    toast.info(`Team "${data.teamName}" deleted`);
+                }
+            });
+
+            socket.on('selectedPlayerUpdate', (data) => {
+                console.log('Received selectedPlayerUpdate:', data);
+
+                // Update the player store with the selected player
+                this.playersStore.handleRemoteSelectedPlayerUpdate(data);
+
+                // Show toast notification about the selected player change
+                if (data.player) {
+                    toast.info(`${data.player.name} is now up for auction`);
+                } else {
+                    toast.info(`Player auction selection was cleared`);
                 }
             });
         }

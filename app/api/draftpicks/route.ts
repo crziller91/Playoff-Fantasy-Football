@@ -113,16 +113,21 @@ export async function DELETE(): Promise<NextResponse> {
       // Delete all records from the PlayerScore table
       await prisma.playerScore.deleteMany();
 
-      // Get the current budget value from any team (they should all be the same)
-      const firstTeam = await prisma.team.findFirst();
-      const currentBudget = firstTeam?.budget || 200;
-
-      // Reset all team budgets to the current global value
-      await prisma.team.updateMany({
-        data: {
-          budget: currentBudget
+      // Get all teams with their original budgets
+      const teams = await prisma.team.findMany({
+        select: {
+          id: true,
+          originalBudget: true
         }
       });
+
+      // Reset each team's budget to its original budget
+      for (const team of teams) {
+        await prisma.team.update({
+          where: { id: team.id },
+          data: { budget: team.originalBudget }
+        });
+      }
     });
 
     return NextResponse.json(

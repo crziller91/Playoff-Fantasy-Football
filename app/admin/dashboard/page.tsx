@@ -8,88 +8,14 @@ import { redirect } from "next/navigation";
 import { HiCheckCircle, HiPencil, HiTrash, HiPlus, HiHome } from "react-icons/hi";
 import Link from "next/link";
 import ScoringRulesEditor from "@/app/components/admin/ScoringRulesEditor";
+import { useStore } from "@/app/stores/StoreContext";
+import GlobalBudgetSettings from "@/app/components/admin/GlobalBudgetSettings";
 
 interface Team {
     id: number;
     name: string;
     budget: number;
-}
-
-// Internal component for global budget settings
-function GlobalBudgetSettings({
-    currentBudget,
-    onSaveBudget,
-    isLoading,
-    draftFinished
-}: {
-    currentBudget: number,
-    onSaveBudget: (budget: number) => Promise<void>,
-    isLoading: boolean,
-    draftFinished: boolean
-}) {
-    const [budget, setBudget] = useState(currentBudget.toString());
-    const [isValid, setIsValid] = useState(true);
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-
-        // Validate the budget
-        const budgetValue = parseInt(budget, 10);
-        if (isNaN(budgetValue) || budgetValue <= 0) {
-            setIsValid(false);
-            return;
-        }
-
-        // Submit the budget change
-        onSaveBudget(budgetValue);
-    };
-
-    return (
-        <div className="mb-8">
-            <div className="mb-4">
-                <h2 className="text-xl font-semibold">Global Budget Settings</h2>
-                <p className="text-sm text-gray-500">
-                    Set the budget amount for all teams. This will also be the default when resetting teams.
-                </p>
-            </div>
-
-            <Card>
-                <form onSubmit={handleSubmit} className="flex items-end gap-4">
-                    <div className="flex-1">
-                        <div className="mb-2 block">
-                            <Label htmlFor="globalBudget" value="Budget for all teams" />
-                        </div>
-                        <TextInput
-                            id="globalBudget"
-                            placeholder="200"
-                            value={budget}
-                            onChange={(e) => {
-                                setBudget(e.target.value);
-                                setIsValid(true);
-                            }}
-                            disabled={draftFinished || isLoading}
-                            color={isValid ? undefined : "failure"}
-                            helperText={!isValid ? "Budget must be a positive number" : undefined}
-                        />
-                    </div>
-                    <Button
-                        type="submit"
-                        disabled={draftFinished || isLoading}
-                        color={draftFinished ? "gray" : "success"}
-                    >
-                        {isLoading ? (
-                            <>
-                                <Spinner size="sm" className="mr-2" />
-                                Saving...
-                            </>
-                        ) : (
-                            "Save Budget"
-                        )}
-                    </Button>
-                </form>
-            </Card>
-        </div>
-    );
+    originalBudget: number;
 }
 
 export default function AdminDashboardPage() {
@@ -101,6 +27,7 @@ export default function AdminDashboardPage() {
     });
 
     const { isAdmin, isLoading: permissionsLoading } = usePermissions();
+    const { socket } = useStore();
     const [teams, setTeams] = useState<Team[]>([]);
     const [globalBudget, setGlobalBudget] = useState(200); // Default budget
     const [loading, setLoading] = useState(true);
@@ -137,9 +64,9 @@ export default function AdminDashboardPage() {
                 }
                 const teamsData = await teamsResponse.json();
 
-                // Extract the budget from the first team (assuming all teams have the same budget)
-                const firstTeamBudget = teamsData.length > 0 ? teamsData[0].budget : 200;
-                setGlobalBudget(firstTeamBudget);
+                // Extract the originalBudget from the first team (all teams should have the same originalBudget)
+                const globalOriginalBudget = teamsData.length > 0 ? teamsData[0].originalBudget : 200;
+                setGlobalBudget(globalOriginalBudget);
 
                 // Fetch draft status
                 const draftStatusResponse = await fetch("/api/draft-status");
@@ -196,8 +123,17 @@ export default function AdminDashboardPage() {
             // Update team budgets in the teams array
             setTeams(teams.map(team => ({
                 ...team,
-                budget: budgetValue
+                budget: budgetValue,
+                originalBudget: budgetValue
             })));
+
+            // Emit socket event for real-time updates
+            if (socket) {
+                socket.emit("teamUpdate", {
+                    action: "update_all_budgets",
+                    budget: budgetValue
+                });
+            }
 
             setSuccessMessage(`Updated all team budgets to $${budgetValue}`);
 
@@ -251,6 +187,16 @@ export default function AdminDashboardPage() {
 
             // Update local state
             setTeams([...teams, newTeam]);
+
+            // Emit socket event for real-time updates
+            if (socket) {
+                socket.emit("teamUpdate", {
+                    action: "add",
+                    team: newTeam,
+                    teamName: newTeam.name
+                });
+            }
+
             setSuccessMessage(`Team "${teamName}" added successfully`);
             setShowAddModal(false);
             resetForm();
@@ -294,8 +240,22 @@ export default function AdminDashboardPage() {
 
             const updatedTeam = await response.json();
 
+            // Store the old name before updating state
+            const oldName = editingTeam.name;
+
             // Update local state
             setTeams(teams.map(team => team.id === editingTeam.id ? updatedTeam : team));
+
+            // Emit socket event for real-time updates
+            if (socket) {
+                socket.emit("teamUpdate", {
+                    action: "update",
+                    team: updatedTeam,
+                    oldName: oldName, // Include the old name in case it changed
+                    teamName: updatedTeam.name
+                });
+            }
+
             setSuccessMessage(`Team "${teamName}" updated successfully`);
             setShowEditModal(false);
             resetForm();
@@ -330,8 +290,20 @@ export default function AdminDashboardPage() {
                 throw new Error(errorData.error || `Failed to delete team: ${response.status}`);
             }
 
+            // Store the team name before removing from state
+            const teamName = deletingTeam.name;
+
             // Update local state
             setTeams(teams.filter(team => team.id !== deletingTeam.id));
+
+            // Emit socket event for real-time updates
+            if (socket) {
+                socket.emit("teamUpdate", {
+                    action: "delete",
+                    teamName: teamName
+                });
+            }
+
             setSuccessMessage(`Team "${deletingTeam.name}" deleted successfully`);
             setShowDeleteModal(false);
 

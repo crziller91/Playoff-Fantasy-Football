@@ -71,6 +71,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         const updatedTeams = await prisma.team.updateMany({
             data: {
                 budget: Number(budget),
+                originalBudget: Number(budget),
             },
         });
 

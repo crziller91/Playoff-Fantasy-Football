@@ -44,11 +44,12 @@ export async function GET(): Promise<NextResponse> {
 
     console.log(`API GET /teams: Found ${teams.length} teams`);
 
-    // Return teams with both name and budget
+    // Return teams with name, budget, and originalBudget
     const formattedTeams: TeamWithBudget[] = teams.map((team) => ({
       id: team.id, // Include ID for admin functionality
       name: team.name as Team,
-      budget: team.budget
+      budget: team.budget,
+      originalBudget: team.originalBudget
     }));
 
     return NextResponse.json(formattedTeams, { status: 200 });
@@ -124,6 +125,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       data: {
         name,
         budget: Number(budget),
+        originalBudget: Number(budget),
       },
     });
 

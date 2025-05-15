@@ -24,10 +24,11 @@ model Player {
 }
 
 model Team {
-  id         Int      @id @default(autoincrement())
-  name       String
-  budget     Int      @default(200)  // Added budget field with default value of 200
-  draftPicks DraftPick[]
+  id             Int      @id @default(autoincrement())
+  name           String
+  budget         Int      @default(200)  // Added budget field with default value of 200
+  originalBudget Int      @default(200)  // New field to track the original budget before player drafting
+  draftPicks     DraftPick[]
 }
 
 model DraftPick {

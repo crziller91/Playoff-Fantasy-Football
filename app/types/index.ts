@@ -9,6 +9,7 @@ export interface TeamWithBudget {
   id: number;
   name: string;
   budget: number;
+  originalBudget: number;
 }
 
 export type Team = string;

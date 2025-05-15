@@ -150,6 +150,15 @@ const ScoringRulesEditor = observer(() => {
             });
             setChangedRules(newChangedRules);
 
+            // Emit socket event for real-time updates on scoring rules
+            const socket = scoresStore.rootStore.socket;
+            if (socket) {
+                socket.emit("playerScoreUpdate", {
+                    action: "scoring_rules_update",
+                    position: currentPosition
+                });
+            }
+
             setSuccessMessage(`${currentPosition} scoring rules updated and scores recalculated successfully`);
 
             // Auto-hide success message after 3 seconds

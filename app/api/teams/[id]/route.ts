@@ -104,6 +104,7 @@ export async function PUT(
             data: {
                 name,
                 budget: Number(budget),
+                originalBudget: Number(budget),
             },
         });
 

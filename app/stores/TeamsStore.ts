@@ -44,4 +44,49 @@ export class TeamsStore {
     setTeamBudgets = (budgets: Map<string, number>) => {
         this.teamBudgets = budgets;
     };
+
+    handleRemoteTeamUpdate = (data: any) => {
+        runInAction(() => {
+            // Handle different types of team updates
+            if (data.action === 'update_all_budgets' && data.budget) {
+                // Update all team budgets
+                this.teams.forEach(team => {
+                    this.teamBudgets.set(team, data.budget);
+                });
+            } else if (data.action === 'update' && data.team) {
+                // Update a specific team
+                const { team } = data;
+                if (team.name && team.budget) {
+                    this.teamBudgets.set(team.name, team.budget);
+
+                    // If the name changed (comparing old and new)
+                    if (data.oldName && data.oldName !== team.name) {
+                        // Remove old team name
+                        this.teamBudgets.delete(data.oldName);
+
+                        // Update teams array
+                        const teamIndex = this.teams.findIndex(t => t === data.oldName);
+                        if (teamIndex !== -1) {
+                            this.teams[teamIndex] = team.name;
+                        }
+                    }
+                }
+            } else if (data.action === 'add' && data.team) {
+                // Add a new team
+                const { team } = data;
+                if (team.name && team.budget) {
+                    this.teamBudgets.set(team.name, team.budget);
+
+                    // Add to teams array if not already present
+                    if (!this.teams.includes(team.name)) {
+                        this.teams.push(team.name);
+                    }
+                }
+            } else if (data.action === 'delete' && data.teamName) {
+                // Delete a team
+                this.teamBudgets.delete(data.teamName);
+                this.teams = this.teams.filter(team => team !== data.teamName);
+            }
+        });
+    };
 }

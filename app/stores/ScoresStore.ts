@@ -137,6 +137,14 @@ export class ScoresStore {
     handleRemoteScoreUpdate(data: any) {
         // This will be called when another user updates player scores
         runInAction(() => {
+            // Handle scoring rules update
+            if (data.action === 'scoring_rules_update') {
+                // Reload player scores when scoring rules are updated
+                this.loadPlayerScores();
+                console.log(`Scoring rules updated for ${data.position} position - reloading scores`);
+                return;
+            }
+
             const { round, playerName, scoreData, isDeleted } = data;
 
             // Make sure we have the round initialized
@@ -173,16 +181,16 @@ export class ScoresStore {
 
     resetScores = () => {
         runInAction(() => {
-          this.playerScores = {
-            "Wild Card": {},
-            "Divisional": {},
-            "Conference": {},
-            "Superbowl": {}
-          };
-          this.lastSavedScores = "{}";
-          this.scoresLoaded = false; // Reset the loaded state
+            this.playerScores = {
+                "Wild Card": {},
+                "Divisional": {},
+                "Conference": {},
+                "Superbowl": {}
+            };
+            this.lastSavedScores = "{}";
+            this.scoresLoaded = false; // Reset the loaded state
         });
-      };
+    };
 
     // Helper method to detect and emit score changes
     private emitScoreChanges(prevScores: PlayerScoresByRound) {

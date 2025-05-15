@@ -76,6 +76,13 @@ export class PlayersStore {
 
     setSelectedPlayer = (player: Player | null) => {
         this.selectedPlayer = player;
+
+        // Emit socket event for real-time update to other clients
+        if (this.rootStore.socket) {
+            this.rootStore.socket.emit('selectedPlayerUpdate', {
+                player: player
+            });
+        }
     };
 
     setDraftPicks = (draftPicks: DraftPicks) => {
@@ -270,6 +277,14 @@ export class PlayersStore {
                     this.rootStore.teamsStore.teamBudgets.set(data.team, currentBudget + data.refundAmount);
                 }
             }
+        });
+    }
+
+    // Handle remotely selected player updates
+    handleRemoteSelectedPlayerUpdate(data: any) {
+        runInAction(() => {
+            // Update the selected player
+            this.selectedPlayer = data.player;
         });
     }
 }

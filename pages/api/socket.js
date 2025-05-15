@@ -50,6 +50,25 @@ const SocketHandler = (req, res) => {
       socket.broadcast.emit("draftStatusUpdate", data);
     });
 
+    // Event for team updates
+    socket.on("teamUpdate", (data) => {
+      console.log(
+        `teamUpdate event from ${socket.id}`,
+        data.action,
+        data.teamName ? `team: ${data.teamName}` : "all teams",
+      );
+      socket.broadcast.emit("teamUpdate", data);
+    });
+
+    // Event for selected player updates
+    socket.on("selectedPlayerUpdate", (data) => {
+      console.log(
+        `selectedPlayerUpdate event from ${socket.id}`,
+        data.player ? `player: ${data.player.name}` : "cleared selection",
+      );
+      socket.broadcast.emit("selectedPlayerUpdate", data);
+    });
+
     // Disconnect event
     socket.on("disconnect", () => {
       const clientCount = io.engine.clientsCount;
