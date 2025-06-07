@@ -192,7 +192,7 @@ const SelectedPlayerTable = observer(() => {
                                         ? positionColors[selectedPlayer.position]
                                         : "gray"
                                 }
-                                className="w-48 justify-start text-sm"
+                                className={`w-48 justify-start text-sm ${!canEdit ? 'disabled:cursor-not-allowed disabled:opacity-100' : ''}`}
                                 disabled={!canEdit} // Disable the button if the user doesn't have permission
                             >
                                 {selectedPlayer?.name || "Select Player"}
