@@ -2,12 +2,12 @@
 
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { Button, Card, Label, TextInput, Alert } from "flowbite-react";
 import { HiInformationCircle, HiHome } from "react-icons/hi";
 import Link from "next/link";
 
-export default function SignIn() {
+function SignInForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [email, setEmail] = useState("");
@@ -226,5 +226,13 @@ export default function SignIn() {
                 </div>
             </Card>
         </div>
+    );
+}
+
+export default function SignIn() {
+    return (
+        <Suspense fallback={<div className="flex min-h-screen items-center justify-center">Loading...</div>}>
+            <SignInForm />
+        </Suspense>
     );
 }

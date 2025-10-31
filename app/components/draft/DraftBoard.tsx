@@ -44,8 +44,8 @@ const DraftBoard = observer(() => {
   const { draftStore, teamsStore, playersStore, scoresStore } = useStore();
 
   // Get tab and subtab from URL query parameters
-  const tabParam = searchParams.get("tab");
-  const subtabParam = searchParams.get("subtab");
+  const tabParam = searchParams?.get("tab");
+  const subtabParam = searchParams?.get("subtab");
 
   // Initialize activeTab state
   const [activeTab, setActiveTab] = useState(() => {

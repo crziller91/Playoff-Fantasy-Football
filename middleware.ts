@@ -36,9 +36,10 @@ export async function middleware(request: NextRequest) {
 // Specify the paths this middleware should run on
 export const config = {
     matcher: [
-        // Apply to all protected routes
-        ...protectedRoutes,
-        // Apply to auth routes
-        ...authRoutes,
+        // Protected routes
+        "/profile",
+        // Auth routes
+        "/auth/signin",
+        "/auth/register",
     ],
 };

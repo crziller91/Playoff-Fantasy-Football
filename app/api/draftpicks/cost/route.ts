@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+export const dynamic = 'force-dynamic'; // Ensure the route is always dynamic since without this it is trying to be static
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
     try {

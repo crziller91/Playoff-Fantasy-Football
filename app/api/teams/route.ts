@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "../../../lib/prisma";
 import { Team, TeamWithBudget } from "../../types";
 import { getServerSession } from "next-auth";
-import { authOptions } from "../auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 
 // Centralized error messages for consistency and easy updates
 const ERROR_MESSAGES = {
