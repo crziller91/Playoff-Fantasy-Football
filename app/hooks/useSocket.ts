@@ -5,6 +5,10 @@ import io, { Socket } from 'socket.io-client';
 let socketInitialized = false;
 let globalSocket: Socket | null = null;
 
+// Get WebSocket server URL from environment variable
+// Falls back to localhost for local development
+const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001';
+
 export const useSocket = () => {
     const [socket, setSocket] = useState<Socket | null>(null);
     const [isConnected, setIsConnected] = useState(false);
@@ -16,15 +20,13 @@ export const useSocket = () => {
             // Create a promise to handle initialization
             socketInitializer.current = (async () => {
                 try {
-                    // Make a request to our socket endpoint just once
-                    await fetch('/api/socket');
-
                     // Create socket connection only if it doesn't exist
                     if (!globalSocket) {
-                        console.log('Creating new socket connection');
-                        const socketConnection = io({
-                            reconnectionAttempts: 3,
+                        console.log('Creating new socket connection to:', SOCKET_URL);
+                        const socketConnection = io(SOCKET_URL, {
+                            reconnectionAttempts: 5,
                             reconnectionDelay: 1000,
+                            transports: ['websocket', 'polling'],
                         });
 
                         socketConnection.on('connect', () => {
@@ -35,6 +37,10 @@ export const useSocket = () => {
                         socketConnection.on('disconnect', () => {
                             console.log('Socket disconnected');
                             setIsConnected(false);
+                        });
+
+                        socketConnection.on('connect_error', (error) => {
+                            console.error('Socket connection error:', error);
                         });
 
                         globalSocket = socketConnection;

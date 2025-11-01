@@ -8,6 +8,8 @@
     "postinstall": "prisma generate",
     "vercel-build": "prisma generate && prisma migrate deploy && next build",
     "start": "next start",
+    "socket": "node websocket-server.js",
+    "dev:all": "concurrently \"npm run dev\" \"npm run socket\"",
     "format": "prettier . --write",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
