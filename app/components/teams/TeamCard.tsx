@@ -2,7 +2,7 @@ import { observer } from "mobx-react-lite";
 import { Card, Button, Badge } from "flowbite-react";
 import { ExtendedPlayer } from "../../types";
 import { getOrderedTeamPicks, getTeamScore } from "../../utils/scoreCalculator";
-import { HiX, HiTrash } from "react-icons/hi";
+import { HiX, HiTrash, HiPencil, HiPlus } from "react-icons/hi";
 import { useStore } from "../../stores/StoreContext";
 
 // Map position to badge color
@@ -123,7 +123,7 @@ const TeamCard = observer(({
                                                 disabled={isDisabled}
                                                 onClick={() => onEditScore(player as ExtendedPlayer)}
                                             >
-                                                {playerScores[player.name]?.scoreData ? "Edit Scores" : "Enter Scores"}
+                                                {playerScores[player.name]?.scoreData ? <HiPencil className="size-4" /> : <HiPlus className="size-4" />}
                                             </Button>
                                             {/* Show Clear Scores button if scores are entered */}
                                             {playerScores[player.name]?.scoreData && (
