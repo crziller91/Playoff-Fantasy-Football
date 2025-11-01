@@ -7,12 +7,13 @@ import { PrismaClient } from '@prisma/client';
 // This file should only be imported in server-side code (API routes, server components)
 // Never import this directly in client components
 
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
+const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
 export const prisma =
     globalForPrisma.prisma ||
     new PrismaClient({
         log: ['error', 'warn'],
+        datasourceUrl: process.env.DATABASE_URL,
     });
 
 if (process.env.NODE_ENV !== 'production') {

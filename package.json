@@ -7,8 +7,9 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && prisma migrate deploy && next build",
+    "build": "prisma generate && next build",
     "postinstall": "prisma generate",
+    "vercel-build": "prisma generate && prisma migrate deploy && next build",
     "start": "next start",
     "format": "prettier . --write",
     "lint": "next lint",
@@ -38,6 +39,8 @@
     "socket.io-client": "^4.8.1"
   },
   "devDependencies": {
+    "@eslint/config-array": "^0.21.1",
+    "@eslint/object-schema": "^2.1.7",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20.16.11",
     "@types/react": "^18.3.11",
