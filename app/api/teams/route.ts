@@ -39,8 +39,12 @@ export async function GET(): Promise<NextResponse> {
   try {
     console.log("API GET /teams: Fetching teams from database");
 
-    // Fetch all teams from the Team table
-    const teams = await prisma.team.findMany();
+    // Fetch all teams from the Team table, ordered by ID to maintain consistent order
+    const teams = await prisma.team.findMany({
+      orderBy: {
+        id: 'asc'
+      }
+    });
 
     console.log(`API GET /teams: Found ${teams.length} teams`);
 
