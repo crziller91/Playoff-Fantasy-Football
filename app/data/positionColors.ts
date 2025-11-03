@@ -4,7 +4,6 @@ export const positionColors = {
   WR: "warning",
   TE: "failure",
   K: "info",
-  DST: "dark",
   default: "gray",
 } as const;
 
@@ -14,5 +13,4 @@ export const legendColors = {
   WR: "#F59E0B", // Yellow
   TE: "#EF4444", // Red
   K: "#155E75",  // Cyan
-  DST: "#111827", // Black
 } as const;

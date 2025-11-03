@@ -63,7 +63,7 @@ model PlayerScore {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  @@unique([playerId, round])
+  @@unique([playerId, round], name: "playerId_round")
 }
 
 model Account {
@@ -125,7 +125,7 @@ model Permission {
 
 model ScoringRule {
   id          Int      @id @default(autoincrement())
-  position    String   // "QB", "RB", "WR", "TE", "K", "DST"
+  position    String   // "QB", "RB", "WR", "TE", "K"
   category    String   // e.g. "passingTouchdown", "passingYardDivisor", etc.
   value       Float    // The point value or divisor value
   description String   // Description of the rule

@@ -1,6 +1,8 @@
 import { Modal, Button, Label, TextInput, Spinner } from "flowbite-react";
 import { ScoreForm, FormErrors, ScoreModalProps } from "../../types";
 import { useState } from "react";
+import { searchPlayerStats } from "../../services/espnStatsService";
+import { HiSparkles } from "react-icons/hi";
 
 export default function ScoreModal({
     isOpen,
@@ -16,7 +18,9 @@ export default function ScoreModal({
     onSubmit
 }: ScoreModalProps) {
     const [isSubmitting, setIsSubmitting] = useState(false);
-    
+    const [isAutoFilling, setIsAutoFilling] = useState(false);
+    const [autoFillError, setAutoFillError] = useState<string | null>(null);
+
     // Wrap the onSubmit to handle loading state
     const handleSubmit = async () => {
         setIsSubmitting(true);
@@ -26,6 +30,49 @@ export default function ScoreModal({
             console.error("Error submitting score:", error);
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    // Handle auto-fill from ESPN stats
+    const handleAutoFill = async () => {
+        if (!player) return;
+
+        setIsAutoFilling(true);
+        setAutoFillError(null);
+
+        try {
+            const stats = await searchPlayerStats(player.name, player.position, player.teamName);
+
+            if (!stats) {
+                setAutoFillError("No stats found for this player");
+                return;
+            }
+
+            // Update form fields based on the stats returned
+            Object.entries(stats).forEach(([key, value]) => {
+                if (value !== undefined && value !== null) {
+                    // Handle fgYardages array specially
+                    if (key === 'fgYardages' && Array.isArray(value)) {
+                        // Update FG count first
+                        onFgCountChange(value.length.toString());
+                        // Then update each yardage
+                        value.forEach((yardage, index) => {
+                            onFgYardageChange(index, yardage.toString());
+                        });
+                    } else if (key === 'fg') {
+                        // Handle field goal count specially
+                        onFgCountChange(value.toString());
+                    } else {
+                        // Regular field update
+                        onInputChange(key as keyof ScoreForm, value.toString());
+                    }
+                }
+            });
+        } catch (error) {
+            console.error("Error auto-filling stats:", error);
+            setAutoFillError(error instanceof Error ? error.message : "Failed to fetch stats");
+        } finally {
+            setIsAutoFilling(false);
         }
     };
 
@@ -54,11 +101,11 @@ export default function ScoreModal({
                                     htmlFor="touchdowns"
                                     color={submitAttempted && formErrors.touchdowns ? "failure" : undefined}
                                 >
-                                    # of Touchdowns
+                                    # of Passing Touchdowns
                                 </Label>
                             </div>
                             <TextInput
-                                {...commonProps("touchdowns", "# of Touchdowns", "touchdowns")}
+                                {...commonProps("touchdowns", "# of Passing Touchdowns", "touchdowns")}
                                 type="text"
                             />
                         </div>
@@ -68,24 +115,10 @@ export default function ScoreModal({
                                     htmlFor="yards"
                                     color={submitAttempted && formErrors.yards ? "failure" : undefined}
                                 >
-                                    Total Yards
+                                    Total Passing Yards
                                 </Label>
                             </div>
-                            <TextInput {...commonProps("yards", "Total Yards", "yards")} type="text" />
-                        </div>
-                        <div>
-                            <div className="mb-2 block">
-                                <Label
-                                    htmlFor="twoPtConversions"
-                                    color={submitAttempted && formErrors.twoPtConversions ? "failure" : undefined}
-                                >
-                                    # of 2 PT Conversions
-                                </Label>
-                            </div>
-                            <TextInput
-                                {...commonProps("twoPtConversions", "# of 2 PT Conversions", "twoPtConversions")}
-                                type="text"
-                            />
+                            <TextInput {...commonProps("yards", "Total Passing Yards", "yards")} type="text" />
                         </div>
                         <div>
                             <div className="mb-2 block">
@@ -115,6 +148,48 @@ export default function ScoreModal({
                                 type="text"
                             />
                         </div>
+                        <div>
+                            <div className="mb-2 block">
+                                <Label
+                                    htmlFor="rushingTouchdowns"
+                                    color={submitAttempted && formErrors.rushingTouchdowns ? "failure" : undefined}
+                                >
+                                    # of Rushing Touchdowns
+                                </Label>
+                            </div>
+                            <TextInput
+                                {...commonProps("rushingTouchdowns", "# of Rushing Touchdowns", "rushingTouchdowns")}
+                                type="text"
+                            />
+                        </div>
+                        <div>
+                            <div className="mb-2 block">
+                                <Label
+                                    htmlFor="rushingYards"
+                                    color={submitAttempted && formErrors.rushingYards ? "failure" : undefined}
+                                >
+                                    Total Rushing Yards
+                                </Label>
+                            </div>
+                            <TextInput
+                                {...commonProps("rushingYards", "Total Rushing Yards", "rushingYards")}
+                                type="text"
+                            />
+                        </div>
+                        <div>
+                            <div className="mb-2 block">
+                                <Label
+                                    htmlFor="rushingAttempts"
+                                    color={submitAttempted && formErrors.rushingAttempts ? "failure" : undefined}
+                                >
+                                    Rushing Attempts
+                                </Label>
+                            </div>
+                            <TextInput
+                                {...commonProps("rushingAttempts", "Rushing Attempts", "rushingAttempts")}
+                                type="text"
+                            />
+                        </div>
                     </>
                 );
             case "RB":
@@ -126,11 +201,11 @@ export default function ScoreModal({
                                     htmlFor="touchdowns"
                                     color={submitAttempted && formErrors.touchdowns ? "failure" : undefined}
                                 >
-                                    # of Touchdowns
+                                    # of Rushing Touchdowns
                                 </Label>
                             </div>
                             <TextInput
-                                {...commonProps("touchdowns", "# of Touchdowns", "touchdowns")}
+                                {...commonProps("touchdowns", "# of Rushing Touchdowns", "touchdowns")}
                                 type="text"
                             />
                         </div>
@@ -165,34 +240,14 @@ export default function ScoreModal({
                         <div>
                             <div className="mb-2 block">
                                 <Label
-                                    htmlFor="twoPtConversions"
-                                    color={submitAttempted && formErrors.twoPtConversions ? "failure" : undefined}
+                                    htmlFor="receivingTouchdowns"
+                                    color={submitAttempted && formErrors.receivingTouchdowns ? "failure" : undefined}
                                 >
-                                    # of 2 PT Conversions
+                                    # of Receiving Touchdowns
                                 </Label>
                             </div>
                             <TextInput
-                                {...commonProps("twoPtConversions", "# of 2 PT Conversions", "twoPtConversions")}
-                                type="text"
-                            />
-                        </div>
-                    </>
-                );
-            case "WR":
-            case "TE":
-                return (
-                    <>
-                        <div>
-                            <div className="mb-2 block">
-                                <Label
-                                    htmlFor="touchdowns"
-                                    color={submitAttempted && formErrors.touchdowns ? "failure" : undefined}
-                                >
-                                    # of Touchdowns
-                                </Label>
-                            </div>
-                            <TextInput
-                                {...commonProps("touchdowns", "# of Touchdowns", "touchdowns")}
+                                {...commonProps("receivingTouchdowns", "# of Receiving Touchdowns", "receivingTouchdowns")}
                                 type="text"
                             />
                         </div>
@@ -227,14 +282,118 @@ export default function ScoreModal({
                         <div>
                             <div className="mb-2 block">
                                 <Label
-                                    htmlFor="twoPtConversions"
-                                    color={submitAttempted && formErrors.twoPtConversions ? "failure" : undefined}
+                                    htmlFor="fumblesLost"
+                                    color={submitAttempted && formErrors.fumblesLost ? "failure" : undefined}
                                 >
-                                    # of 2 PT Conversions
+                                    # of Fumbles Lost
                                 </Label>
                             </div>
                             <TextInput
-                                {...commonProps("twoPtConversions", "# of 2 PT Conversions", "twoPtConversions")}
+                                {...commonProps("fumblesLost", "# of Fumbles Lost", "fumblesLost")}
+                                type="text"
+                            />
+                        </div>
+                    </>
+                );
+            case "WR":
+            case "TE":
+                return (
+                    <>
+                        <div>
+                            <div className="mb-2 block">
+                                <Label
+                                    htmlFor="touchdowns"
+                                    color={submitAttempted && formErrors.touchdowns ? "failure" : undefined}
+                                >
+                                    # of Receiving Touchdowns
+                                </Label>
+                            </div>
+                            <TextInput
+                                {...commonProps("touchdowns", "# of Receiving Touchdowns", "touchdowns")}
+                                type="text"
+                            />
+                        </div>
+                        <div>
+                            <div className="mb-2 block">
+                                <Label
+                                    htmlFor="receivingYards"
+                                    color={submitAttempted && formErrors.receivingYards ? "failure" : undefined}
+                                >
+                                    Total Receiving Yards
+                                </Label>
+                            </div>
+                            <TextInput
+                                {...commonProps("receivingYards", "Total Receiving Yards", "receivingYards")}
+                                type="text"
+                            />
+                        </div>
+                        <div>
+                            <div className="mb-2 block">
+                                <Label
+                                    htmlFor="receptions"
+                                    color={submitAttempted && formErrors.receptions ? "failure" : undefined}
+                                >
+                                    # of Receptions
+                                </Label>
+                            </div>
+                            <TextInput
+                                {...commonProps("receptions", "# of Receptions", "receptions")}
+                                type="text"
+                            />
+                        </div>
+                        <div>
+                            <div className="mb-2 block">
+                                <Label
+                                    htmlFor="rushingTouchdowns"
+                                    color={submitAttempted && formErrors.rushingTouchdowns ? "failure" : undefined}
+                                >
+                                    # of Rushing Touchdowns
+                                </Label>
+                            </div>
+                            <TextInput
+                                {...commonProps("rushingTouchdowns", "# of Rushing Touchdowns", "rushingTouchdowns")}
+                                type="text"
+                            />
+                        </div>
+                        <div>
+                            <div className="mb-2 block">
+                                <Label
+                                    htmlFor="rushingYards"
+                                    color={submitAttempted && formErrors.rushingYards ? "failure" : undefined}
+                                >
+                                    Total Rushing Yards
+                                </Label>
+                            </div>
+                            <TextInput
+                                {...commonProps("rushingYards", "Total Rushing Yards", "rushingYards")}
+                                type="text"
+                            />
+                        </div>
+                        <div>
+                            <div className="mb-2 block">
+                                <Label
+                                    htmlFor="rushingAttempts"
+                                    color={submitAttempted && formErrors.rushingAttempts ? "failure" : undefined}
+                                >
+                                    Rushing Attempts
+                                </Label>
+                            </div>
+                            <TextInput
+                                {...commonProps("rushingAttempts", "Rushing Attempts", "rushingAttempts")}
+                                type="text"
+                            />
+                        </div>
+                        <div>
+                            <div className="mb-2 block">
+                                <Label
+                                    htmlFor="fumblesLost"
+                                    color={submitAttempted && formErrors.fumblesLost ? "failure" : undefined}
+                                >
+                                    # of Fumbles Lost
+                                </Label>
+                            </div>
+                            <TextInput
+                                {...commonProps("fumblesLost", "# of Fumbles Lost", "fumblesLost")}
                                 type="text"
                             />
                         </div>
@@ -309,120 +468,6 @@ export default function ScoreModal({
                             ))}
                     </>
                 );
-            case "DST":
-                return (
-                    <>
-                        <div>
-                            <div className="mb-2 block">
-                                <Label
-                                    htmlFor="touchdowns"
-                                    color={submitAttempted && formErrors.touchdowns ? "failure" : undefined}
-                                >
-                                    # of Touchdowns
-                                </Label>
-                            </div>
-                            <TextInput
-                                {...commonProps("touchdowns", "# of Touchdowns", "touchdowns")}
-                                type="text"
-                            />
-                        </div>
-                        <div>
-                            <div className="mb-2 block">
-                                <Label
-                                    htmlFor="sacks"
-                                    color={submitAttempted && formErrors.sacks ? "failure" : undefined}
-                                >
-                                    # of Sacks
-                                </Label>
-                            </div>
-                            <TextInput {...commonProps("sacks", "# of Sacks", "sacks")} type="text" />
-                        </div>
-                        <div>
-                            <div className="mb-2 block">
-                                <Label
-                                    htmlFor="blockedKicks"
-                                    color={submitAttempted && formErrors.blockedKicks ? "failure" : undefined}
-                                >
-                                    # of Blocked Kicks
-                                </Label>
-                            </div>
-                            <TextInput
-                                {...commonProps("blockedKicks", "# of Blocked Kicks", "blockedKicks")}
-                                type="text"
-                            />
-                        </div>
-                        <div>
-                            <div className="mb-2 block">
-                                <Label
-                                    htmlFor="interceptions"
-                                    color={submitAttempted && formErrors.interceptions ? "failure" : undefined}
-                                >
-                                    # of Interceptions
-                                </Label>
-                            </div>
-                            <TextInput
-                                {...commonProps("interceptions", "# of Interceptions", "interceptions")}
-                                type="text"
-                            />
-                        </div>
-                        <div>
-                            <div className="mb-2 block">
-                                <Label
-                                    htmlFor="fumblesRecovered"
-                                    color={submitAttempted && formErrors.fumblesRecovered ? "failure" : undefined}
-                                >
-                                    # of Fumbles Recovered
-                                </Label>
-                            </div>
-                            <TextInput
-                                {...commonProps("fumblesRecovered", "# of Fumbles Recovered", "fumblesRecovered")}
-                                type="text"
-                            />
-                        </div>
-                        <div>
-                            <div className="mb-2 block">
-                                <Label
-                                    htmlFor="safeties"
-                                    color={submitAttempted && formErrors.safeties ? "failure" : undefined}
-                                >
-                                    # of Safeties
-                                </Label>
-                            </div>
-                            <TextInput
-                                {...commonProps("safeties", "# of Safeties", "safeties")}
-                                type="text"
-                            />
-                        </div>
-                        <div>
-                            <div className="mb-2 block">
-                                <Label
-                                    htmlFor="pointsAllowed"
-                                    color={submitAttempted && formErrors.pointsAllowed ? "failure" : undefined}
-                                >
-                                    # of Points Allowed
-                                </Label>
-                            </div>
-                            <TextInput
-                                {...commonProps("pointsAllowed", "# of Points Allowed", "pointsAllowed")}
-                                type="text"
-                            />
-                        </div>
-                        <div>
-                            <div className="mb-2 block">
-                                <Label
-                                    htmlFor="yardsAllowed"
-                                    color={submitAttempted && formErrors.yardsAllowed ? "failure" : undefined}
-                                >
-                                    Total Yards Allowed
-                                </Label>
-                            </div>
-                            <TextInput
-                                {...commonProps("yardsAllowed", "Total Yards Allowed", "yardsAllowed")}
-                                type="text"
-                            />
-                        </div>
-                    </>
-                );
             default:
                 return null;
         }
@@ -436,6 +481,34 @@ export default function ScoreModal({
                     <h3 className="text-xl font-medium text-gray-900 dark:text-white">
                         Add scores for {player.name}
                     </h3>
+
+                    {/* Auto-fill button */}
+                    <div className="w-full">
+                        <Button
+                            color="light"
+                            onClick={handleAutoFill}
+                            disabled={isAutoFilling || isSubmitting}
+                            className="w-full"
+                        >
+                            {isAutoFilling ? (
+                                <>
+                                    <Spinner size="sm" className="mr-2" />
+                                    Fetching stats...
+                                </>
+                            ) : (
+                                <>
+                                    <HiSparkles className="mr-2 size-5" />
+                                    Auto-fill with ESPN Stats
+                                </>
+                            )}
+                        </Button>
+                        {autoFillError && (
+                            <p className="mt-2 text-sm text-red-600 dark:text-red-500">
+                                {autoFillError}
+                            </p>
+                        )}
+                    </div>
+
                     {renderPositionFields()}
                     <div className="w-full">
                         <Button 

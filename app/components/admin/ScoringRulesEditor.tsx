@@ -34,7 +34,7 @@ const ScoringRulesEditor = observer(() => {
     const [changedRules, setChangedRules] = useState<Record<number, boolean>>({});
 
     // Positions in the order we want to display them
-    const positions = ["QB", "RB", "WR", "TE", "K", "DST"];
+    const positions = ["QB", "RB", "WR", "TE", "K"];
 
     // Fetch scoring rules on component mount
     useEffect(() => {

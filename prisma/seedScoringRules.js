@@ -33,12 +33,6 @@ async function seedScoringRules() {
       },
       {
         position: "QB",
-        category: "twoPtConversion",
-        value: 2,
-        description: "Points per 2-pt conversion",
-      },
-      {
-        position: "QB",
         category: "interception",
         value: -2,
         description: "Points per interception",
@@ -48,6 +42,24 @@ async function seedScoringRules() {
         category: "completionDivisor",
         value: 10,
         description: "Completions divisor (1 point per X completions)",
+      },
+      {
+        position: "QB",
+        category: "rushingTouchdown",
+        value: 6,
+        description: "Points per rushing touchdown",
+      },
+      {
+        position: "QB",
+        category: "rushingYardDivisor",
+        value: 10,
+        description: "Rushing yards divisor (1 point per X yards)",
+      },
+      {
+        position: "QB",
+        category: "rushingAttemptDivisor",
+        value: 5,
+        description: "Rushing attempts divisor (1 point per X attempts)",
       },
 
       // RB Scoring Rules
@@ -71,9 +83,27 @@ async function seedScoringRules() {
       },
       {
         position: "RB",
-        category: "twoPtConversion",
-        value: 2,
-        description: "Points per 2-pt conversion",
+        category: "receivingTouchdown",
+        value: 6,
+        description: "Points per receiving touchdown",
+      },
+      {
+        position: "RB",
+        category: "receivingYardDivisor",
+        value: 10,
+        description: "Receiving yards divisor (1 point per X yards)",
+      },
+      {
+        position: "RB",
+        category: "reception",
+        value: 1,
+        description: "Points per reception",
+      },
+      {
+        position: "RB",
+        category: "fumbleLost",
+        value: -2,
+        description: "Points per fumble lost",
       },
 
       // WR Scoring Rules
@@ -97,9 +127,27 @@ async function seedScoringRules() {
       },
       {
         position: "WR",
-        category: "twoPtConversion",
-        value: 2,
-        description: "Points per 2-pt conversion",
+        category: "rushingTouchdown",
+        value: 6,
+        description: "Points per rushing touchdown",
+      },
+      {
+        position: "WR",
+        category: "rushingYardDivisor",
+        value: 10,
+        description: "Rushing yards divisor (1 point per X yards)",
+      },
+      {
+        position: "WR",
+        category: "rushingAttemptDivisor",
+        value: 5,
+        description: "Rushing attempts divisor (1 point per X attempts)",
+      },
+      {
+        position: "WR",
+        category: "fumbleLost",
+        value: -2,
+        description: "Points per fumble lost",
       },
 
       // TE Scoring Rules (same as WR)
@@ -123,9 +171,27 @@ async function seedScoringRules() {
       },
       {
         position: "TE",
-        category: "twoPtConversion",
-        value: 2,
-        description: "Points per 2-pt conversion",
+        category: "rushingTouchdown",
+        value: 6,
+        description: "Points per rushing touchdown",
+      },
+      {
+        position: "TE",
+        category: "rushingYardDivisor",
+        value: 10,
+        description: "Rushing yards divisor (1 point per X yards)",
+      },
+      {
+        position: "TE",
+        category: "rushingAttemptDivisor",
+        value: 5,
+        description: "Rushing attempts divisor (1 point per X attempts)",
+      },
+      {
+        position: "TE",
+        category: "fumbleLost",
+        value: -2,
+        description: "Points per fumble lost",
       },
 
       // K Scoring Rules
@@ -164,134 +230,6 @@ async function seedScoringRules() {
         category: "fg60plus",
         value: 6,
         description: "Points per field goal from 60+ yards",
-      },
-
-      // DST Scoring Rules
-      {
-        position: "DST",
-        category: "touchdown",
-        value: 6,
-        description: "Points per touchdown (defensive or special teams)",
-      },
-      {
-        position: "DST",
-        category: "sack",
-        value: 2,
-        description: "Points per sack",
-      },
-      {
-        position: "DST",
-        category: "blockedKick",
-        value: 2,
-        description: "Points per blocked kick",
-      },
-      {
-        position: "DST",
-        category: "interception",
-        value: 2,
-        description: "Points per interception",
-      },
-      {
-        position: "DST",
-        category: "fumbleRecovery",
-        value: 2,
-        description: "Points per fumble recovery",
-      },
-      {
-        position: "DST",
-        category: "safety",
-        value: 2,
-        description: "Points per safety",
-      },
-      {
-        position: "DST",
-        category: "points0",
-        value: 10,
-        description: "Points for allowing 0 points",
-      },
-      {
-        position: "DST",
-        category: "points1to6",
-        value: 5,
-        description: "Points for allowing 1-6 points",
-      },
-      {
-        position: "DST",
-        category: "points7to13",
-        value: 3,
-        description: "Points for allowing 7-13 points",
-      },
-      {
-        position: "DST",
-        category: "points14to17",
-        value: 1,
-        description: "Points for allowing 14-17 points",
-      },
-      {
-        position: "DST",
-        category: "points18to27",
-        value: 0,
-        description: "Points for allowing 18-27 points",
-      },
-      {
-        position: "DST",
-        category: "points28to34",
-        value: -1,
-        description: "Points for allowing 28-34 points",
-      },
-      {
-        position: "DST",
-        category: "points35to45",
-        value: -3,
-        description: "Points for allowing 35-45 points",
-      },
-      {
-        position: "DST",
-        category: "pointsOver45",
-        value: -5,
-        description: "Points for allowing 46+ points",
-      },
-      {
-        position: "DST",
-        category: "yards0to99",
-        value: 5,
-        description: "Points for allowing 0-99 yards",
-      },
-      {
-        position: "DST",
-        category: "yards100to199",
-        value: 3,
-        description: "Points for allowing 100-199 yards",
-      },
-      {
-        position: "DST",
-        category: "yards200to299",
-        value: 2,
-        description: "Points for allowing 200-299 yards",
-      },
-      {
-        position: "DST",
-        category: "yards300to399",
-        value: 0,
-        description: "Points for allowing 300-399 yards",
-      },
-      {
-        position: "DST",
-        category: "yards400to449",
-        value: -1,
-        description: "Points for allowing 400-449 yards",
-      },
-      {
-        position: "DST",
-        category: "yards450to499",
-        value: -3,
-        description: "Points for allowing 450-499 yards",
-      },
-      {
-        position: "DST",
-        category: "yards500plus",
-        value: -5,
-        description: "Points for allowing 500+ yards",
       },
     ];
 

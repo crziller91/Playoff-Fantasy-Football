@@ -30,7 +30,7 @@ export async function GET(): Promise<NextResponse> {
     const formattedPlayers: Player[] = players.map((player) => ({
       id: player.id,
       name: player.name,
-      position: player.position as "QB" | "RB" | "WR" | "TE" | "K" | "DST",
+      position: player.position as "QB" | "RB" | "WR" | "TE" | "K",
       teamName: player.teamName || undefined, // Include teamName if available
     }));
 

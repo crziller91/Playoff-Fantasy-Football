@@ -1,7 +1,7 @@
 export type Player = {
   id: number;
   name: string;
-  position: "QB" | "RB" | "WR" | "TE" | "K" | "DST";
+  position: "QB" | "RB" | "WR" | "TE" | "K";
   teamName?: string;
 };
 
@@ -59,23 +59,19 @@ export interface ExtendedPlayer extends Player {
 export interface ScoreForm {
   touchdowns?: string;
   yards?: string;
-  twoPtConversions?: string;
   interceptions?: string;
   completions?: string;
+  rushingTouchdowns?: string;
   rushingYards?: string;
   rushingAttempts?: string;
+  receivingTouchdowns?: string;
   receivingYards?: string;
   receptions?: string;
+  fumblesLost?: string;
   pat?: string;
   fgMisses?: string;
   fg?: string;
   fgYardages?: string[];
-  sacks?: string;
-  blockedKicks?: string;
-  fumblesRecovered?: string;
-  safeties?: string;
-  pointsAllowed?: string;
-  yardsAllowed?: string;
 }
 
 // New type to store player scores by playoff round

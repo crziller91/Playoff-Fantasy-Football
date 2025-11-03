@@ -14,15 +14,19 @@ export const calculatePlayerScore = async (player: ExtendedPlayer, form: ScoreFo
             // Use dynamic scoring rules from database
             const passingTDValue = await getScoringRule("QB", "passingTouchdown");
             const passingYardDivisor = await getScoringRule("QB", "passingYardDivisor");
-            const qbTwoPtValue = await getScoringRule("QB", "twoPtConversion");
             const interceptionValue = await getScoringRule("QB", "interception");
             const completionDivisor = await getScoringRule("QB", "completionDivisor");
+            const qbRushingTDValue = await getScoringRule("QB", "rushingTouchdown");
+            const qbRushingYardDivisor = await getScoringRule("QB", "rushingYardDivisor");
+            const qbRushingAttemptDivisor = await getScoringRule("QB", "rushingAttemptDivisor");
 
             score += parseNum(form.touchdowns) * passingTDValue; // Points per passing TD
             score += Math.round(parseNum(form.yards) / passingYardDivisor); // Points per yards divisor
-            score += parseNum(form.twoPtConversions) * qbTwoPtValue; // Points per 2-pt conversion
             score += parseNum(form.interceptions) * interceptionValue; // Points per INT
             score += Math.round(parseNum(form.completions) / completionDivisor); // Points per completions divisor
+            score += parseNum(form.rushingTouchdowns) * qbRushingTDValue; // Points per rushing TD
+            score += Math.floor(parseNum(form.rushingYards) / qbRushingYardDivisor); // Points per rushing yards divisor
+            score += Math.floor(parseNum(form.rushingAttempts) / qbRushingAttemptDivisor); // Points per rushing attempts divisor
             break;
 
         case "RB":
@@ -30,12 +34,18 @@ export const calculatePlayerScore = async (player: ExtendedPlayer, form: ScoreFo
             const rushingTDValue = await getScoringRule("RB", "rushingTouchdown");
             const rushingYardDivisor = await getScoringRule("RB", "rushingYardDivisor");
             const rushingAttemptDivisor = await getScoringRule("RB", "rushingAttemptDivisor");
-            const rbTwoPtValue = await getScoringRule("RB", "twoPtConversion");
+            const rbReceivingTDValue = await getScoringRule("RB", "receivingTouchdown");
+            const rbReceivingYardDivisor = await getScoringRule("RB", "receivingYardDivisor");
+            const rbReceptionValue = await getScoringRule("RB", "reception");
+            const rbFumbleLostValue = await getScoringRule("RB", "fumbleLost");
 
-            score += parseNum(form.touchdowns) * rushingTDValue; // Points per TD
+            score += parseNum(form.touchdowns) * rushingTDValue; // Points per rushing TD
             score += Math.floor(parseNum(form.rushingYards) / rushingYardDivisor); // Points per rushing yards divisor
             score += Math.floor(parseNum(form.rushingAttempts) / rushingAttemptDivisor); // Points per attempts divisor
-            score += parseNum(form.twoPtConversions) * rbTwoPtValue; // Points per 2-pt conversion
+            score += parseNum(form.receivingTouchdowns) * rbReceivingTDValue; // Points per receiving TD
+            score += Math.floor(parseNum(form.receivingYards) / rbReceivingYardDivisor); // Points per receiving yards divisor
+            score += parseNum(form.receptions) * rbReceptionValue; // Points per reception
+            score += parseNum(form.fumblesLost) * rbFumbleLostValue; // Points per fumble lost
             break;
 
         case "WR":
@@ -44,12 +54,18 @@ export const calculatePlayerScore = async (player: ExtendedPlayer, form: ScoreFo
             const receivingTDValue = await getScoringRule(player.position, "receivingTouchdown");
             const receivingYardDivisor = await getScoringRule(player.position, "receivingYardDivisor");
             const receptionValue = await getScoringRule(player.position, "reception");
-            const wrTePtValue = await getScoringRule(player.position, "twoPtConversion");
+            const wrTeRushingTDValue = await getScoringRule(player.position, "rushingTouchdown");
+            const wrTeRushingYardDivisor = await getScoringRule(player.position, "rushingYardDivisor");
+            const wrTeRushingAttemptDivisor = await getScoringRule(player.position, "rushingAttemptDivisor");
+            const wrTeFumbleLostValue = await getScoringRule(player.position, "fumbleLost");
 
-            score += parseNum(form.touchdowns) * receivingTDValue; // Points per TD
+            score += parseNum(form.touchdowns) * receivingTDValue; // Points per receiving TD
             score += Math.floor(parseNum(form.receivingYards) / receivingYardDivisor); // Points per receiving yards divisor
             score += parseNum(form.receptions) * receptionValue; // Points per reception
-            score += parseNum(form.twoPtConversions) * wrTePtValue; // Points per 2-pt conversion
+            score += parseNum(form.rushingTouchdowns) * wrTeRushingTDValue; // Points per rushing TD
+            score += Math.floor(parseNum(form.rushingYards) / wrTeRushingYardDivisor); // Points per rushing yards divisor
+            score += Math.floor(parseNum(form.rushingAttempts) / wrTeRushingAttemptDivisor); // Points per rushing attempts divisor
+            score += parseNum(form.fumblesLost) * wrTeFumbleLostValue; // Points per fumble lost
             break;
 
         case "K":
@@ -75,63 +91,6 @@ export const calculatePlayerScore = async (player: ExtendedPlayer, form: ScoreFo
             }
             break;
 
-        case "DST":
-            // Use dynamic scoring rules from database
-            const tdValue = await getScoringRule("DST", "touchdown");
-            const sackValue = await getScoringRule("DST", "sack");
-            const blockedKickValue = await getScoringRule("DST", "blockedKick");
-            const intValue = await getScoringRule("DST", "interception");
-            const fumbleRecoveryValue = await getScoringRule("DST", "fumbleRecovery");
-            const safetyValue = await getScoringRule("DST", "safety");
-
-            // Points allowed values
-            const points0Value = await getScoringRule("DST", "points0");
-            const points1to6Value = await getScoringRule("DST", "points1to6");
-            const points7to13Value = await getScoringRule("DST", "points7to13");
-            const points14to17Value = await getScoringRule("DST", "points14to17");
-            const points18to27Value = await getScoringRule("DST", "points18to27");
-            const points28to34Value = await getScoringRule("DST", "points28to34");
-            const points35to45Value = await getScoringRule("DST", "points35to45");
-            const pointsOver45Value = await getScoringRule("DST", "pointsOver45");
-
-            // Yards allowed values
-            const yards0to99Value = await getScoringRule("DST", "yards0to99");
-            const yards100to199Value = await getScoringRule("DST", "yards100to199");
-            const yards200to299Value = await getScoringRule("DST", "yards200to299");
-            const yards300to399Value = await getScoringRule("DST", "yards300to399");
-            const yards400to449Value = await getScoringRule("DST", "yards400to449");
-            const yards450to499Value = await getScoringRule("DST", "yards450to499");
-            const yards500plusValue = await getScoringRule("DST", "yards500plus");
-
-            score += parseNum(form.touchdowns) * tdValue; // Points per TD
-            score += parseNum(form.sacks) * sackValue; // Points per sack
-            score += parseNum(form.blockedKicks) * blockedKickValue; // Points per blocked kick
-            score += parseNum(form.interceptions) * intValue; // Points per INT
-            score += parseNum(form.fumblesRecovered) * fumbleRecoveryValue; // Points per fumble recovered
-            score += parseNum(form.safeties) * safetyValue; // Points per safety
-
-            // Points allowed scoring
-            const points = parseNum(form.pointsAllowed);
-            if (points === 0) score += points0Value;
-            else if (points <= 6) score += points1to6Value;
-            else if (points <= 13) score += points7to13Value;
-            else if (points <= 17) score += points14to17Value;
-            else if (points <= 27) score += points18to27Value;
-            else if (points <= 34) score += points28to34Value;
-            else if (points <= 45) score += points35to45Value;
-            else score += pointsOver45Value;
-
-            // Yards allowed scoring
-            const yards = parseNum(form.yardsAllowed);
-            if (yards < 100) score += yards0to99Value;
-            else if (yards <= 199) score += yards100to199Value;
-            else if (yards <= 299) score += yards200to299Value;
-            else if (yards <= 399) score += yards300to399Value;
-            else if (yards <= 449) score += yards400to449Value;
-            else if (yards <= 499) score += yards450to499Value;
-            else score += yards500plusValue;
-            break;
-
         default:
             break;
     }
@@ -142,7 +101,7 @@ export const calculatePlayerScore = async (player: ExtendedPlayer, form: ScoreFo
 
 // Get team picks in a specific order by position
 export const getOrderedTeamPicks = (team: string, draftPicks: any) => {
-    const positionOrder = ["QB", "RB", "WR", "TE", "DST", "K"];
+    const positionOrder = ["QB", "RB", "WR", "TE", "K"];
     const teamPicks = Object.entries(draftPicks[team] || {})
         .filter(([_, player]) => player !== null)
         .map(([pick, player]) => ({ pick: Number(pick), player: player as ExtendedPlayer }));
@@ -193,22 +152,30 @@ export const validateForm = (selectedPlayer: ExtendedPlayer | null, scoreForm: S
         case "QB":
             validateField("touchdowns");
             validateField("yards");
-            validateField("twoPtConversions");
             validateField("interceptions");
             validateField("completions");
+            validateField("rushingTouchdowns");
+            validateField("rushingYards");
+            validateField("rushingAttempts");
             break;
         case "RB":
             validateField("touchdowns");
             validateField("rushingYards");
             validateField("rushingAttempts");
-            validateField("twoPtConversions");
+            validateField("receivingTouchdowns");
+            validateField("receivingYards");
+            validateField("receptions");
+            validateField("fumblesLost");
             break;
         case "WR":
         case "TE":
             validateField("touchdowns");
             validateField("receivingYards");
             validateField("receptions");
-            validateField("twoPtConversions");
+            validateField("rushingTouchdowns");
+            validateField("rushingYards");
+            validateField("rushingAttempts");
+            validateField("fumblesLost");
             break;
         case "K":
             validateField("pat");

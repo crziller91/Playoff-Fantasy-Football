@@ -41,29 +41,6 @@ const DEFAULT_SCORING_RULES: ScoringRulesMap = {
         fg40to49: 4,
         fg50to59: 5,
         fg60plus: 6
-    },
-    DST: {
-        touchdown: 6,
-        sack: 2,
-        blockedKick: 2,
-        interception: 2,
-        fumbleRecovery: 2,
-        safety: 2,
-        points0: 10,
-        points1to6: 5,
-        points7to13: 3,
-        points14to17: 1,
-        points18to27: 0,
-        points28to34: -1,
-        points35to45: -3,
-        pointsOver45: -5,
-        yards0to99: 5,
-        yards100to199: 3,
-        yards200to299: 2,
-        yards300to399: 0,
-        yards400to449: -1,
-        yards450to499: -3,
-        yards500plus: -5
     }
 };
 

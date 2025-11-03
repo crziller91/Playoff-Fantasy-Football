@@ -8,7 +8,7 @@ import { ExtendedPlayer } from "../types";
  * @returns Array of team picks sorted by position and pick number
  */
 export const getOrderedTeamPicks = (team: string, draftPicks: any) => {
-    const positionOrder = ["QB", "RB", "WR", "TE", "DST", "K"];
+    const positionOrder = ["QB", "RB", "WR", "TE", "K"];
 
     const teamPicks = Object.entries(draftPicks[team] || {})
         .filter(([_, player]) => player !== null)

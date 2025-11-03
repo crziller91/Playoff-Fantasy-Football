@@ -11,8 +11,7 @@ const positionBadgeColors: Record<string, "info" | "gray" | "failure" | "success
     RB: "purple",
     WR: "warning",
     TE: "failure",
-    K: "info",
-    DST: "gray"
+    K: "info"
 };
 
 // Array of rank labels with medals

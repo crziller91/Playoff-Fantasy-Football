@@ -6,7 +6,7 @@ import { HiFilter } from "react-icons/hi";
 import { useStore } from "../../stores/StoreContext";
 import { createPortal } from "react-dom";
 
-type PositionType = "QB" | "RB" | "WR" | "TE" | "K" | "DST" | "ALL";
+type PositionType = "QB" | "RB" | "WR" | "TE" | "K" | "ALL";
 
 const AvailablePlayers = observer(() => {
     const { playersStore } = useStore();
@@ -67,7 +67,7 @@ const AvailablePlayers = observer(() => {
         : availablePlayers.filter(player => player.position === positionFilter);
 
     // Get unique positions for creating filter dropdown
-    const positions: ("QB" | "RB" | "WR" | "TE" | "K" | "DST")[] = ["QB", "RB", "WR", "TE", "K", "DST"];
+    const positions: ("QB" | "RB" | "WR" | "TE" | "K")[] = ["QB", "RB", "WR", "TE", "K"];
 
     // Use the TOTAL number of players for width, not the filtered count
     // This ensures the container size never changes
