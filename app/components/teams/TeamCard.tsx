@@ -1,8 +1,8 @@
 import { observer } from "mobx-react-lite";
-import { Card, Button, Badge } from "flowbite-react";
+import { Card, Button, Badge, Tooltip } from "flowbite-react";
 import { ExtendedPlayer } from "../../types";
 import { getOrderedTeamPicks, getTeamScore } from "../../utils/scoreCalculator";
-import { HiX, HiTrash, HiPencil, HiPlus } from "react-icons/hi";
+import { HiX, HiTrash, HiPencil, HiPlus, HiSparkles } from "react-icons/hi";
 import { useStore } from "../../stores/StoreContext";
 
 // Map position to badge color
@@ -22,6 +22,7 @@ interface TeamCardProps {
     playerScores: { [key: string]: ExtendedPlayer };
     onEditScore: (player: ExtendedPlayer) => void;
     onTogglePlayerDisabled: (player: ExtendedPlayer, isClearScores?: boolean) => void;
+    onAutoFillScore?: (player: ExtendedPlayer) => void;
     round?: string;
     ranking?: number;
     canEditScores: boolean;
@@ -32,6 +33,7 @@ const TeamCard = observer(({
     playerScores,
     onEditScore,
     onTogglePlayerDisabled,
+    onAutoFillScore,
     round,
     ranking,
     canEditScores
@@ -68,7 +70,10 @@ const TeamCard = observer(({
                         const playerData = playerScores[player.name];
                         const isDisabled = playerData?.isDisabled || false;
                         const statusReason = playerData?.statusReason;
+                        const hasScore = playerData?.scoreData !== undefined;
+                        const score = playerData?.score || 0;
                         const showScore = hasPositiveScore(player.name) && !isDisabled;
+                        const showZeroScore = hasScore && score === 0 && !isDisabled;
 
                         // Determine status message based on the status reason
                         let statusMessage = "";
@@ -111,38 +116,67 @@ const TeamCard = observer(({
                                                 {playerScores[player.name]?.score} pts
                                             </p>
                                         )}
+                                        {showZeroScore && (
+                                            <p className="text-xs font-semibold text-green-600">
+                                                0 pts
+                                            </p>
+                                        )}
+                                        {isDisabled && (
+                                            <p className="text-xs font-semibold text-green-600">
+                                                0 pts
+                                            </p>
+                                        )}
                                     </div>
 
                                     {/* Only show controls if user has permission */}
                                     {canEditScores ? (
                                         <div className="flex space-x-2">
-                                            <Button
-                                                size="xs"
-                                                color={playerScores[player.name]?.scoreData ? "success" : "info"}
-                                                disabled={isDisabled}
-                                                onClick={() => onEditScore(player as ExtendedPlayer)}
-                                            >
-                                                {playerScores[player.name]?.scoreData ? <HiPencil className="size-4" /> : <HiPlus className="size-4" />}
-                                            </Button>
-                                            {/* Show Clear Scores button if scores are entered */}
-                                            {playerScores[player.name]?.scoreData && (
+                                            {/* Auto-fill button - only show if no scores entered */}
+                                            {onAutoFillScore && !playerScores[player.name]?.scoreData && (
+                                                <Tooltip content="Auto-fill scores from ESPN" animation="duration-500" arrow={false}>
+                                                    <Button
+                                                        size="xs"
+                                                        color="purple"
+                                                        disabled={isDisabled}
+                                                        onClick={() => onAutoFillScore(player as ExtendedPlayer)}
+                                                    >
+                                                        <HiSparkles className="size-4" />
+                                                    </Button>
+                                                </Tooltip>
+                                            )}
+                                            <Tooltip content={playerScores[player.name]?.scoreData ? "Edit player score" : "Add player score"} animation="duration-500" arrow={false}>
                                                 <Button
                                                     size="xs"
-                                                    color="failure"
-                                                    onClick={() => onTogglePlayerDisabled(player as ExtendedPlayer, true)}
+                                                    color={playerScores[player.name]?.scoreData ? "success" : "info"}
+                                                    disabled={isDisabled}
+                                                    onClick={() => onEditScore(player as ExtendedPlayer)}
                                                 >
-                                                    <HiTrash className="size-4" />
+                                                    {playerScores[player.name]?.scoreData ? <HiPencil className="size-4" /> : <HiPlus className="size-4" />}
                                                 </Button>
+                                            </Tooltip>
+                                            {/* Show Clear Scores button if scores are entered */}
+                                            {playerScores[player.name]?.scoreData && (
+                                                <Tooltip content="Delete player scores" animation="duration-500" arrow={false}>
+                                                    <Button
+                                                        size="xs"
+                                                        color="failure"
+                                                        onClick={() => onTogglePlayerDisabled(player as ExtendedPlayer, true)}
+                                                    >
+                                                        <HiTrash className="size-4" />
+                                                    </Button>
+                                                </Tooltip>
                                             )}
                                             {/* Only show X button if no scores entered */}
                                             {!playerScores[player.name]?.scoreData && (
-                                                <Button
-                                                    size="xs"
-                                                    color={isDisabled ? "failure" : "light"}
-                                                    onClick={() => onTogglePlayerDisabled(player as ExtendedPlayer)}
-                                                >
-                                                    <HiX className="size-4" />
-                                                </Button>
+                                                <Tooltip content={isDisabled ? "Re-activate player" : "Deactivate player"} animation="duration-500" arrow={false}>
+                                                    <Button
+                                                        size="xs"
+                                                        color={isDisabled ? "failure" : "light"}
+                                                        onClick={() => onTogglePlayerDisabled(player as ExtendedPlayer)}
+                                                    >
+                                                        <HiX className="size-4" />
+                                                    </Button>
+                                                </Tooltip>
                                             )}
                                         </div>
                                     ) : (

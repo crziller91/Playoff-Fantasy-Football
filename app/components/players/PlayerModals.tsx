@@ -3,6 +3,7 @@ import ScoreModal from "../modals/ScoreModal";
 import ClearScoresModal from "../modals/ClearScoresModal";
 import PlayerStatusModal from "../modals/PlayerStatusModal";
 import PlayerReactivationModal from "../modals/PlayerReactivationModal";
+import ZeroStatsModal from "../modals/ZeroStatsModal";
 import { ExtendedPlayer, ScoreForm, FormErrors } from "../../types";
 
 interface PlayerModalsProps {
@@ -24,6 +25,10 @@ interface PlayerModalsProps {
             player: ExtendedPlayer | null;
         };
         reactivationModal: {
+            isOpen: boolean;
+            player: ExtendedPlayer | null;
+        };
+        zeroStatsModal: {
             isOpen: boolean;
             player: ExtendedPlayer | null;
         };
@@ -49,6 +54,11 @@ interface PlayerModalsProps {
             onClose: () => void;
             onConfirm: () => void;
         };
+        zeroStatsModal: {
+            onClose: () => void;
+            onConfirmDeactivate: () => void;
+            onKeepZeroScore: () => void;
+        };
     };
     activeRound: string;
 }
@@ -65,14 +75,16 @@ export default function PlayerModals({
         scoreModal,
         clearScoresModal,
         statusModal,
-        reactivationModal
+        reactivationModal,
+        zeroStatsModal
     } = modalsState;
 
     const {
         scoreModal: scoreModalHandlers,
         clearScoresModal: clearScoresModalHandlers,
         statusModal: statusModalHandlers,
-        reactivationModal: reactivationModalHandlers
+        reactivationModal: reactivationModalHandlers,
+        zeroStatsModal: zeroStatsModalHandlers
     } = modalsHandlers;
 
     return (
@@ -116,6 +128,16 @@ export default function PlayerModals({
                 player={reactivationModal.player}
                 onClose={reactivationModalHandlers.onClose}
                 onConfirm={reactivationModalHandlers.onConfirm}
+            />
+
+            {/* Zero Stats modal */}
+            <ZeroStatsModal
+                isOpen={zeroStatsModal.isOpen}
+                player={zeroStatsModal.player}
+                round={activeRound}
+                onClose={zeroStatsModalHandlers.onClose}
+                onConfirmDeactivate={zeroStatsModalHandlers.onConfirmDeactivate}
+                onKeepZeroScore={zeroStatsModalHandlers.onKeepZeroScore}
             />
         </>
     );

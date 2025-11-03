@@ -8,6 +8,7 @@ interface TeamCardListProps {
     round: string;
     onEditScore: (player: ExtendedPlayer) => void;
     onTogglePlayerDisabled: (player: ExtendedPlayer, isClearScores?: boolean) => void;
+    onAutoFillScore?: (player: ExtendedPlayer) => void;
     canEditScores: boolean;
 }
 
@@ -15,6 +16,7 @@ const TeamCardList = observer(({
     round,
     onEditScore,
     onTogglePlayerDisabled,
+    onAutoFillScore,
     canEditScores
 }: TeamCardListProps) => {
     const { teamsStore, playersStore, scoresStore } = useStore();
@@ -40,6 +42,7 @@ const TeamCardList = observer(({
                     playerScores={playerScores}
                     onEditScore={onEditScore}
                     onTogglePlayerDisabled={onTogglePlayerDisabled}
+                    onAutoFillScore={onAutoFillScore}
                     round={round}
                     ranking={index} // Pass the ranking to display medals
                     canEditScores={canEditScores}

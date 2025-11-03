@@ -5,6 +5,7 @@ import { savePlayerScore, deletePlayerScore } from '../services/scoreService';
 import { PLAYOFF_ROUNDS } from '../constants/playoffs';
 import { usePermissions } from './usePermissions';
 import { Socket } from 'socket.io-client';
+import { searchPlayerStats } from '../services/espnStatsService';
 
 interface UsePlayerModalsProps {
     playerScores: PlayerScoresByRound;
@@ -40,11 +41,14 @@ export function usePlayerModals({
     const [openClearScoresModal, setOpenClearScoresModal] = useState(false);
     const [openStatusModal, setOpenStatusModal] = useState(false);
     const [openReactivationModal, setOpenReactivationModal] = useState(false);
+    const [openZeroStatsModal, setOpenZeroStatsModal] = useState(false);
 
     // Players for various modals
     const [clearScoresPlayer, setClearScoresPlayer] = useState<ExtendedPlayer | null>(null);
     const [statusPlayer, setStatusPlayer] = useState<ExtendedPlayer | null>(null);
     const [reactivationPlayer, setReactivationPlayer] = useState<ExtendedPlayer | null>(null);
+    const [zeroStatsPlayer, setZeroStatsPlayer] = useState<ExtendedPlayer | null>(null);
+    const [zeroStatsData, setZeroStatsData] = useState<{ scoreForm: ScoreForm; score: number } | null>(null);
 
     // Helper function to check if scores have changed
     const hasScoresChanged = () => {
@@ -220,6 +224,65 @@ export function usePlayerModals({
     const handleCloseReactivationModal = () => {
         setOpenReactivationModal(false);
         setReactivationPlayer(null);
+    };
+
+    // Handler for closing the zero stats modal
+    const handleCloseZeroStatsModal = () => {
+        setOpenZeroStatsModal(false);
+        setZeroStatsPlayer(null);
+        setZeroStatsData(null);
+    };
+
+    // Handler for deactivating player from zero stats modal
+    const handleZeroStatsDeactivate = () => {
+        if (!zeroStatsPlayer) return;
+
+        const round = zeroStatsPlayer.currentRound || activeRound;
+
+        // If Wild Card round, deactivate immediately without asking status
+        if (round === "Wild Card") {
+            updatePlayerStatus(zeroStatsPlayer, true, false);
+            handleCloseZeroStatsModal();
+        } else {
+            // For other rounds, trigger the status modal to ask if eliminated or not playing
+            setStatusPlayer(zeroStatsPlayer);
+            setOpenZeroStatsModal(false);
+            setOpenStatusModal(true);
+        }
+    };
+
+    // Handler for keeping zero score from zero stats modal
+    const handleZeroStatsKeepScore = async () => {
+        if (!canEditScores || !zeroStatsPlayer || !zeroStatsData) return;
+
+        const round = zeroStatsPlayer.currentRound || activeRound;
+        const { scoreForm, score } = zeroStatsData;
+
+        // Update playerScores state
+        const newScores = JSON.parse(JSON.stringify(playerScores));
+        if (!newScores[round]) {
+            newScores[round] = {};
+        }
+        newScores[round][zeroStatsPlayer.name] = {
+            ...zeroStatsPlayer,
+            score,
+            scoreData: { ...scoreForm },
+            isDisabled: false
+        };
+        setPlayerScores(newScores);
+
+        // Save to database
+        await savePlayerScore(
+            zeroStatsPlayer.id,
+            round,
+            false,
+            null,
+            score,
+            { ...scoreForm }
+        );
+
+        console.log(`Kept zero score for ${zeroStatsPlayer.name}`);
+        handleCloseZeroStatsModal();
     };
 
     // Handler for confirming clear scores
@@ -470,6 +533,104 @@ export function usePlayerModals({
         }
     };
 
+    // Handler for auto-filling scores from ESPN and submitting automatically
+    const handleAutoFillScore = async (player: ExtendedPlayer) => {
+        if (!canEditScores) return;
+
+        try {
+            console.log(`Auto-filling scores for ${player.name} (${player.position})`);
+
+            // Fetch stats from ESPN
+            const stats = await searchPlayerStats(player.name, player.position, player.teamName);
+
+            if (!stats) {
+                console.error("No stats found for this player");
+                return;
+            }
+
+            // Build score form from stats, defaulting missing fields to "0"
+            const autoScoreForm: ScoreForm = {};
+
+            // Map stats to form fields based on position, set missing fields to "0"
+            if (player.position === 'QB') {
+                autoScoreForm.touchdowns = stats.touchdowns?.toString() || "0";
+                autoScoreForm.yards = stats.yards?.toString() || "0";
+                autoScoreForm.interceptions = stats.interceptions?.toString() || "0";
+                autoScoreForm.completions = stats.completions?.toString() || "0";
+                autoScoreForm.rushingTouchdowns = stats.rushingTouchdowns?.toString() || "0";
+                autoScoreForm.rushingYards = stats.rushingYards?.toString() || "0";
+                autoScoreForm.rushingAttempts = stats.rushingAttempts?.toString() || "0";
+            } else if (player.position === 'RB') {
+                autoScoreForm.touchdowns = stats.touchdowns?.toString() || "0";
+                autoScoreForm.rushingYards = stats.rushingYards?.toString() || "0";
+                autoScoreForm.rushingAttempts = stats.rushingAttempts?.toString() || "0";
+                autoScoreForm.receivingTouchdowns = stats.receivingTouchdowns?.toString() || "0";
+                autoScoreForm.receivingYards = stats.receivingYards?.toString() || "0";
+                autoScoreForm.receptions = stats.receptions?.toString() || "0";
+                autoScoreForm.fumblesLost = stats.fumblesLost?.toString() || "0";
+            } else if (player.position === 'WR' || player.position === 'TE') {
+                autoScoreForm.touchdowns = stats.touchdowns?.toString() || "0";
+                autoScoreForm.receivingYards = stats.receivingYards?.toString() || "0";
+                autoScoreForm.receptions = stats.receptions?.toString() || "0";
+                autoScoreForm.rushingTouchdowns = stats.rushingTouchdowns?.toString() || "0";
+                autoScoreForm.rushingYards = stats.rushingYards?.toString() || "0";
+                autoScoreForm.rushingAttempts = stats.rushingAttempts?.toString() || "0";
+                autoScoreForm.fumblesLost = stats.fumblesLost?.toString() || "0";
+            } else if (player.position === 'K') {
+                autoScoreForm.pat = stats.pat?.toString() || "0";
+                autoScoreForm.fg = stats.fg?.toString() || "0";
+                autoScoreForm.fgMisses = stats.fgMisses?.toString() || "0";
+                // Handle field goal yardages
+                if (stats.fgYardages && Array.isArray(stats.fgYardages)) {
+                    autoScoreForm.fgYardages = stats.fgYardages.map(y => y.toString());
+                } else {
+                    autoScoreForm.fgYardages = [];
+                }
+            }
+
+            // Calculate score
+            const score = await calculatePlayerScore(player, autoScoreForm);
+
+            // Check if all stats are zero (score is 0)
+            if (score === 0) {
+                // Store the player and score data for the modal
+                setZeroStatsPlayer({ ...player, currentRound: activeRound });
+                setZeroStatsData({ scoreForm: autoScoreForm, score });
+                setOpenZeroStatsModal(true);
+                return;
+            }
+
+            // Update playerScores state
+            const round = activeRound;
+            const newScores = JSON.parse(JSON.stringify(playerScores));
+            if (!newScores[round]) {
+                newScores[round] = {};
+            }
+            newScores[round][player.name] = {
+                ...player,
+                score,
+                scoreData: { ...autoScoreForm },
+                isDisabled: false
+            };
+            setPlayerScores(newScores);
+
+            // Save to database
+            await savePlayerScore(
+                player.id,
+                round,
+                false,
+                null,
+                score,
+                { ...autoScoreForm }
+            );
+
+            console.log(`Successfully auto-filled and saved scores for ${player.name}`);
+        } catch (error) {
+            console.error("Error auto-filling score:", error);
+            // You might want to show a toast notification here
+        }
+    };
+
     // Return all state and handlers
     return {
         // Current player being edited
@@ -478,6 +639,7 @@ export function usePlayerModals({
         // Main handlers
         handleEditScore,
         handleTogglePlayerDisabled,
+        handleAutoFillScore,
 
         // Modals state
         modalsState: {
@@ -500,6 +662,10 @@ export function usePlayerModals({
             reactivationModal: {
                 isOpen: openReactivationModal,
                 player: reactivationPlayer
+            },
+            zeroStatsModal: {
+                isOpen: openZeroStatsModal,
+                player: zeroStatsPlayer
             }
         },
 
@@ -524,6 +690,11 @@ export function usePlayerModals({
             reactivationModal: {
                 onClose: handleCloseReactivationModal,
                 onConfirm: handlePlayerReactivation
+            },
+            zeroStatsModal: {
+                onClose: handleCloseZeroStatsModal,
+                onConfirmDeactivate: handleZeroStatsDeactivate,
+                onKeepZeroScore: handleZeroStatsKeepScore
             }
         }
     };

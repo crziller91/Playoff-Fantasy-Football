@@ -32,6 +32,7 @@ const TeamsView = observer(({ initialActiveRound, onRoundChange }: TeamsViewProp
     selectedPlayer,
     handleEditScore,
     handleTogglePlayerDisabled,
+    handleAutoFillScore,
     modalsState,
     modalsHandlers
   } = usePlayerModals({
@@ -164,6 +165,7 @@ const TeamsView = observer(({ initialActiveRound, onRoundChange }: TeamsViewProp
                 round={round}
                 onEditScore={handleEditScore}
                 onTogglePlayerDisabled={handleTogglePlayerDisabled}
+                onAutoFillScore={handleAutoFillScore}
                 canEditScores={canEditScores}
               />
             ) : (
