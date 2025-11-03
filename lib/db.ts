@@ -9,7 +9,7 @@ export async function getPlayers(): Promise<Player[]> {
         return players.map(player => ({
             id: player.id,
             name: player.name,
-            position: player.position as "QB" | "RB" | "WR" | "TE" | "K" | "DST",
+            position: player.position as "QB" | "RB" | "WR" | "TE" | "K",
             teamName: player.teamName || undefined,
         }));
     } catch (error) {

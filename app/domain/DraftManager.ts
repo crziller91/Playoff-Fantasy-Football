@@ -58,7 +58,6 @@ export class DraftManager {
                 RB: 0,
                 WR: 0,
                 TE: 0,
-                DST: 0,
                 K: 0,
             };
         }
@@ -69,7 +68,6 @@ export class DraftManager {
             RB: picks.filter((p) => p.position === "RB").length,
             WR: picks.filter((p) => p.position === "WR").length,
             TE: picks.filter((p) => p.position === "TE").length,
-            DST: picks.filter((p) => p.position === "DST").length,
             K: picks.filter((p) => p.position === "K").length,
         };
     }
@@ -103,20 +101,18 @@ export class DraftManager {
 
         const counts = this.getTeamPositionCounts(team, draftPicks);
         const hasTE = counts.TE > 0;
-        const hasDST = counts.DST > 0;
-        const hasFlexOccupiedByTEorDST = hasTE || hasDST;
+        const hasFlexOccupiedByTE = hasTE;
         const hasFlexOccupiedByExtra =
-            (counts.RB > 1 && !hasTE && !hasDST) ||
-            (counts.WR > 2 && !hasTE && !hasDST) ||
-            (counts.K > 1 && !hasTE && !hasDST);
-        const hasFlex = hasFlexOccupiedByTEorDST || hasFlexOccupiedByExtra;
+            (counts.RB > 1 && !hasTE) ||
+            (counts.WR > 2 && !hasTE) ||
+            (counts.K > 1 && !hasTE);
+        const hasFlex = hasFlexOccupiedByTE || hasFlexOccupiedByExtra;
 
         const caps = {
             QB: 1,
             RB: hasFlex ? 1 : 2,
             WR: hasFlex ? 2 : 3,
             TE: 1,
-            DST: 1,
             K: hasFlex ? 1 : 2,
         };
 
@@ -129,8 +125,7 @@ export class DraftManager {
                 const count = counts[pos];
 
                 if (pos === "QB" && count >= caps.QB) return false;
-                if (pos === "TE" && (count >= caps.TE || hasDST || hasFlexOccupiedByExtra)) return false;
-                if (pos === "DST" && (count >= caps.DST || hasTE || hasFlexOccupiedByExtra)) return false;
+                if (pos === "TE" && (count >= caps.TE || hasFlexOccupiedByExtra)) return false;
 
                 return count < caps[pos];
             });

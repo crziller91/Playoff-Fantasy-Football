@@ -32,7 +32,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
             formattedScores[score.round][score.player.name] = {
                 id: score.player.id,
                 name: score.player.name,
-                position: score.player.position as "QB" | "RB" | "WR" | "TE" | "K" | "DST",
+                position: score.player.position as "QB" | "RB" | "WR" | "TE" | "K",
                 teamName: score.player.teamName || undefined,
                 score: score.score,
                 isDisabled: score.isDisabled,

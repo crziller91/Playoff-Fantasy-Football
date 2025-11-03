@@ -194,16 +194,6 @@ export const validateForm = (selectedPlayer: ExtendedPlayer | null, scoreForm: S
                 }
             }
             break;
-        case "DST":
-            validateField("touchdowns");
-            validateField("sacks");
-            validateField("blockedKicks");
-            validateField("interceptions");
-            validateField("fumblesRecovered");
-            validateField("safeties");
-            validateField("pointsAllowed");
-            validateField("yardsAllowed");
-            break;
         default:
             break;
     }

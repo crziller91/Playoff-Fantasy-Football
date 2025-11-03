@@ -75,7 +75,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
                     const player = {
                         id: score.player.id,
                         name: score.player.name,
-                        position: score.player.position as "QB" | "RB" | "WR" | "TE" | "K" | "DST",
+                        position: score.player.position as "QB" | "RB" | "WR" | "TE" | "K",
                         teamName: score.player.teamName || undefined,
                     };
 
