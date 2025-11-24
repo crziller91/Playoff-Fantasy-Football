@@ -50,6 +50,22 @@ const DraftTable = observer(() => {
     }
   };
 
+  // New handler for when a pick cell is clicked (not the dropdown)
+  const handlePickCellClick = (team: Team, pick: number) => {
+    // Add permission check
+    if (!canEdit) return;
+
+    // Check if there's a player selected for auction
+    if (selectedPlayer && DraftManager.canSelectPlayer(team, draftPicks, picks.length)) {
+      // If there is, open the budget modal with that player automatically
+      setBudgetError("");
+      setCurrentTeam(team);
+      setCurrentPick(pick);
+      setSelectedPlayerForBudget(selectedPlayer);
+      setBudgetModalOpen(true);
+    }
+  };
+
   const handleBudgetConfirm = async (cost: number) => {
     if (!canEdit || !selectedPlayerForBudget) return;
 
@@ -65,6 +81,11 @@ const DraftTable = observer(() => {
       const success = await selectPlayerForTeam(currentTeam, currentPick, selectedPlayerForBudget, cost);
 
       if (success) {
+        // If the player came from the auction (selectedPlayer), clear it
+        if (selectedPlayer && selectedPlayer.id === selectedPlayerForBudget.id) {
+          playersStore.setSelectedPlayer(null);
+        }
+
         // Close dropdowns and modal
         setOpenDropdown(null);
         setBudgetModalOpen(false);
@@ -136,6 +157,7 @@ const DraftTable = observer(() => {
                         onSearchChange={(value) => handleSearchChange(team, pick, value)}
                         onPlayerSelect={(player) => handlePlayerSelect(team, pick, player)}
                         onRemovePick={() => handleRemovePick(team, pick)}
+                        onPickCellClick={() => handlePickCellClick(team, pick)}
                         isDraftFinished={isDraftFinished}
                         canEdit={canEdit} // Pass the permission prop
                       />

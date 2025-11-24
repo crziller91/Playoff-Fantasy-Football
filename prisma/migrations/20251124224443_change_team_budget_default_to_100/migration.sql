@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Team" ALTER COLUMN "budget" SET DEFAULT 100,
+ALTER COLUMN "originalBudget" SET DEFAULT 100;

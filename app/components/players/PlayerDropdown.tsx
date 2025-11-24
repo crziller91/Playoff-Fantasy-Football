@@ -19,6 +19,7 @@ interface PlayerDropdownProps {
   onSearchChange: (value: string) => void;
   onPlayerSelect: (player: Player) => void;
   onRemovePick: () => void;
+  onPickCellClick?: () => void; // New prop for handling auction player clicks
   isDraftFinished: boolean;
   canEdit?: boolean; // Add permission prop
 }
@@ -34,10 +35,12 @@ const PlayerDropdown = observer(({
   onSearchChange,
   onPlayerSelect,
   onRemovePick,
+  onPickCellClick,
   isDraftFinished,
   canEdit = false, // Default to false for security
 }: PlayerDropdownProps) => {
   const { playersStore } = useStore();
+  const { selectedPlayer: auctionPlayer } = playersStore;
   const dropdownKey = `${team}-${pick}`.replace(/[^a-zA-Z0-9-]/g, "-");
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [dropdownPosition, setDropdownPosition] = useState<{
@@ -116,7 +119,14 @@ const PlayerDropdown = observer(({
 
   const handleButtonClick = () => {
     if (!isDraftFinished && canEdit) {
-      onToggle(isOpen ? null : dropdownKey);
+      // If there's no player selected in this cell yet and there's an auction player,
+      // trigger the auction flow instead of opening the dropdown
+      if (!selectedPlayer && auctionPlayer && onPickCellClick) {
+        onPickCellClick();
+      } else {
+        // Otherwise, toggle the dropdown as normal
+        onToggle(isOpen ? null : dropdownKey);
+      }
     }
   };
 
