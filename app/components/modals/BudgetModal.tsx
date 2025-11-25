@@ -1,7 +1,7 @@
 import { Modal, Button, Label, TextInput, Alert } from "flowbite-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { BudgetModalProps } from "../../types";
-import { HiExclamation, HiX } from "react-icons/hi";
+import { HiExclamation } from "react-icons/hi";
 
 export default function BudgetModal({
     isOpen,
@@ -13,16 +13,10 @@ export default function BudgetModal({
 }: BudgetModalProps) {
     const [cost, setCost] = useState<string>("");
     const [error, setError] = useState<string>("");
-    const [showAlert, setShowAlert] = useState(false);
+    const [alertDismissed, setAlertDismissed] = useState(false);
 
-    // Reset state when modal opens/closes or when budgetError changes
-    useEffect(() => {
-        if (isOpen) {
-            setCost("");
-            setError("");
-            setShowAlert(!!budgetError);
-        }
-    }, [isOpen, budgetError]);
+    // Derive showAlert from budgetError and dismissal state
+    const showAlert = !!budgetError && !alertDismissed;
 
     const handleSubmit = () => {
         // Validate input - only positive whole numbers
@@ -40,14 +34,14 @@ export default function BudgetModal({
         
         // Clear error and submit
         setError("");
-        setShowAlert(true); // Ensure alert is visible if budget error comes back
+        setAlertDismissed(false); // Reset dismissal state so alert shows if budget error comes back
         onConfirm(costValue);
     };
 
     const handleClose = () => {
         setCost(""); // Reset state
         setError("");
-        setShowAlert(false);
+        setAlertDismissed(false);
         onClose();
     };
 
@@ -57,9 +51,9 @@ export default function BudgetModal({
         if (value === "" || /^[0-9]+$/.test(value)) {
             setCost(value);
             setError("");
-            
-            // Hide alert when user starts typing
-            setShowAlert(false);
+
+            // Dismiss alert when user starts typing
+            setAlertDismissed(true);
         }
     };
 
@@ -71,7 +65,7 @@ export default function BudgetModal({
     };
 
     const handleDismissAlert = () => {
-        setShowAlert(false);
+        setAlertDismissed(true);
     };
 
     if (!player) return null;

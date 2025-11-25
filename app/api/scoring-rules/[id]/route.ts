@@ -6,7 +6,7 @@ import { authOptions } from "@/lib/auth";
 // PUT handler: Update a single scoring rule by ID
 export async function PUT(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
     try {
         const session = await getServerSession(authOptions);
@@ -31,7 +31,8 @@ export async function PUT(
             );
         }
 
-        const ruleId = parseInt(params.id);
+        const { id } = await params;
+        const ruleId = parseInt(id);
         if (isNaN(ruleId)) {
             return NextResponse.json(
                 { error: "Invalid rule ID" },

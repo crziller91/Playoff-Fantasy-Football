@@ -172,6 +172,7 @@ const DraftTable = observer(() => {
 
       {/* Budget Modal */}
       <BudgetModal
+        key={budgetModalOpen ? 'open' : 'closed'}
         isOpen={budgetModalOpen}
         onClose={handleBudgetCancel}
         player={selectedPlayerForBudget}

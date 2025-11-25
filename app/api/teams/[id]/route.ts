@@ -29,7 +29,7 @@ const isDraftFinished = async (): Promise<boolean> => {
 // PUT handler: Update a team by ID
 export async function PUT(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const session = await getServerSession(authOptions);
@@ -60,7 +60,8 @@ export async function PUT(
             );
         }
 
-        const teamId = parseInt(params.id);
+        const { id } = await params;
+        const teamId = parseInt(id);
         if (isNaN(teamId)) {
             return NextResponse.json(
                 { error: "Invalid team ID" },
@@ -121,7 +122,7 @@ export async function PUT(
 // DELETE handler: Delete a team by ID
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const session = await getServerSession(authOptions);
@@ -152,7 +153,8 @@ export async function DELETE(
             );
         }
 
-        const teamId = parseInt(params.id);
+        const { id } = await params;
+        const teamId = parseInt(id);
         if (isNaN(teamId)) {
             return NextResponse.json(
                 { error: "Invalid team ID" },

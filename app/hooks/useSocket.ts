@@ -10,8 +10,13 @@ let globalSocket: Socket | null = null;
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001';
 
 export const useSocket = () => {
-    const [socket, setSocket] = useState<Socket | null>(null);
-    const [isConnected, setIsConnected] = useState(false);
+    // Initialize state with existing socket if available
+    const [socket, setSocket] = useState<Socket | null>(() =>
+        socketInitialized && globalSocket ? globalSocket : null
+    );
+    const [isConnected, setIsConnected] = useState(() =>
+        socketInitialized && globalSocket ? globalSocket.connected : false
+    );
     const socketInitializer = useRef<Promise<void> | null>(null);
 
     useEffect(() => {
@@ -54,12 +59,6 @@ export const useSocket = () => {
                     globalSocket = null;
                 }
             })();
-        }
-
-        // Use the existing socket if we already initialized
-        if (socketInitialized && globalSocket) {
-            setSocket(globalSocket);
-            setIsConnected(globalSocket.connected);
         }
 
         // Cleanup function
