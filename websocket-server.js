@@ -108,18 +108,24 @@ server.listen(PORT, () => {
 });
 
 // Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('SIGTERM signal received: closing WebSocket server');
-  server.close(() => {
-    console.log('WebSocket server closed');
-    process.exit(0);
-  });
-});
+let isShuttingDown = false;
 
-process.on('SIGINT', () => {
-  console.log('SIGINT signal received: closing WebSocket server');
+const shutdown = (signal) => {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+
+  console.log(`${signal} signal received: closing WebSocket server`);
   server.close(() => {
     console.log('WebSocket server closed');
     process.exit(0);
   });
-});
+
+  // Force exit after 2 seconds if graceful shutdown fails
+  setTimeout(() => {
+    console.log('Forcing exit...');
+    process.exit(1);
+  }, 2000);
+};
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
