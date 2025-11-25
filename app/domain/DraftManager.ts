@@ -82,6 +82,15 @@ export class DraftManager {
         return picked < totalRounds;
     }
 
+    static getRemainingRosterSpots(team: Team, draftPicks: DraftPicks): number {
+        if (!draftPicks[team]) {
+            return this.PICKS.length;
+        }
+
+        const picked = Object.values(draftPicks[team]).filter(Boolean).length;
+        return this.PICKS.length - picked;
+    }
+
     static filterPlayers(players: Player[], team: Team, draftPicks: DraftPicks, searchTerm: string): Player[] {
         // ADDED: If no players available, return empty array immediately
         if (!players || players.length === 0) {

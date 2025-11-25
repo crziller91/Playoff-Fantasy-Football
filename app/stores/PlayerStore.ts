@@ -106,6 +106,15 @@ export class PlayersStore {
                 throw new Error(`Insufficient budget! ${team} only has $${currentBudget} remaining.`);
             }
 
+            // Calculate remaining roster spots after this pick
+            const remainingSpots = DraftManager.getRemainingRosterSpots(team, this.draftPicks);
+            const minReserve = remainingSpots - 1; // -1 because this pick will fill one spot
+            const budgetAfterPick = currentBudget - cost;
+
+            if (budgetAfterPick < minReserve) {
+                throw new Error(`Insufficient budget. Only $${currentBudget} remaining. Must keep at least $${minReserve} to fill remaining ${minReserve} roster spot${minReserve !== 1 ? 's' : ''}.`);
+            }
+
             // Update UI state
             const updatedDraftPicks = {
                 ...this.draftPicks,

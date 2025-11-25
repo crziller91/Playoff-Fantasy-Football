@@ -92,6 +92,28 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         );
       }
 
+      // Get all draft picks to calculate remaining roster spots
+      const allDraftPicks = await prisma.draftPick.findMany({
+        include: {
+          team: true,
+          player: true,
+        },
+      });
+
+      const formattedDraftPicks = DraftManager.formatDraftPicks(allDraftPicks as DraftPickWithRelations[]);
+      const remainingSpots = DraftManager.getRemainingRosterSpots(teamName, formattedDraftPicks);
+
+      // Calculate minimum reserve: need $1 for each remaining spot AFTER this pick
+      const minReserve = remainingSpots - 1; // -1 because this pick will fill one spot
+      const budgetAfterPick = team.budget - (cost || 0);
+
+      if (budgetAfterPick < minReserve) {
+        return NextResponse.json(
+          { error: `Insufficient budget. Only $${team.budget} remaining. Must keep at least $${minReserve} to fill remaining ${minReserve} roster spot${minReserve !== 1 ? 's' : ''}.` },
+          { status: 400 }
+        );
+      }
+
       return await saveDraftPick(existingPick, team.id, teamName, round, playerId, cost);
     }
   } catch (error) {

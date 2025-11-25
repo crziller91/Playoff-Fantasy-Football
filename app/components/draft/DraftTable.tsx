@@ -69,12 +69,25 @@ const DraftTable = observer(() => {
   const handleBudgetConfirm = async (cost: number) => {
     if (!canEdit || !selectedPlayerForBudget) return;
 
+    // Clear any previous errors immediately when user submits
+    setBudgetError("");
+
     try {
       // Check if team has enough budget
       const currentBudget = teamBudgets.get(currentTeam) || 0;
       if (cost > currentBudget) {
         // Set budget error to display in the modal
         setBudgetError(`Insufficient budget! ${currentTeam} only has $${currentBudget} remaining.`);
+        return;
+      }
+
+      // Calculate remaining roster spots after this pick
+      const remainingSpots = DraftManager.getRemainingRosterSpots(currentTeam, draftPicks);
+      const minReserve = remainingSpots - 1; // -1 because this pick will fill one spot
+      const budgetAfterPick = currentBudget - cost;
+
+      if (budgetAfterPick < minReserve) {
+        setBudgetError(`Insufficient budget. Only $${currentBudget} remaining. Must keep at least $${minReserve} to fill remaining ${minReserve} roster spot${minReserve !== 1 ? 's' : ''}.`);
         return;
       }
 
@@ -90,7 +103,6 @@ const DraftTable = observer(() => {
         setOpenDropdown(null);
         setBudgetModalOpen(false);
         setSelectedPlayerForBudget(null);
-        setBudgetError("");
       }
     } catch (err) {
       // Show error in the modal
