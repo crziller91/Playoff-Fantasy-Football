@@ -113,22 +113,35 @@ const TeamCard = observer(({
                                                 {player.teamName}
                                             </p>
                                         )}
-                                        {showScore && (
-                                            <p className="text-xs font-semibold text-green-600">
-                                                {playerScores[player.name]?.score} pts
-                                            </p>
-                                        )}
-                                        {showZeroScore && (
-                                            <p className="text-xs font-semibold text-green-600">
-                                                0 pts
-                                            </p>
-                                        )}
-                                        {isDisabled && (
-                                            <p className="text-xs font-semibold text-green-600">
-                                                0 pts
-                                            </p>
+                                        {/* For users with edit permissions, show score below player name/team */}
+                                        {canEditScores && (
+                                            <>
+                                                {showScore && (
+                                                    <p className="text-xs font-semibold text-green-600">
+                                                        {playerScores[player.name]?.score} pts
+                                                    </p>
+                                                )}
+                                                {showZeroScore && (
+                                                    <p className="text-xs font-semibold text-green-600">
+                                                        0 pts
+                                                    </p>
+                                                )}
+                                                {isDisabled && (
+                                                    <p className="text-xs font-semibold text-green-600">
+                                                        0 pts
+                                                    </p>
+                                                )}
+                                            </>
                                         )}
                                     </div>
+
+                                    {/* For users WITHOUT edit permissions, show score to the right */}
+                                    {!canEditScores && (showScore || showZeroScore || isDisabled) && (
+                                        <Badge color="success" size="sm">
+                                            {showScore && `${playerScores[player.name]?.score} pts`}
+                                            {(showZeroScore || isDisabled) && "0 pts"}
+                                        </Badge>
+                                    )}
 
                                     {/* Only show controls if user has permission */}
                                     {canEditScores ? (
@@ -139,7 +152,7 @@ const TeamCard = observer(({
                                                     <Button
                                                         size="xs"
                                                         color="purple"
-                                                        disabled={isDisabled || autoFillLoadingPlayerId === player.id}
+                                                        disabled={isDisabled || autoFillLoadingPlayerId !== null}
                                                         onClick={() => onAutoFillScore(player as ExtendedPlayer)}
                                                     >
                                                         {autoFillLoadingPlayerId === player.id ? (
