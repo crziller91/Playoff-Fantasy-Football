@@ -9,6 +9,7 @@ export class DraftStore {
     loading: boolean = true;
     error: string | null = null;
     searchTerms: { [key: string]: string } = {};
+    private isLoadingDraftStatus: boolean = false; // Guard against concurrent fetches
 
     constructor(rootStore: RootStore) {
         this.rootStore = rootStore;
@@ -17,17 +18,30 @@ export class DraftStore {
     }
 
     loadDraftStatus = async () => {
+        // Prevent operations if page is reloading
+        if (this.rootStore.isReloading) {
+            return;
+        }
+
+        // Prevent concurrent fetches
+        if (this.isLoadingDraftStatus) {
+            return;
+        }
+
         try {
+            this.isLoadingDraftStatus = true;
             this.loading = true;
             const status = await getDraftStatus();
             runInAction(() => {
                 this.isDraftFinished = status;
                 this.loading = false;
+                this.isLoadingDraftStatus = false;
             });
         } catch (err) {
             runInAction(() => {
                 this.error = err instanceof Error ? err.message : "Failed to load draft status";
                 this.loading = false;
+                this.isLoadingDraftStatus = false;
             });
         }
     };
@@ -119,8 +133,6 @@ export class DraftStore {
 
     // Handle remote draft status updates
     handleRemoteDraftStatusUpdate(data: any) {
-        console.log("Received remote draft status update:", data);
-
         runInAction(() => {
             // Update draft status
             if (data.isDraftFinished !== undefined) {
@@ -129,8 +141,6 @@ export class DraftStore {
 
             // Check if this is a full reset action
             if (data.action === 'reset') {
-                console.log("Received full draft reset action");
-
                 // Let the RootStore handle the page reload for full resets
                 // Just update local state here
                 this.isDraftFinished = false;

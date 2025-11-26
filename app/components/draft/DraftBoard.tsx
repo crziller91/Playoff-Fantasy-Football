@@ -2,7 +2,7 @@
 
 import { observer } from "mobx-react-lite";
 import { Flowbite, TabItem, Tabs, type TabsRef } from "flowbite-react";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { HiUserCircle } from "react-icons/hi";
 import { MdDashboard, MdScoreboard } from "react-icons/md";
 import { useStore } from "../../stores/StoreContext";
@@ -55,21 +55,30 @@ const DraftBoard = observer(() => {
     return 0; // Default to Draft Board
   });
 
+  // Create stable callbacks for store methods
+  const loadScores = useCallback(() => {
+    scoresStore.loadPlayerScores();
+  }, [scoresStore]);
+
+  const setActiveRound = useCallback((roundName: string) => {
+    scoresStore.setActiveRound(roundName);
+  }, [scoresStore]);
+
   useEffect(() => {
     if (draftStore.isDraftFinished && !scoresStore.scoresLoaded) {
-      scoresStore.loadPlayerScores();
+      loadScores();
     }
-  }, [draftStore.isDraftFinished, scoresStore]);
+  }, [draftStore.isDraftFinished, scoresStore.scoresLoaded, loadScores]);
 
   // Set the active round in the scores store based on URL parameters
   useEffect(() => {
     if (subtabParam && subtabParam in URL_PARAM_TO_ROUND) {
       const roundName = URL_PARAM_TO_ROUND[subtabParam];
       if (PLAYOFF_ROUNDS.includes(roundName)) {
-        scoresStore.setActiveRound(roundName);
+        setActiveRound(roundName);
       }
     }
-  }, [subtabParam, scoresStore]);
+  }, [subtabParam, setActiveRound]);
 
   // Update URL when tabs change
   useEffect(() => {

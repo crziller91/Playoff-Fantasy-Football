@@ -30,9 +30,12 @@ const DraftDashboard = observer(({ isDraftComplete }: DraftDashboardProps) => {
                 {/* Only show these components if not finished and user has edit permissions */}
                 {!draftStore.isDraftFinished && (
                     <>
-                        <div className="w-full min-w-[200px] lg:w-fit">
-                            <SelectedPlayerTable />
-                        </div>
+                        {/* Only show SelectedPlayerTable to admins */}
+                        {canEdit && (
+                            <div className="w-full min-w-[200px] lg:w-fit">
+                                <SelectedPlayerTable />
+                            </div>
+                        )}
                         <div className="w-full min-w-0 lg:flex-1">
                             <AvailablePlayers />
                         </div>

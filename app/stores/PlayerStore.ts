@@ -12,6 +12,9 @@ export class PlayersStore {
     selectedPlayer: Player | null = null;
     loading: boolean = true;
     error: string | null = null;
+    private isLoadingPlayers: boolean = false; // Guard against concurrent fetches
+    private retryCount: number = 0; // Track retry attempts
+    private readonly MAX_RETRIES: number = 3; // Maximum retry attempts
 
     constructor(rootStore: RootStore) {
         this.rootStore = rootStore;
@@ -21,25 +24,32 @@ export class PlayersStore {
 
     loadPlayers = async () => {
         try {
+            // Prevent operations if page is reloading
+            if (this.rootStore.isReloading) {
+                return;
+            }
+
             // Flag to track loading status
             this.loading = true;
 
             // Check if there's already data loaded
             if (this.allPlayers.length > 0) {
-                console.log("Players already loaded, skipping fetch");
                 this.loading = false;
                 return;
             }
 
-            console.log("Attempting to load players and draft picks...");
+            // Prevent concurrent fetches
+            if (this.isLoadingPlayers) {
+                return;
+            }
+
+            this.isLoadingPlayers = true;
 
             try {
                 const [players, picks] = await Promise.all([
                     fetchPlayers(),
                     fetchDraftPicks(),
                 ]);
-
-                console.log(`Fetched ${players.length} players and ${Object.keys(picks).length} team picks`);
 
                 // Initialize draft picks with all teams and rounds
                 const initializedPicks = DraftManager.initializeDraftPicks(this.rootStore.teamsStore.teams);
@@ -53,22 +63,30 @@ export class PlayersStore {
                     this.availablePlayers = available;
                     this.draftPicks = mergedPicks;
                     this.loading = false;
+                    this.isLoadingPlayers = false;
+                    this.retryCount = 0; // Reset retry count on success
                 });
             } catch (fetchError) {
                 console.error("Error fetching data:", fetchError);
 
-                // If in browser context, try again after a short delay
-                if (typeof window !== 'undefined') {
-                    console.log("Retrying fetch after delay...");
+                // Reset loading guard on error
+                runInAction(() => {
+                    this.isLoadingPlayers = false;
+                });
+
+                // If in browser context and haven't exceeded max retries, try again after a short delay
+                if (typeof window !== 'undefined' && this.retryCount < this.MAX_RETRIES) {
+                    this.retryCount++;
                     setTimeout(() => this.loadPlayers(), 1500);
                 } else {
-                    throw fetchError; // Re-throw in server context
+                    throw fetchError; // Re-throw in server context or after max retries
                 }
             }
         } catch (err) {
             runInAction(() => {
                 this.error = err instanceof Error ? err.message : "Failed to load players";
                 this.loading = false;
+                this.isLoadingPlayers = false;
             });
             console.error("Error in loadPlayers:", err);
         }
@@ -103,7 +121,10 @@ export class PlayersStore {
             // Validate budget
             const currentBudget = this.rootStore.teamsStore.teamBudgets.get(team) || 0;
             if (cost > currentBudget) {
-                throw new Error(`Insufficient budget! ${team} only has $${currentBudget} remaining.`);
+                runInAction(() => {
+                    this.error = `Insufficient budget! ${team} only has $${currentBudget} remaining.`;
+                });
+                return false;
             }
 
             // Calculate remaining roster spots after this pick
@@ -112,7 +133,10 @@ export class PlayersStore {
             const budgetAfterPick = currentBudget - cost;
 
             if (budgetAfterPick < minReserve) {
-                throw new Error(`Insufficient budget. Only $${currentBudget} remaining. Must keep at least $${minReserve} to fill remaining ${minReserve} roster spot${minReserve !== 1 ? 's' : ''}.`);
+                runInAction(() => {
+                    this.error = `Insufficient budget. Only $${currentBudget} remaining. Must keep at least $${minReserve} to fill remaining ${minReserve} roster spot${minReserve !== 1 ? 's' : ''}.`;
+                });
+                return false;
             }
 
             // Update UI state
@@ -137,7 +161,22 @@ export class PlayersStore {
             this.updateAvailablePlayers();
 
             // Save to backend
-            await saveDraftPick(team, pick, player.id, cost);
+            try {
+                await saveDraftPick(team, pick, player.id, cost);
+            } catch (saveError) {
+                // Backend validation failed - revert the changes
+                runInAction(() => {
+                    this.draftPicks = { ...this.draftPicks };
+                    this.rootStore.teamsStore.teamBudgets = new Map(this.rootStore.teamsStore.teamBudgets);
+                });
+                this.updateAvailablePlayers();
+
+                // Set the error message from the backend
+                runInAction(() => {
+                    this.error = saveError instanceof Error ? saveError.message : "Failed to save draft pick";
+                });
+                return false;
+            }
 
             // Emit socket event for real-time update to other clients
             if (this.rootStore.socket) {
@@ -189,24 +228,8 @@ export class PlayersStore {
             // Now save to backend
             await saveDraftPick(team, pick, null);
 
-            // REMOVE THIS LINE:
-            // await this.rootStore.teamsStore.loadTeams();
-
-            // Instead of reloading all teams, just fetch the updated budget in background
-            // This can happen asynchronously without blocking the UI
-            fetch(`/api/teams`)
-                .then(response => response.json())
-                .then(teams => {
-                    // Silently update budget values without causing a loading state
-                    runInAction(() => {
-                        teams.forEach((t: any) => {
-                            this.rootStore.teamsStore.teamBudgets.set(t.name, t.budget);
-                        });
-                    });
-                })
-                .catch(error => {
-                    console.error("Error fetching updated team budgets:", error);
-                });
+            // Note: Budget is already refunded locally above (line 218)
+            // Backend will handle persistence, no need for additional fetch
 
             // Emit socket event for real-time update to other clients
             if (this.rootStore.socket) {
@@ -252,10 +275,9 @@ export class PlayersStore {
             }
             this.draftPicks[data.team][data.pick] = data.player;
 
-            // ADDED: If we have no players data yet, force reload all players
+            // If we have no players data yet, skip update
+            // Don't trigger a reload as it might cause infinite loops
             if (this.allPlayers.length === 0) {
-                console.log("Received remote update but no local players - loading all players");
-                setTimeout(() => this.loadPlayers(), 300);
                 return;
             }
 

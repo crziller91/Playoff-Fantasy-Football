@@ -11,6 +11,7 @@ export class RootStore {
     playersStore: PlayersStore;
     scoresStore: ScoresStore;
     socket: Socket | null = null;
+    isReloading: boolean = false; // Flag to prevent operations during page reload
 
     constructor() {
         this.draftStore = new DraftStore(this);
@@ -48,8 +49,6 @@ export class RootStore {
             });
 
             socket.on('draftPickUpdate', (data) => {
-                console.log('Received draftPickUpdate:', data);
-
                 if (data.action === 'add' || data.action === 'update') {
                     this.playersStore.handleRemoteDraftPickUpdate(data);
                     toast.info(`${data.team} selected ${data.player.name} in round ${data.pick}`);
@@ -60,31 +59,33 @@ export class RootStore {
             });
 
             socket.on('draftStatusUpdate', (data) => {
-                console.log('Received draftStatusUpdate:', data);
+                // Handle full reset action immediately to prevent API spam
+                if (data.action === 'reset') {
+                    // Set the reloading flag to prevent any store operations
+                    this.isReloading = true;
 
-                // First update the store state
-                this.draftStore.handleRemoteDraftStatusUpdate(data);
+                    toast.info('Draft has been reset - reloading page...');
 
-                // Then handle UI notifications and potential page reload
-                if (data.isDraftFinished) {
-                    toast.success('Draft has been marked as finished');
-                } else if (data.action === 'reset') {
-                    toast.info('Draft has been reset');
-
-                    // Only for full reset action, reload the page after a short delay
-                    // to allow the toast to be seen
+                    // Reload immediately without updating store state
+                    // This prevents the stores from entering inconsistent states
                     if (typeof window !== 'undefined') {
                         setTimeout(() => {
-                            console.log('Reloading page after full draft reset');
                             window.location.href = '/';
-                        }, 1500);
+                        }, 500);
                     }
+                    return; // Don't process further
+                }
+
+                // For non-reset actions, update the store state normally
+                this.draftStore.handleRemoteDraftStatusUpdate(data);
+
+                // Handle UI notifications for other actions
+                if (data.isDraftFinished) {
+                    toast.success('Draft has been marked as finished');
                 }
             });
 
             socket.on('teamUpdate', (data) => {
-                console.log('Received teamUpdate:', data);
-
                 // Update the teams store with the new data
                 this.teamsStore.handleRemoteTeamUpdate(data);
 
@@ -101,17 +102,8 @@ export class RootStore {
             });
 
             socket.on('selectedPlayerUpdate', (data) => {
-                console.log('Received selectedPlayerUpdate:', data);
-
                 // Update the player store with the selected player
                 this.playersStore.handleRemoteSelectedPlayerUpdate(data);
-
-                // Show toast notification about the selected player change
-                if (data.player) {
-                    toast.info(`${data.player.name} is now up for auction`);
-                } else {
-                    toast.info(`Player auction selection was cleared`);
-                }
             });
         }
     }

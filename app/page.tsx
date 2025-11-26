@@ -5,7 +5,7 @@ import { Flowbite, Spinner, Alert, Button } from "flowbite-react";
 import DraftBoard from "./components/draft/DraftBoard";
 import NavigationBar from "./components/layout/Navbar";
 import { useStore } from "./stores/StoreContext";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 
 const Page = observer(() => {
@@ -19,13 +19,21 @@ const Page = observer(() => {
   const loading = draftStore.loading || teamsStore.loading || playersStore.loading || authStatus === "loading";
   const error = draftStore.error || teamsStore.error || playersStore.error;
 
+  // Create stable callbacks for store methods
+  const loadPlayers = useCallback(() => {
+    playersStore.loadPlayers();
+  }, [playersStore]);
+
+  const loadScores = useCallback(() => {
+    scoresStore.loadPlayerScores();
+  }, [scoresStore]);
+
   // Force a data reload if we don't have players after initial load
   useEffect(() => {
     // Only check once initial loading is complete
     if (!loading && playersStore.allPlayers.length === 0 && retryCount < 3) {
       const timer = setTimeout(() => {
-        console.log(`Initial load: No players available, reloading (attempt ${retryCount + 1})`);
-        playersStore.loadPlayers();
+        loadPlayers();
         setRetryCount(prev => prev + 1);
 
         // If we've tried 3 times and still no players, show retry button
@@ -36,14 +44,14 @@ const Page = observer(() => {
 
       return () => clearTimeout(timer);
     }
-  }, [loading, playersStore, retryCount]);
+  }, [loading, playersStore.allPlayers.length, retryCount, loadPlayers]);
 
   // Load scores if draft is finished
   useEffect(() => {
     if (draftStore.isDraftFinished && !scoresStore.scoresLoaded) {
-      scoresStore.loadPlayerScores();
+      loadScores();
     }
-  }, [draftStore.isDraftFinished, scoresStore]);
+  }, [draftStore.isDraftFinished, scoresStore.scoresLoaded, loadScores]);
 
   // Manual retry handler
   const handleManualRetry = () => {

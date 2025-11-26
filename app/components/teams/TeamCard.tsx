@@ -1,5 +1,5 @@
 import { observer } from "mobx-react-lite";
-import { Card, Button, Badge, Tooltip } from "flowbite-react";
+import { Card, Button, Badge, Tooltip, Spinner } from "flowbite-react";
 import { ExtendedPlayer } from "../../types";
 import { getOrderedTeamPicks, getTeamScore } from "../../utils/scoreCalculator";
 import { HiX, HiTrash, HiPencil, HiPlus, HiSparkles } from "react-icons/hi";
@@ -23,6 +23,7 @@ interface TeamCardProps {
     onEditScore: (player: ExtendedPlayer) => void;
     onTogglePlayerDisabled: (player: ExtendedPlayer, isClearScores?: boolean) => void;
     onAutoFillScore?: (player: ExtendedPlayer) => void;
+    autoFillLoadingPlayerId?: number | null;
     round?: string;
     ranking?: number;
     canEditScores: boolean;
@@ -34,6 +35,7 @@ const TeamCard = observer(({
     onEditScore,
     onTogglePlayerDisabled,
     onAutoFillScore,
+    autoFillLoadingPlayerId,
     round,
     ranking,
     canEditScores
@@ -137,10 +139,14 @@ const TeamCard = observer(({
                                                     <Button
                                                         size="xs"
                                                         color="purple"
-                                                        disabled={isDisabled}
+                                                        disabled={isDisabled || autoFillLoadingPlayerId === player.id}
                                                         onClick={() => onAutoFillScore(player as ExtendedPlayer)}
                                                     >
-                                                        <HiSparkles className="size-4" />
+                                                        {autoFillLoadingPlayerId === player.id ? (
+                                                            <Spinner size="sm" light />
+                                                        ) : (
+                                                            <HiSparkles className="size-4" />
+                                                        )}
                                                     </Button>
                                                 </Tooltip>
                                             )}

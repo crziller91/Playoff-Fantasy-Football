@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ExtendedPlayer, ScoreForm, FormErrors, PlayerScoresByRound } from '../types';
 import { validateForm, calculatePlayerScore } from '../utils/scoreCalculator';
-import { savePlayerScore, deletePlayerScore } from '../services/scoreService';
+import { deletePlayerScore } from '../services/scoreService';
 import { PLAYOFF_ROUNDS } from '../constants/playoffs';
 import { usePermissions } from './usePermissions';
 import { Socket } from 'socket.io-client';
@@ -48,6 +48,9 @@ export function usePlayerModals({
     const [statusPlayer, setStatusPlayer] = useState<ExtendedPlayer | null>(null);
     const [reactivationPlayer, setReactivationPlayer] = useState<ExtendedPlayer | null>(null);
     const [zeroStatsPlayer, setZeroStatsPlayer] = useState<ExtendedPlayer | null>(null);
+
+    // Auto-fill loading state - track which player is being auto-filled
+    const [autoFillLoadingPlayerId, setAutoFillLoadingPlayerId] = useState<number | null>(null);
     const [zeroStatsData, setZeroStatsData] = useState<{ scoreForm: ScoreForm; score: number } | null>(null);
 
     // Helper function to check if scores have changed
@@ -184,33 +187,21 @@ export function usePlayerModals({
         const round = reactivationPlayer.currentRound || activeRound;
 
         try {
-            // We'll let the server handle the score update, rather than updating UI directly
-            // This should prevent duplicate events
-
-            // Save to database with reactivation flag
-            await savePlayerScore(
-                reactivationPlayer.id,
-                round,
-                false,  // Not disabled
-                null,   // No status reason
-                0,      // Reset score
-                undefined,
-                true    // This parameter indicates reactivation
-            );
-
-            // No need to emit a socket event here as the server will do that
-            // when the savePlayerScore API is called
-
-            // Just for immediate UI feedback, update the local state
+            // Update the local state to reactivate the player
             const newScores = JSON.parse(JSON.stringify(playerScores)); // Deep copy
             if (newScores[round]?.[reactivationPlayer.name]) {
                 newScores[round][reactivationPlayer.name] = {
                     ...newScores[round][reactivationPlayer.name],
                     isDisabled: false,
-                    statusReason: null
+                    statusReason: null,
+                    score: 0,
+                    scoreData: undefined
                 };
             }
             setPlayerScores(newScores);
+
+            // The setPlayerScores call above will trigger the bulk save through ScoresStore
+            // No need to call savePlayerScore individually here
 
         } catch (err) {
             console.error(`Error reactivating player: ${err}`);
@@ -271,15 +262,8 @@ export function usePlayerModals({
         };
         setPlayerScores(newScores);
 
-        // Save to database
-        await savePlayerScore(
-            zeroStatsPlayer.id,
-            round,
-            false,
-            null,
-            score,
-            { ...scoreForm }
-        );
+        // The setPlayerScores call above will trigger the bulk save through ScoresStore
+        // No need to call savePlayerScore individually here
 
         console.log(`Kept zero score for ${zeroStatsPlayer.name}`);
         handleCloseZeroStatsModal();
@@ -425,15 +409,8 @@ export function usePlayerModals({
             };
             setPlayerScores(newScores);
 
-            // Save player score to the database
-            savePlayerScore(
-                selectedPlayer.id,
-                round,
-                false, // Not disabled since we're setting a score
-                null,  // No status reason needed
-                score,
-                { ...scoreForm }
-            ).catch(err => console.error(`Error saving player score: ${err}`));
+            // The setPlayerScores call above will trigger the bulk save through ScoresStore
+            // No need to call savePlayerScore individually here
 
             handleCloseScoreModal();
         } catch (error) {
@@ -504,38 +481,17 @@ export function usePlayerModals({
         // Update the scores state
         setPlayerScores(newState);
 
-        // Save this individual player status update to the database
-        savePlayerScore(
-            player.id,
-            round,
-            isDisabled,
-            isDisabled ? (cascade ? "eliminated" : "notPlaying") : null,
-            0,
-            undefined
-        ).catch(err => console.error(`Error saving player status: ${err}`));
-
-        // If cascading, also save future rounds
-        if (cascade && isDisabled && round !== "Wild Card") {
-            const roundIndex = PLAYOFF_ROUNDS.indexOf(round);
-            const subsequentRounds = PLAYOFF_ROUNDS.slice(roundIndex + 1);
-
-            // Save each future round status
-            subsequentRounds.forEach(futureRound => {
-                savePlayerScore(
-                    player.id,
-                    futureRound,
-                    true,
-                    "eliminated",
-                    0,
-                    undefined
-                ).catch(err => console.error(`Error saving cascaded player status: ${err}`));
-            });
-        }
+        // The setPlayerScores call above will trigger the bulk save through ScoresStore
+        // This will save both the current round and any cascaded future rounds
+        // No need to call savePlayerScore individually here
     };
 
     // Handler for auto-filling scores from ESPN and submitting automatically
     const handleAutoFillScore = async (player: ExtendedPlayer) => {
         if (!canEditScores) return;
+
+        // Set loading state for this player
+        setAutoFillLoadingPlayerId(player.id);
 
         try {
             console.log(`Auto-filling scores for ${player.name} (${player.position})`);
@@ -545,6 +501,7 @@ export function usePlayerModals({
 
             if (!stats) {
                 console.error("No stats found for this player");
+                setAutoFillLoadingPlayerId(null);
                 return;
             }
 
@@ -597,6 +554,7 @@ export function usePlayerModals({
                 setZeroStatsPlayer({ ...player, currentRound: activeRound });
                 setZeroStatsData({ scoreForm: autoScoreForm, score });
                 setOpenZeroStatsModal(true);
+                setAutoFillLoadingPlayerId(null);
                 return;
             }
 
@@ -614,20 +572,16 @@ export function usePlayerModals({
             };
             setPlayerScores(newScores);
 
-            // Save to database
-            await savePlayerScore(
-                player.id,
-                round,
-                false,
-                null,
-                score,
-                { ...autoScoreForm }
-            );
+            // The setPlayerScores call above will trigger the bulk save through ScoresStore
+            // No need to call savePlayerScore individually here
 
             console.log(`Successfully auto-filled and saved scores for ${player.name}`);
         } catch (error) {
             console.error("Error auto-filling score:", error);
             // You might want to show a toast notification here
+        } finally {
+            // Clear loading state
+            setAutoFillLoadingPlayerId(null);
         }
     };
 
@@ -640,6 +594,9 @@ export function usePlayerModals({
         handleEditScore,
         handleTogglePlayerDisabled,
         handleAutoFillScore,
+
+        // Loading state
+        autoFillLoadingPlayerId,
 
         // Modals state
         modalsState: {

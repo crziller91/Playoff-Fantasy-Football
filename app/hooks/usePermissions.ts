@@ -15,10 +15,11 @@ export function usePermissions() {
     const [permissions, setPermissions] = useState<Permission | null>(null);
     const [isLoadingPermissions, setIsLoadingPermissions] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [hasFetched, setHasFetched] = useState(false); // Track if we've already fetched
 
     useEffect(() => {
-        // Only fetch permissions if user is authenticated
-        if (status === "authenticated" && session?.user?.id) {
+        // Only fetch permissions if user is authenticated AND we haven't fetched yet
+        if (status === "authenticated" && session?.user?.id && !hasFetched && !isLoadingPermissions) {
             const fetchPermissions = async () => {
                 try {
                     setIsLoadingPermissions(true);
@@ -30,6 +31,7 @@ export function usePermissions() {
                         // If 404, this means no permissions yet - that's OK
                         if (response.status === 404) {
                             setPermissions(null);
+                            setHasFetched(true);
                             return;
                         }
                         throw new Error(`Failed to fetch permissions: ${response.status}`);
@@ -37,6 +39,7 @@ export function usePermissions() {
 
                     const data = await response.json();
                     setPermissions(data);
+                    setHasFetched(true);
                 } catch (err) {
                     console.error("Error fetching permissions:", err);
                     setError(err instanceof Error ? err.message : "Failed to fetch permissions");
@@ -47,7 +50,7 @@ export function usePermissions() {
 
             fetchPermissions();
         }
-    }, [session, status]);
+    }, [session, status, hasFetched, isLoadingPermissions]);
 
     return {
         canEditScores: permissions?.editScores || permissions?.isAdmin || false, // Admin implies editScores

@@ -18,6 +18,11 @@ export class TeamsStore {
 
     loadTeams = async () => {
         try {
+            // Prevent operations if page is reloading
+            if (this.rootStore.isReloading) {
+                return;
+            }
+
             this.loading = true;
             const teamsData = await fetchTeams();
 

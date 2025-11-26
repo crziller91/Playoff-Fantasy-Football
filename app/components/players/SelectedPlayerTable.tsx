@@ -7,11 +7,14 @@ import { createPortal } from "react-dom";
 import { positionColors } from "../../data/positionColors";
 import { useStore } from "../../stores/StoreContext";
 import { Player } from "../../types";
-import { usePermissions } from "../../hooks/usePermissions"; // Import the permission hook
+import { usePermissions } from "../../hooks/usePermissions";
+import AuctionPlayerModal from "../modals/AuctionPlayerModal";
+import { DraftManager } from "../../domain/DraftManager";
 
 const SelectedPlayerTable = observer(() => {
-    const { playersStore } = useStore();
-    const { availablePlayers, selectedPlayer, setSelectedPlayer } = playersStore;
+    const { playersStore, teamsStore } = useStore();
+    const { availablePlayers, selectedPlayer, setSelectedPlayer, draftPicks } = playersStore;
+    const { teams } = teamsStore;
     const { canEditScores, isAdmin } = usePermissions(); // Get permissions
 
     // User can edit if they have edit scores permission or admin rights
@@ -25,6 +28,9 @@ const SelectedPlayerTable = observer(() => {
         left: number;
     } | null>(null);
     const [isMounted, setIsMounted] = useState(false);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [budgetError, setBudgetError] = useState<string>("");
+    const [playerForModal, setPlayerForModal] = useState<Player | null>(null);
 
     // Handle client-side rendering
     useEffect(() => {
@@ -84,14 +90,16 @@ const SelectedPlayerTable = observer(() => {
         }
     }, [isOpen, searchTerm]);
 
-    // Memoize handlePlayerSelect
+    // Memoize handlePlayerSelect - now opens modal instead of just selecting
     const handlePlayerSelect = useCallback((player: Player) => {
         if (!canEdit) return; // Add permission check
 
-        setSelectedPlayer(player);
+        setPlayerForModal(player);
+        setIsModalOpen(true);
         setIsOpen(false);
         setSearchTerm("");
-    }, [setSelectedPlayer, canEdit]);
+        setBudgetError("");
+    }, [canEdit]);
 
     // Memoize handleRemovePick
     const handleRemovePick = useCallback(() => {
@@ -101,7 +109,81 @@ const SelectedPlayerTable = observer(() => {
         setIsOpen(false);
     }, [setSelectedPlayer, canEdit]);
 
-    const filteredPlayers = availablePlayers.filter((player) =>
+    // Handle modal close
+    const handleModalClose = useCallback(() => {
+        setIsModalOpen(false);
+        setPlayerForModal(null);
+        setBudgetError("");
+    }, []);
+
+    // Handle modal confirmation - assign player to team
+    const handleModalConfirm = useCallback(async (team: string, cost: number) => {
+        if (!canEdit || !playerForModal) return;
+
+        // Clear any previous errors immediately when user submits
+        setBudgetError("");
+
+        try {
+            // Find the next available pick for the team
+            const teamPicks = draftPicks[team] || {};
+            let nextPick = -1;
+
+            for (let pick = 1; pick <= 6; pick++) {
+                if (!teamPicks[pick]) {
+                    nextPick = pick;
+                    break;
+                }
+            }
+
+            if (nextPick === -1) {
+                setBudgetError("This team has no available roster spots.");
+                return;
+            }
+
+            // Check if team has enough budget - VALIDATE BEFORE CALLING selectPlayerForTeam
+            const currentBudget = teamsStore.teamBudgets.get(team) || 0;
+            if (cost > currentBudget) {
+                setBudgetError(`Insufficient budget! ${team} only has $${currentBudget} remaining.`);
+                return;
+            }
+
+            // Calculate remaining roster spots after this pick
+            const remainingSpots = 6 - Object.values(teamPicks).filter(Boolean).length;
+            const minReserve = remainingSpots - 1; // -1 because this pick will fill one spot
+            const budgetAfterPick = currentBudget - cost;
+
+            if (budgetAfterPick < minReserve) {
+                setBudgetError(`Insufficient budget. Only $${currentBudget} remaining. Must keep at least $${minReserve} to fill remaining ${minReserve} roster spot${minReserve !== 1 ? 's' : ''}.`);
+                return;
+            }
+
+            // Attempt to select the player for the team
+            const success = await playersStore.selectPlayerForTeam(team, nextPick, playerForModal, cost);
+
+            if (success) {
+                // Success - close modal properly using the close handler
+                handleModalClose();
+                setSelectedPlayer(null); // Clear the auction player
+            }
+        } catch (err) {
+            // Show error in the modal
+            setBudgetError(err instanceof Error ? err.message : "Failed to save draft pick");
+            console.error("Error saving draft pick:", err);
+        }
+    }, [canEdit, playerForModal, playersStore, draftPicks, teamsStore.teamBudgets, setSelectedPlayer, handleModalClose]);
+
+    // Filter players that can be selected by at least one team
+    const selectablePlayers = useMemo(() => {
+        return availablePlayers.filter((player) => {
+            // Check if at least one team can select this player
+            return teams.some(team => {
+                const canSelectPlayer = DraftManager.filterPlayers([player], team, draftPicks, "");
+                return canSelectPlayer.length > 0;
+            });
+        });
+    }, [availablePlayers, teams, draftPicks]);
+
+    const filteredPlayers = selectablePlayers.filter((player) =>
         player.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
@@ -174,43 +256,58 @@ const SelectedPlayerTable = observer(() => {
     };
 
     return (
-        <Table className="w-auto rounded-lg border-0 bg-white shadow-xl">
-            <Table.Head>
-                <Table.HeadCell className="bg-gray-200 p-2 text-center text-sm">
-                    Player For Auction
-                </Table.HeadCell>
-            </Table.Head>
-            <Table.Body>
-                <Table.Row>
-                    <Table.Cell className="p-1">
-                        <div className="relative">
-                            <Button
-                                ref={buttonRef}
-                                onClick={handleButtonClick}
-                                color={
-                                    selectedPlayer
-                                        ? positionColors[selectedPlayer.position]
-                                        : "gray"
-                                }
-                                className={`w-48 justify-start text-sm ${!canEdit ? 'disabled:cursor-not-allowed disabled:opacity-100' : ''}`}
-                                disabled={!canEdit} // Disable the button if the user doesn't have permission
-                            >
-                                {selectedPlayer?.name || "Select Player"}
-                            </Button>
-                            {isOpen &&
-                                dropdownPosition &&
-                                isMounted &&
-                                canEdit && // Only render the dropdown if the user has permission
-                                createPortal(
-                                    dropdownContent,
-                                    document.body,
-                                    "dropdown-portal-selected-player"
-                                )}
-                        </div>
-                    </Table.Cell>
-                </Table.Row>
-            </Table.Body>
-        </Table>
+        <>
+            <Table className="w-auto rounded-lg border-0 bg-white shadow-xl">
+                <Table.Head>
+                    <Table.HeadCell className="bg-gray-200 p-2 text-center text-sm">
+                        Player For Auction
+                    </Table.HeadCell>
+                </Table.Head>
+                <Table.Body>
+                    <Table.Row>
+                        <Table.Cell className="p-1">
+                            <div className="relative">
+                                <Button
+                                    ref={buttonRef}
+                                    onClick={handleButtonClick}
+                                    color={
+                                        selectedPlayer
+                                            ? positionColors[selectedPlayer.position]
+                                            : "gray"
+                                    }
+                                    className={`w-48 justify-start text-sm ${!canEdit ? 'disabled:cursor-not-allowed disabled:opacity-100' : ''}`}
+                                    disabled={!canEdit} // Disable the button if the user doesn't have permission
+                                >
+                                    {selectedPlayer?.name || "Select Player"}
+                                </Button>
+                                {isOpen &&
+                                    dropdownPosition &&
+                                    isMounted &&
+                                    canEdit && // Only render the dropdown if the user has permission
+                                    createPortal(
+                                        dropdownContent,
+                                        document.body,
+                                        "dropdown-portal-selected-player"
+                                    )}
+                            </div>
+                        </Table.Cell>
+                    </Table.Row>
+                </Table.Body>
+            </Table>
+
+            {/* Auction Player Modal */}
+            <AuctionPlayerModal
+                key={playerForModal?.id || 'no-player'}
+                isOpen={isModalOpen}
+                onClose={handleModalClose}
+                player={playerForModal}
+                teams={teams}
+                draftPicks={draftPicks}
+                teamBudgets={teamsStore.teamBudgets}
+                onConfirm={handleModalConfirm}
+                budgetError={budgetError}
+            />
+        </>
     );
 });
 
