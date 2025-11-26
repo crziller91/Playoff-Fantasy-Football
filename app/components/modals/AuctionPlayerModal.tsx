@@ -1,11 +1,12 @@
 "use client";
 
 import { Modal, Button, Label, TextInput, Alert } from "flowbite-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Player, DraftPicks } from "../../types";
 import { HiExclamation } from "react-icons/hi";
 import { legendColors } from "../../data/positionColors";
 import { DraftManager } from "../../domain/DraftManager";
+import Image from "next/image";
 
 interface AuctionPlayerModalProps {
     isOpen: boolean;
@@ -32,9 +33,53 @@ export default function AuctionPlayerModal({
     const [cost, setCost] = useState<string>("");
     const [error, setError] = useState<string>("");
     const [alertDismissed, setAlertDismissed] = useState(false);
+    const [headshotUrl, setHeadshotUrl] = useState<string | null>(null);
+    const [isLoadingHeadshot, setIsLoadingHeadshot] = useState(false);
 
     // Derive showAlert from budgetError and dismissal state
     const showAlert = !!budgetError && !alertDismissed;
+
+    // Fetch player headshot when modal opens with a player
+    useEffect(() => {
+        const fetchHeadshot = async () => {
+            if (!player || !isOpen) {
+                setHeadshotUrl(null);
+                return;
+            }
+
+            setIsLoadingHeadshot(true);
+            console.log(`Fetching headshot for ${player.name}`);
+
+            try {
+                const params = new URLSearchParams({
+                    playerName: player.name,
+                });
+
+                if (player.teamName) {
+                    params.append('teamName', player.teamName);
+                }
+
+                const response = await fetch(`/api/espn/player/headshot?${params.toString()}`);
+
+                const data = await response.json();
+
+                if (response.ok && data.headshot) {
+                    console.log(`Headshot found: ${data.headshot}`);
+                    setHeadshotUrl(data.headshot);
+                } else {
+                    console.log('No headshot available for this player');
+                    setHeadshotUrl(null);
+                }
+            } catch (error) {
+                console.error('Error fetching headshot:', error);
+                setHeadshotUrl(null);
+            } finally {
+                setIsLoadingHeadshot(false);
+            }
+        };
+
+        fetchHeadshot();
+    }, [player, isOpen]);
 
     // Filter teams based on position rules - only show teams that can select this player
     const eligibleTeams = useMemo(() => {
@@ -118,11 +163,26 @@ export default function AuctionPlayerModal({
                     {/* Player Info Card */}
                     <div className="rounded-lg border border-gray-200 bg-gray-50 p-6 dark:border-gray-700 dark:bg-gray-800">
                         <div className="flex flex-col items-center gap-4">
-                            {/* Player Position Badge */}
-                            <div className="flex size-32 items-center justify-center rounded-full border-4 border-gray-300 bg-gray-200">
-                                <span className="text-4xl font-bold text-gray-500">
-                                    {player.position}
-                                </span>
+                            {/* Player Photo or Position Badge */}
+                            <div className="flex size-32 items-center justify-center overflow-hidden rounded-full border-4 border-gray-300 bg-gray-200">
+                                {isLoadingHeadshot ? (
+                                    <div className="flex items-center justify-center">
+                                        <div className="size-8 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600"></div>
+                                    </div>
+                                ) : headshotUrl ? (
+                                    <Image
+                                        src={headshotUrl}
+                                        alt={player.name}
+                                        width={128}
+                                        height={128}
+                                        className="scale-150 object-cover"
+                                        unoptimized
+                                    />
+                                ) : (
+                                    <span className="text-4xl font-bold text-gray-500">
+                                        {player.position}
+                                    </span>
+                                )}
                             </div>
 
                             {/* Player Name */}
