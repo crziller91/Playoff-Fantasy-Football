@@ -19,7 +19,7 @@ export function usePermissions() {
 
     useEffect(() => {
         // Only fetch permissions if user is authenticated AND we haven't fetched yet
-        if (status === "authenticated" && session?.user?.id && !hasFetched && !isLoadingPermissions) {
+        if (status === "authenticated" && session?.user?.id && !hasFetched) {
             const fetchPermissions = async () => {
                 try {
                     setIsLoadingPermissions(true);
@@ -50,7 +50,7 @@ export function usePermissions() {
 
             fetchPermissions();
         }
-    }, [session, status, hasFetched, isLoadingPermissions]);
+    }, [session, status, hasFetched]);
 
     return {
         canEditScores: permissions?.editScores || permissions?.isAdmin || false, // Admin implies editScores
