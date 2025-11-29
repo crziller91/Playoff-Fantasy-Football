@@ -1,6 +1,6 @@
 import { observer } from "mobx-react-lite";
 import { Tabs, type TabsRef } from "flowbite-react";
-import { useEffect, useRef, useMemo } from "react";
+import { useEffect, useRef } from "react";
 import { useStore } from "../../stores/StoreContext";
 import { PLAYOFF_ROUNDS } from "../../constants/playoffs";
 import { usePlayerModals } from "../../hooks/usePlayerModals";
@@ -94,39 +94,37 @@ const TeamsView = observer(({ initialActiveRound, onRoundChange }: TeamsViewProp
   };
 
   // Compute round validation based on completion status
-  const roundValidation = useMemo(() => {
-    // Helper function to check if a round is complete
-    const isRoundComplete = (round: string): boolean => {
-      if (!draftStore.isDraftFinished) return false;
+  // Helper function to check if a round is complete
+  const isRoundComplete = (round: string): boolean => {
+    if (!draftStore.isDraftFinished) return false;
 
-      const allTeamPlayers: Array<any> = [];
+    const allTeamPlayers: Array<any> = [];
 
-      // Collect all players from all teams
-      teamsStore.teams.forEach(team => {
-        const teamPicks = getOrderedTeamPicks(team, playersStore.draftPicks);
-        teamPicks.forEach(({ player }) => {
-          allTeamPlayers.push(player);
-        });
+    // Collect all players from all teams
+    teamsStore.teams.forEach(team => {
+      const teamPicks = getOrderedTeamPicks(team, playersStore.draftPicks);
+      teamPicks.forEach(({ player }) => {
+        allTeamPlayers.push(player);
       });
+    });
 
-      // Check if all players have been scored or marked as not playing
-      return allTeamPlayers.every(player => {
-        const playerData = scoresStore.playerScores[round]?.[player.name];
-        return playerData?.scoreData || playerData?.isDisabled === true;
-      });
-    };
+    // Check if all players have been scored or marked as not playing
+    return allTeamPlayers.every(player => {
+      const playerData = scoresStore.playerScores[round]?.[player.name];
+      return playerData?.scoreData || playerData?.isDisabled === true;
+    });
+  };
 
-    const wildCardComplete = isRoundComplete("Wild Card");
-    const divisionalComplete = isRoundComplete("Divisional");
-    const conferenceComplete = isRoundComplete("Conference");
+  const wildCardComplete = isRoundComplete("Wild Card");
+  const divisionalComplete = isRoundComplete("Divisional");
+  const conferenceComplete = isRoundComplete("Conference");
 
-    return {
-      "Wild Card": true, // Always enabled
-      "Divisional": wildCardComplete,
-      "Conference": wildCardComplete && divisionalComplete,
-      "Superbowl": wildCardComplete && divisionalComplete && conferenceComplete
-    };
-  }, [draftStore.isDraftFinished, teamsStore.teams, playersStore.draftPicks, scoresStore.playerScores]);
+  const roundValidation = {
+    "Wild Card": true, // Always enabled
+    "Divisional": wildCardComplete,
+    "Conference": wildCardComplete && divisionalComplete,
+    "Superbowl": wildCardComplete && divisionalComplete && conferenceComplete
+  };
 
   // If draft isn't finished, show placeholder
   if (!draftStore.isDraftFinished) {
