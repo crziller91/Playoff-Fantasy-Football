@@ -3,13 +3,17 @@
 import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
 import { Card, Table, Spinner, Alert, Button, TextInput, Modal, Label } from "flowbite-react";
-import { usePermissions } from "@/app/hooks/usePermissions";
+import { usePermissions } from "@/app/contexts/PermissionsContext";
 import { redirect } from "next/navigation";
 import { HiCheckCircle, HiPencil, HiTrash, HiPlus, HiHome } from "react-icons/hi";
 import Link from "next/link";
 import ScoringRulesEditor from "@/app/components/admin/ScoringRulesEditor";
 import { useStore } from "@/app/stores/StoreContext";
 import GlobalBudgetSettings from "@/app/components/admin/GlobalBudgetSettings";
+import { PermissionsProvider } from "@/app/contexts/PermissionsContext";
+
+// Force dynamic rendering - this page requires authentication and can't be statically generated
+export const dynamic = 'force-dynamic';
 
 interface Team {
     id: number;
@@ -18,7 +22,7 @@ interface Team {
     originalBudget: number;
 }
 
-export default function AdminDashboardPage() {
+function AdminDashboardContent() {
     const { data: session } = useSession({
         required: true,
         onUnauthenticated() {
@@ -573,5 +577,13 @@ export default function AdminDashboardPage() {
                 </Modal.Body>
             </Modal>
         </div>
+    );
+}
+
+export default function AdminDashboardPage() {
+    return (
+        <PermissionsProvider>
+            <AdminDashboardContent />
+        </PermissionsProvider>
     );
 }

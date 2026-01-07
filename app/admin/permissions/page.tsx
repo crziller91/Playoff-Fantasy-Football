@@ -3,10 +3,13 @@
 import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
 import { Card, Table, Spinner, Alert, Checkbox, Button } from "flowbite-react";
-import { usePermissions } from "@/app/hooks/usePermissions";
+import { usePermissions, PermissionsProvider } from "@/app/contexts/PermissionsContext";
 import { redirect } from "next/navigation";
 import { HiCheckCircle, HiLockClosed, HiHome } from "react-icons/hi";
 import Link from "next/link";
+
+// Force dynamic rendering - this page requires authentication and can't be statically generated
+export const dynamic = 'force-dynamic';
 
 interface User {
     id: string;
@@ -22,7 +25,7 @@ interface Permission {
     isAdmin: boolean;
 }
 
-export default function PermissionsPage() {
+function PermissionsPageContent() {
     const { data: session } = useSession({
         required: true,
         onUnauthenticated() {
@@ -300,5 +303,13 @@ export default function PermissionsPage() {
                 </Button>
             </div>
         </div>
+    );
+}
+
+export default function PermissionsPage() {
+    return (
+        <PermissionsProvider>
+            <PermissionsPageContent />
+        </PermissionsProvider>
     );
 }
