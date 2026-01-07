@@ -7,6 +7,7 @@ import NavigationBar from "./components/layout/Navbar";
 import { useStore } from "./stores/StoreContext";
 import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
+import { PermissionsProvider } from "./contexts/PermissionsContext";
 
 const Page = observer(() => {
   const store = useStore();
@@ -124,10 +125,12 @@ const Page = observer(() => {
   }
 
   return (
-    <Flowbite>
-      <NavigationBar />
-      <DraftBoard />
-    </Flowbite>
+    <PermissionsProvider>
+      <Flowbite>
+        <NavigationBar />
+        <DraftBoard />
+      </Flowbite>
+    </PermissionsProvider>
   );
 });
 

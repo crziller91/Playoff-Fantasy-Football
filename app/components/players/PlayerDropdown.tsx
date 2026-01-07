@@ -212,7 +212,7 @@ const PlayerDropdown = observer(({
         className="w-48 justify-start text-sm"
         disabled={isDraftFinished || !canEdit}
       >
-        {selectedPlayer?.name || `Pick ${team} R${pick}`}
+        {selectedPlayer?.name || `Pick ${team} P${pick}`}
       </Button>
       {isOpen &&
         dropdownPosition &&
