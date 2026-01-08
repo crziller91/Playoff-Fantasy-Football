@@ -209,7 +209,7 @@ const PlayerDropdown = observer(({
         color={
           selectedPlayer ? positionColors[selectedPlayer.position] : "gray"
         }
-        className="w-48 justify-start text-sm"
+        className="w-full justify-start text-sm"
         disabled={isDraftFinished || !canEdit}
       >
         {selectedPlayer?.name || `Pick ${team} P${pick}`}

@@ -139,20 +139,20 @@ const DraftTable = observer(() => {
   return (
     <div className="w-full">
       <div className="overflow-x-auto rounded-lg shadow-xl">
-        <Table hoverable className="w-full table-fixed bg-white" style={{ minWidth: `${teams.length * 192 + 80}px` }}>
+        <Table hoverable className="w-full table-fixed bg-white" style={{ minWidth: `${teams.length * 208 + 80}px` }}>
           <Table.Head>
             <TeamHeader />
           </Table.Head>
           <Table.Body className="divide-y">
             {picks.map((pick) => (
-              <Table.Row key={pick}>
+              <Table.Row key={pick} className="gap-4">
                 <Table.Cell className="w-20 shrink-0 px-4 text-center font-medium text-gray-900">
                   Pick <br /> {pick}
                 </Table.Cell>
                 {teams.map((team) => {
                   const sanitizedKey = `${team}-${pick}`.replace(/[^a-zA-Z0-9-]/g, "-");
                   return (
-                    <Table.Cell key={sanitizedKey} className="relative p-1">
+                    <Table.Cell key={sanitizedKey} className="relative px-2 py-1" style={{ width: '208px' }}>
                       <PlayerDropdown
                         team={team}
                         pick={pick}
