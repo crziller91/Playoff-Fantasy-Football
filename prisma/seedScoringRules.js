@@ -61,6 +61,12 @@ async function seedScoringRules() {
         value: 5,
         description: "Rushing attempts divisor (1 point per X attempts)",
       },
+      {
+        position: "QB",
+        category: "twoPtConversion",
+        value: 2,
+        description: "Points per 2-point conversion",
+      },
 
       // RB Scoring Rules
       {
@@ -104,6 +110,18 @@ async function seedScoringRules() {
         category: "fumbleLost",
         value: -2,
         description: "Points per fumble lost",
+      },
+      {
+        position: "RB",
+        category: "passingTouchdown",
+        value: 4,
+        description: "Points per passing touchdown",
+      },
+      {
+        position: "RB",
+        category: "twoPtConversion",
+        value: 2,
+        description: "Points per 2-point conversion",
       },
 
       // WR Scoring Rules
@@ -149,6 +167,18 @@ async function seedScoringRules() {
         value: -2,
         description: "Points per fumble lost",
       },
+      {
+        position: "WR",
+        category: "passingTouchdown",
+        value: 4,
+        description: "Points per passing touchdown",
+      },
+      {
+        position: "WR",
+        category: "twoPtConversion",
+        value: 2,
+        description: "Points per 2-point conversion",
+      },
 
       // TE Scoring Rules (same as WR)
       {
@@ -192,6 +222,18 @@ async function seedScoringRules() {
         category: "fumbleLost",
         value: -2,
         description: "Points per fumble lost",
+      },
+      {
+        position: "TE",
+        category: "passingTouchdown",
+        value: 4,
+        description: "Points per passing touchdown",
+      },
+      {
+        position: "TE",
+        category: "twoPtConversion",
+        value: 2,
+        description: "Points per 2-point conversion",
       },
 
       // K Scoring Rules

@@ -375,7 +375,7 @@ export async function fetchKickerStats(kickerName: string): Promise<KickerStats 
     // 2. Get the most recent completed game
     const eventId = await getMostRecentCompletedGame(teamId);
     if (!eventId) {
-      throw new Error(`Could not find recent game for ${kickerName}`);
+      throw new Error(`No recent completed game found for ${kickerName}. This may be due to the playoff schedule reset. Please enter scores manually.`);
     }
 
     // 3. Get kicker stats from the game
@@ -384,7 +384,8 @@ export async function fetchKickerStats(kickerName: string): Promise<KickerStats 
     console.log(`=== Final kicker stats for ${kickerName}:`, stats);
     return stats;
   } catch (error) {
-    console.error('Error in fetchKickerStats:', error);
+    // Re-throw error without logging to avoid Next.js error overlay
+    // The error will be caught and displayed as a toast in the UI
     throw error;
   }
 }

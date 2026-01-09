@@ -20,18 +20,21 @@ const DEFAULT_SCORING_RULES: ScoringRulesMap = {
         rushingTouchdown: 6,
         rushingYardDivisor: 10,
         rushingAttemptDivisor: 5,
+        passingTouchdown: 4,
         twoPtConversion: 2
     },
     WR: {
         receivingTouchdown: 6,
         receivingYardDivisor: 10,
         reception: 1,
+        passingTouchdown: 4,
         twoPtConversion: 2
     },
     TE: {
         receivingTouchdown: 6,
         receivingYardDivisor: 10,
         reception: 1,
+        passingTouchdown: 4,
         twoPtConversion: 2
     },
     K: {

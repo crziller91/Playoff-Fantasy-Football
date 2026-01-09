@@ -114,7 +114,7 @@ const TeamCard = observer(({
                                             </p>
                                         )}
                                         {/* For users with edit permissions, show score below player name/team */}
-                                        {canEditScores && (
+                                        {canEditScores && !isDisabled && (
                                             <>
                                                 {showScore && (
                                                     <p className="text-xs font-semibold text-green-600">
@@ -126,33 +126,29 @@ const TeamCard = observer(({
                                                         0 pts
                                                     </p>
                                                 )}
-                                                {isDisabled && (
-                                                    <p className="text-xs font-semibold text-green-600">
-                                                        0 pts
-                                                    </p>
-                                                )}
                                             </>
                                         )}
                                     </div>
 
                                     {/* For users WITHOUT edit permissions, show score to the right */}
                                     {!canEditScores && (showScore || showZeroScore || isDisabled) && (
-                                        <Badge color="success" size="sm">
+                                        <Badge color={isDisabled ? "gray" : "success"} size="sm">
                                             {showScore && `${playerScores[player.name]?.score} pts`}
-                                            {(showZeroScore || isDisabled) && "0 pts"}
+                                            {showZeroScore && "0 pts"}
+                                            {isDisabled && (statusReason === "eliminated" ? "Eliminated" : "Not Playing")}
                                         </Badge>
                                     )}
 
                                     {/* Only show controls if user has permission */}
                                     {canEditScores ? (
                                         <div className="flex space-x-2">
-                                            {/* Auto-fill button - only show if no scores entered */}
-                                            {onAutoFillScore && !playerScores[player.name]?.scoreData && (
+                                            {/* Auto-fill button - only show if no scores entered and player is not disabled */}
+                                            {onAutoFillScore && !playerScores[player.name]?.scoreData && !isDisabled && (
                                                 <Tooltip content="Auto-fill scores from ESPN" animation="duration-500" arrow={false}>
                                                     <Button
                                                         size="xs"
                                                         color="purple"
-                                                        disabled={isDisabled || autoFillLoadingPlayerId !== null}
+                                                        disabled={autoFillLoadingPlayerId !== null}
                                                         onClick={() => onAutoFillScore(player as ExtendedPlayer)}
                                                     >
                                                         {autoFillLoadingPlayerId === player.id ? (
@@ -163,16 +159,18 @@ const TeamCard = observer(({
                                                     </Button>
                                                 </Tooltip>
                                             )}
-                                            <Tooltip content={playerScores[player.name]?.scoreData ? "Edit player score" : "Add player score"} animation="duration-500" arrow={false}>
-                                                <Button
-                                                    size="xs"
-                                                    color={playerScores[player.name]?.scoreData ? "success" : "info"}
-                                                    disabled={isDisabled}
-                                                    onClick={() => onEditScore(player as ExtendedPlayer)}
-                                                >
-                                                    {playerScores[player.name]?.scoreData ? <HiPencil className="size-4" /> : <HiPlus className="size-4" />}
-                                                </Button>
-                                            </Tooltip>
+                                            {/* Add/Edit score button - only show if player is not disabled */}
+                                            {!isDisabled && (
+                                                <Tooltip content={playerScores[player.name]?.scoreData ? "Edit player score" : "Add player score"} animation="duration-500" arrow={false}>
+                                                    <Button
+                                                        size="xs"
+                                                        color={playerScores[player.name]?.scoreData ? "success" : "info"}
+                                                        onClick={() => onEditScore(player as ExtendedPlayer)}
+                                                    >
+                                                        {playerScores[player.name]?.scoreData ? <HiPencil className="size-4" /> : <HiPlus className="size-4" />}
+                                                    </Button>
+                                                </Tooltip>
+                                            )}
                                             {/* Show Clear Scores button if scores are entered */}
                                             {playerScores[player.name]?.scoreData && (
                                                 <Tooltip content="Delete player scores" animation="duration-500" arrow={false}>
@@ -198,14 +196,7 @@ const TeamCard = observer(({
                                                 </Tooltip>
                                             )}
                                         </div>
-                                    ) : (
-                                        // Read-only indicator for users without edit permissions
-                                        playerScores[player.name]?.isDisabled && (
-                                            <Badge color="gray" size="xs">
-                                                {statusReason === "eliminated" ? "Eliminated" : "Not Playing"}
-                                            </Badge>
-                                        )
-                                    )}
+                                    ) : null}
                                 </div>
                             </li>
                         );

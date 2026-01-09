@@ -1,8 +1,8 @@
-import { Modal, Button, Label, TextInput, Spinner } from "flowbite-react";
+import { Modal, Button, Label, TextInput, Spinner, Alert } from "flowbite-react";
 import { ScoreForm, FormErrors, ScoreModalProps } from "../../types";
 import { useState } from "react";
 import { searchPlayerStats } from "../../services/espnStatsService";
-import { HiSparkles } from "react-icons/hi";
+import { HiSparkles, HiInformationCircle } from "react-icons/hi";
 
 export default function ScoreModal({
     isOpen,
@@ -69,8 +69,10 @@ export default function ScoreModal({
                 }
             });
         } catch (error) {
-            console.error("Error auto-filling stats:", error);
-            setAutoFillError(error instanceof Error ? error.message : "Failed to fetch stats");
+            const errorMessage = error instanceof Error ? error.message : "Failed to fetch stats";
+            setAutoFillError(errorMessage);
+            // Log error without full stack trace to avoid Next.js error overlay
+            console.log(`Error auto-filling stats for ${player.name}:`, errorMessage);
         } finally {
             setIsAutoFilling(false);
         }
@@ -190,6 +192,20 @@ export default function ScoreModal({
                                 type="text"
                             />
                         </div>
+                        <div>
+                            <div className="mb-2 block">
+                                <Label
+                                    htmlFor="twoPointConversions"
+                                    color={submitAttempted && formErrors.twoPointConversions ? "failure" : undefined}
+                                >
+                                    # of 2-Point Conversions
+                                </Label>
+                            </div>
+                            <TextInput
+                                {...commonProps("twoPointConversions", "# of 2-Point Conversions", "twoPointConversions")}
+                                type="text"
+                            />
+                        </div>
                     </>
                 );
             case "RB":
@@ -290,6 +306,34 @@ export default function ScoreModal({
                             </div>
                             <TextInput
                                 {...commonProps("fumblesLost", "# of Fumbles Lost", "fumblesLost")}
+                                type="text"
+                            />
+                        </div>
+                        <div>
+                            <div className="mb-2 block">
+                                <Label
+                                    htmlFor="passingTouchdowns"
+                                    color={submitAttempted && formErrors.passingTouchdowns ? "failure" : undefined}
+                                >
+                                    # of Passing Touchdowns
+                                </Label>
+                            </div>
+                            <TextInput
+                                {...commonProps("passingTouchdowns", "# of Passing Touchdowns", "passingTouchdowns")}
+                                type="text"
+                            />
+                        </div>
+                        <div>
+                            <div className="mb-2 block">
+                                <Label
+                                    htmlFor="twoPointConversions"
+                                    color={submitAttempted && formErrors.twoPointConversions ? "failure" : undefined}
+                                >
+                                    # of 2-Point Conversions
+                                </Label>
+                            </div>
+                            <TextInput
+                                {...commonProps("twoPointConversions", "# of 2-Point Conversions", "twoPointConversions")}
                                 type="text"
                             />
                         </div>
@@ -394,6 +438,34 @@ export default function ScoreModal({
                             </div>
                             <TextInput
                                 {...commonProps("fumblesLost", "# of Fumbles Lost", "fumblesLost")}
+                                type="text"
+                            />
+                        </div>
+                        <div>
+                            <div className="mb-2 block">
+                                <Label
+                                    htmlFor="passingTouchdowns"
+                                    color={submitAttempted && formErrors.passingTouchdowns ? "failure" : undefined}
+                                >
+                                    # of Passing Touchdowns
+                                </Label>
+                            </div>
+                            <TextInput
+                                {...commonProps("passingTouchdowns", "# of Passing Touchdowns", "passingTouchdowns")}
+                                type="text"
+                            />
+                        </div>
+                        <div>
+                            <div className="mb-2 block">
+                                <Label
+                                    htmlFor="twoPointConversions"
+                                    color={submitAttempted && formErrors.twoPointConversions ? "failure" : undefined}
+                                >
+                                    # of 2-Point Conversions
+                                </Label>
+                            </div>
+                            <TextInput
+                                {...commonProps("twoPointConversions", "# of 2-Point Conversions", "twoPointConversions")}
                                 type="text"
                             />
                         </div>
@@ -503,9 +575,15 @@ export default function ScoreModal({
                             )}
                         </Button>
                         {autoFillError && (
-                            <p className="mt-2 text-sm text-red-600 dark:text-red-500">
-                                {autoFillError}
-                            </p>
+                            <div className="mt-3">
+                                <Alert
+                                    color="failure"
+                                    icon={HiInformationCircle}
+                                    onDismiss={() => setAutoFillError(null)}
+                                >
+                                    <span className="font-medium">Error!</span> {autoFillError}
+                                </Alert>
+                            </div>
                         )}
                     </div>
 

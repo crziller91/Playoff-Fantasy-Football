@@ -68,6 +68,8 @@ export interface ScoreForm {
   receivingYards?: string;
   receptions?: string;
   fumblesLost?: string;
+  passingTouchdowns?: string;
+  twoPointConversions?: string;
   pat?: string;
   fgMisses?: string;
   fg?: string;

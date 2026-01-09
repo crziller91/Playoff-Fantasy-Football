@@ -1,16 +1,18 @@
 import { observer } from "mobx-react-lite";
 import { Table, Dropdown } from "flowbite-react";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { legendColors } from "../../data/positionColors";
 import { HiFilter } from "react-icons/hi";
 import { useStore } from "../../stores/StoreContext";
 import { createPortal } from "react-dom";
+import { DraftManager } from "../../domain/DraftManager";
 
 type PositionType = "QB" | "RB" | "WR" | "TE" | "K" | "ALL";
 
 const AvailablePlayers = observer(() => {
-    const { playersStore } = useStore();
-    const { availablePlayers } = playersStore;
+    const { playersStore, teamsStore } = useStore();
+    const { availablePlayers, draftPicks } = playersStore;
+    const { teams } = teamsStore;
 
     // Add state for the position filter
     const [positionFilter, setPositionFilter] = useState<PositionType>("ALL");
@@ -61,17 +63,29 @@ const AvailablePlayers = observer(() => {
         return () => document.removeEventListener('click', handleClickOutside);
     }, [isDropdownOpen]);
 
+    // Filter players that can be selected by at least one team (same logic as Player For Auction)
+    const selectablePlayers = useMemo(() => {
+        return availablePlayers.filter((player) => {
+            // Check if at least one team can select this player
+            return teams.some(team => {
+                const canSelectPlayer = DraftManager.filterPlayers([player], team, draftPicks, "");
+                return canSelectPlayer.length > 0;
+            });
+        });
+    }, [availablePlayers, teams, draftPicks]);
+
     // Filter players based on the selected position
     const filteredPlayers = positionFilter === "ALL"
-        ? availablePlayers
-        : availablePlayers.filter(player => player.position === positionFilter);
+        ? selectablePlayers
+        : selectablePlayers.filter(player => player.position === positionFilter);
 
     // Get unique positions for creating filter dropdown
     const positions: ("QB" | "RB" | "WR" | "TE" | "K")[] = ["QB", "RB", "WR", "TE", "K"];
 
-    // Use the TOTAL number of players for width, not the filtered count
+    // Use the TOTAL number of selectable players for width, not the filtered count
     // This ensures the container size never changes
-    const tableWidth = `${Math.max(availablePlayers.length, 1) * 144}px`;
+    const cellWidth = 200; // Width per cell in pixels
+    const tableWidth = `${Math.max(selectablePlayers.length, 1) * cellWidth}px`;
 
     // Adjust scroll position on filter change
     useEffect(() => {
@@ -181,17 +195,18 @@ const AvailablePlayers = observer(() => {
                         bottom: 0,
                     }}
                 >
-                    <div style={{ width: `${Math.max(filteredPlayers.length, 1) * 144}px` }} className="min-w-full">
+                    <div style={{ width: `${Math.max(filteredPlayers.length, 1) * cellWidth}px` }} className="min-w-full">
                         <Table className="w-full border-0 bg-white">
                             <Table.Body className="flex">
                                 {filteredPlayers.length > 0 ? (
                                     filteredPlayers.map((player, index) => (
                                         <Table.Row
                                             key={player.id}
-                                            className={`w-36 shrink-0 border-r ${index === 0 ? 'bg-yellow-200' : ''}`}
+                                            className={`shrink-0 border-r ${index === 0 ? 'bg-yellow-200' : ''}`}
+                                            style={{ width: `${cellWidth}px` }}
                                         >
                                             <Table.Cell className={`flex items-center justify-between p-2 text-sm ${index === 0 ? 'font-bold text-black' : ''}`}>
-                                                <span className="truncate">{player.name}</span>
+                                                <span className="overflow-hidden text-ellipsis whitespace-nowrap">{player.name}</span>
                                                 <span
                                                     className={`ml-2 ${index === 0 ? 'font-bold text-black' : 'text-gray-500'}`}
                                                     style={{ color: index === 0 ? 'black' : legendColors[player.position] }}

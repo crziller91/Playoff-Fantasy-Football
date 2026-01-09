@@ -6,6 +6,7 @@ import { PLAYOFF_ROUNDS } from '../constants/playoffs';
 import { usePermissions } from './usePermissions';
 import { Socket } from 'socket.io-client';
 import { searchPlayerStats } from '../services/espnStatsService';
+import { toast } from 'react-toastify';
 
 interface UsePlayerModalsProps {
     playerScores: PlayerScoresByRound;
@@ -517,6 +518,7 @@ export function usePlayerModals({
                 autoScoreForm.rushingTouchdowns = stats.rushingTouchdowns?.toString() || "0";
                 autoScoreForm.rushingYards = stats.rushingYards?.toString() || "0";
                 autoScoreForm.rushingAttempts = stats.rushingAttempts?.toString() || "0";
+                autoScoreForm.twoPointConversions = "0"; // Not available in ESPN API
             } else if (player.position === 'RB') {
                 autoScoreForm.touchdowns = stats.touchdowns?.toString() || "0";
                 autoScoreForm.rushingYards = stats.rushingYards?.toString() || "0";
@@ -525,6 +527,8 @@ export function usePlayerModals({
                 autoScoreForm.receivingYards = stats.receivingYards?.toString() || "0";
                 autoScoreForm.receptions = stats.receptions?.toString() || "0";
                 autoScoreForm.fumblesLost = stats.fumblesLost?.toString() || "0";
+                autoScoreForm.passingTouchdowns = "0"; // Not available in ESPN API
+                autoScoreForm.twoPointConversions = "0"; // Not available in ESPN API
             } else if (player.position === 'WR' || player.position === 'TE') {
                 autoScoreForm.touchdowns = stats.touchdowns?.toString() || "0";
                 autoScoreForm.receivingYards = stats.receivingYards?.toString() || "0";
@@ -533,6 +537,8 @@ export function usePlayerModals({
                 autoScoreForm.rushingYards = stats.rushingYards?.toString() || "0";
                 autoScoreForm.rushingAttempts = stats.rushingAttempts?.toString() || "0";
                 autoScoreForm.fumblesLost = stats.fumblesLost?.toString() || "0";
+                autoScoreForm.passingTouchdowns = "0"; // Not available in ESPN API
+                autoScoreForm.twoPointConversions = "0"; // Not available in ESPN API
             } else if (player.position === 'K') {
                 autoScoreForm.pat = stats.pat?.toString() || "0";
                 autoScoreForm.fg = stats.fg?.toString() || "0";
@@ -577,8 +583,11 @@ export function usePlayerModals({
 
             console.log(`Successfully auto-filled and saved scores for ${player.name}`);
         } catch (error) {
-            console.error("Error auto-filling score:", error);
-            // You might want to show a toast notification here
+            // Display user-friendly error message
+            const errorMessage = error instanceof Error ? error.message : "Failed to fetch stats from ESPN";
+            toast.error(errorMessage);
+            // Log error without full stack trace to avoid Next.js error overlay
+            console.log(`Error auto-filling score for ${player.name}:`, errorMessage);
         } finally {
             // Clear loading state
             setAutoFillLoadingPlayerId(null);

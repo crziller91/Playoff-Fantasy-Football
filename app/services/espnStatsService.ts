@@ -434,8 +434,7 @@ export async function searchPlayerStats(
 
     if (!espnId) {
       throw new Error(
-        `Could not find player "${playerName}" in ESPN database. ` +
-        `Try using the exact name as shown on ESPN (e.g., "Josh Allen" not "J. Allen").`
+        `Could not find player "${playerName}" in ESPN database. Please enter scores manually.`
       );
     }
 
@@ -446,15 +445,15 @@ export async function searchPlayerStats(
 
     if (!stats || Object.keys(stats).length === 0) {
       throw new Error(
-        `No stats available for ${playerName}. ` +
-        `They may not have played recently or stats may not be available yet.`
+        `No recent game stats found for ${playerName}. This may be due to the playoff schedule reset. Please enter scores manually.`
       );
     }
 
     console.log(`=== Successfully fetched stats for ${playerName} ===`);
     return stats;
   } catch (error) {
-    console.error('Error in searchPlayerStats:', error);
+    // Re-throw error without logging to avoid Next.js error overlay
+    // The error will be caught and displayed as a toast in the UI
     throw error;
   }
 }
