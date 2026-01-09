@@ -10,6 +10,8 @@ import {
     recalculatePlayerScores
 } from '../services/scoreService';
 import { calculatePlayerScore } from '../utils/scoreCalculator';
+import { PLAYOFF_ROUNDS } from '../constants/playoffs';
+import { getOrderedTeamPicks } from '../utils/teamUtils';
 
 export class ScoresStore {
     rootStore: RootStore;
@@ -45,6 +47,12 @@ export class ScoresStore {
                 if (scores && Object.keys(scores).length > 0) {
                     this.playerScores = scores;
                     this.lastSavedScores = JSON.stringify(scores);
+                    // Set the active round to the first incomplete round
+                    // This must be called AFTER playerScores is set
+                    this.activeRound = this.getDefaultActiveRound();
+                } else {
+                    // If no scores loaded, still set to first incomplete round
+                    this.activeRound = this.getDefaultActiveRound();
                 }
                 this.scoresLoaded = true;
                 this.isLoading = false;
@@ -59,6 +67,50 @@ export class ScoresStore {
 
     setActiveRound = (round: string) => {
         this.activeRound = round;
+    };
+
+    // Helper method to check if a round is complete
+    private isRoundComplete = (round: string): boolean => {
+        if (!this.rootStore.draftStore.isDraftFinished) return false;
+
+        // Check if we have the necessary data
+        if (!this.rootStore.teamsStore.teams || this.rootStore.teamsStore.teams.length === 0) {
+            return false;
+        }
+        if (!this.rootStore.playersStore.draftPicks) {
+            return false;
+        }
+
+        const allTeamPlayers: Array<any> = [];
+
+        // Collect all players from all teams
+        this.rootStore.teamsStore.teams.forEach(team => {
+            const teamPicks = getOrderedTeamPicks(team, this.rootStore.playersStore.draftPicks);
+            teamPicks.forEach(({ player }) => {
+                allTeamPlayers.push(player);
+            });
+        });
+
+        // If there are no players, the round is not complete
+        if (allTeamPlayers.length === 0) return false;
+
+        // Check if all players have been scored or marked as not playing
+        return allTeamPlayers.every(player => {
+            const playerData = this.playerScores[round]?.[player.name];
+            return playerData?.scoreData || playerData?.isDisabled === true;
+        });
+    };
+
+    // Helper method to determine the default active round
+    private getDefaultActiveRound = (): string => {
+        // Check each round in order and return the first incomplete one
+        for (const round of PLAYOFF_ROUNDS) {
+            if (!this.isRoundComplete(round)) {
+                return round;
+            }
+        }
+        // If all rounds are complete, default to the last round
+        return PLAYOFF_ROUNDS[PLAYOFF_ROUNDS.length - 1];
     };
 
     // Update existing methods to emit socket events
