@@ -67,6 +67,12 @@ async function seedScoringRules() {
         value: 2,
         description: "Points per 2-point conversion",
       },
+      {
+        position: "QB",
+        category: "fumbleLost",
+        value: -2,
+        description: "Points per fumble lost",
+      },
 
       // RB Scoring Rules
       {

@@ -20,6 +20,7 @@ export const calculatePlayerScore = async (player: ExtendedPlayer, form: ScoreFo
             const qbRushingYardDivisor = await getScoringRule("QB", "rushingYardDivisor");
             const qbRushingAttemptDivisor = await getScoringRule("QB", "rushingAttemptDivisor");
             const qbTwoPointValue = await getScoringRule("QB", "twoPtConversion");
+            const qbFumbleLostValue = await getScoringRule("QB", "fumbleLost");
 
             score += parseNum(form.touchdowns) * passingTDValue; // Points per passing TD
             score += Math.round(parseNum(form.yards) / passingYardDivisor); // Points per yards divisor
@@ -29,6 +30,7 @@ export const calculatePlayerScore = async (player: ExtendedPlayer, form: ScoreFo
             score += Math.floor(parseNum(form.rushingYards) / qbRushingYardDivisor); // Points per rushing yards divisor
             score += Math.floor(parseNum(form.rushingAttempts) / qbRushingAttemptDivisor); // Points per rushing attempts divisor
             score += parseNum(form.twoPointConversions) * qbTwoPointValue; // Points per 2-pt conversion
+            score += parseNum(form.fumblesLost) * qbFumbleLostValue; // Points per fumble lost
             break;
 
         case "RB":
@@ -168,6 +170,7 @@ export const validateForm = (selectedPlayer: ExtendedPlayer | null, scoreForm: S
             validateField("rushingYards");
             validateField("rushingAttempts");
             validateField("twoPointConversions");
+            validateField("fumblesLost");
             break;
         case "RB":
             validateField("touchdowns");

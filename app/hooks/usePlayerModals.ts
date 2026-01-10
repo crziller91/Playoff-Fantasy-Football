@@ -519,6 +519,7 @@ export function usePlayerModals({
                 autoScoreForm.rushingYards = stats.rushingYards?.toString() || "0";
                 autoScoreForm.rushingAttempts = stats.rushingAttempts?.toString() || "0";
                 autoScoreForm.twoPointConversions = "0"; // Not available in ESPN API
+                autoScoreForm.fumblesLost = "0"; // Not available in ESPN API for QBs
             } else if (player.position === 'RB') {
                 autoScoreForm.touchdowns = stats.touchdowns?.toString() || "0";
                 autoScoreForm.rushingYards = stats.rushingYards?.toString() || "0";

@@ -206,6 +206,20 @@ export default function ScoreModal({
                                 type="text"
                             />
                         </div>
+                        <div>
+                            <div className="mb-2 block">
+                                <Label
+                                    htmlFor="fumblesLost"
+                                    color={submitAttempted && formErrors.fumblesLost ? "failure" : undefined}
+                                >
+                                    # of Fumbles Lost
+                                </Label>
+                            </div>
+                            <TextInput
+                                {...commonProps("fumblesLost", "# of Fumbles Lost", "fumblesLost")}
+                                type="text"
+                            />
+                        </div>
                     </>
                 );
             case "RB":
