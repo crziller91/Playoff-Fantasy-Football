@@ -1,5 +1,5 @@
 import { observer } from "mobx-react-lite";
-import { Button, DropdownItem, Navbar, NavbarBrand, Dropdown, Avatar } from "flowbite-react";
+import { Button, DropdownItem, Navbar, NavbarBrand, NavbarToggle, NavbarCollapse, Dropdown, Avatar } from "flowbite-react";
 import Link from "next/link";
 import { useState } from "react";
 import { HiOutlineChevronLeft, HiOutlineLogin, HiOutlineLogout, HiOutlineTrash, HiShieldCheck } from "react-icons/hi";
@@ -77,114 +77,142 @@ const NavigationBar = observer(() => {
       fluid
       className="sticky top-0 z-50 border-b border-gray-300 bg-gray-100 py-4"
     >
-      <div className="flex w-full items-center justify-between">
-        <NavbarBrand as={Link} href="/" className="px-1">
-          <span className="self-center whitespace-nowrap text-2xl font-semibold">
-            Playoff Fantasy Football 2026
-          </span>
-        </NavbarBrand>
-        <div className="flex items-center gap-2">
+      <NavbarBrand as={Link} href="/" className="px-1">
+        <span className="self-center whitespace-nowrap text-xl font-semibold md:text-2xl">
+          Playoff Fantasy Football 2026
+        </span>
+      </NavbarBrand>
+
+      <div className="flex items-center gap-3 md:order-2">
+        {/* NFL Bracket button - hidden on mobile, shown on desktop */}
+        <Button
+          as={Link}
+          href="https://www.nfl.com/playoffs/bracket/"
+          color="info"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hidden md:flex"
+        >
+          NFL Bracket
+        </Button>
+
+        {isAuthenticated ? (
+          <>
+            {isAdmin && (
+              <Dropdown
+                arrowIcon={false}
+                inline
+                label={
+                  <div className="flex size-8 items-center justify-center rounded-full bg-[#1a748f] text-white">
+                    {(session.user?.name || 'U').charAt(0).toUpperCase()}
+                  </div>
+                }
+              >
+                {/* Admin Dashboard link - only for admins */}
+                <DropdownItem as={Link} href="/admin/dashboard">
+                  <div className="flex items-center gap-2">
+                    <MdAdminPanelSettings />
+                    <span>Admin Dashboard</span>
+                  </div>
+                </DropdownItem>
+
+                {/* Permissions management - only for admins */}
+                <DropdownItem as={Link} href="/admin/permissions">
+                  <div className="flex items-center gap-2">
+                    <HiShieldCheck />
+                    <span>Manage Permissions</span>
+                  </div>
+                </DropdownItem>
+
+                {/* Reset All - only for admins */}
+                <>
+                  <Dropdown.Divider />
+                  <DropdownItem onClick={() => setOpenResetModal(true)}>
+                    <div className="flex items-center gap-2">
+                      <BiReset />
+                      <span>Reset All</span>
+                    </div>
+                  </DropdownItem>
+                </>
+                <DropdownItem onClick={() => setOpenSignOutModal(true)}>
+                  <div className="flex items-center gap-2">
+                    <HiOutlineLogout />
+                    <span>Sign out</span>
+                  </div>
+                </DropdownItem>
+                <DropdownItem onClick={() => setOpenDeleteModal(true)}>
+                  <div className="flex items-center gap-2 text-red-600">
+                    <HiOutlineTrash />
+                    <span>Delete Account</span>
+                  </div>
+                </DropdownItem>
+              </Dropdown>
+            )}
+
+            {/* Non-admin users get a simpler dropdown */}
+            {!isAdmin && (
+              <Dropdown
+                arrowIcon={false}
+                inline
+                label={
+                  <div className="flex size-8 items-center justify-center rounded-full bg-[#1a748f] text-white">
+                    {(session.user?.name || 'U').charAt(0).toUpperCase()}
+                  </div>
+                }
+              >
+                <DropdownItem onClick={() => setOpenSignOutModal(true)}>
+                  <div className="flex items-center gap-2">
+                    <HiOutlineLogout />
+                    <span>Sign out</span>
+                  </div>
+                </DropdownItem>
+                <DropdownItem onClick={() => setOpenDeleteModal(true)}>
+                  <div className="flex items-center gap-2 text-red-600">
+                    <HiOutlineTrash />
+                    <span>Delete Account</span>
+                  </div>
+                </DropdownItem>
+              </Dropdown>
+            )}
+          </>
+        ) : (
           <Button
             as={Link}
-            href="https://www.nfl.com/playoffs/bracket/"
-            color="info"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="/auth/signin"
+            color="light"
+            className="hidden md:flex"
           >
-            NFL Bracket
+            <HiOutlineLogin className="mr-1 size-5" />
+            Sign In
           </Button>
-
-          {isAuthenticated ? (
-            <div className="ml-2 flex items-center gap-4">
-              {isAdmin && (
-                <Dropdown
-                  arrowIcon={false}
-                  inline
-                  label={
-                    <div className="flex size-8 items-center justify-center rounded-full bg-[#1a748f] text-white">
-                      {(session.user?.name || 'U').charAt(0).toUpperCase()}
-                    </div>
-                  }
-                >
-                  {/* Admin Dashboard link - only for admins */}
-                  <DropdownItem as={Link} href="/admin/dashboard">
-                    <div className="flex items-center gap-2">
-                      <MdAdminPanelSettings />
-                      <span>Admin Dashboard</span>
-                    </div>
-                  </DropdownItem>
-
-                  {/* Permissions management - only for admins */}
-                  <DropdownItem as={Link} href="/admin/permissions">
-                    <div className="flex items-center gap-2">
-                      <HiShieldCheck />
-                      <span>Manage Permissions</span>
-                    </div>
-                  </DropdownItem>
-
-                  {/* Reset All - only for admins */}
-                  <>
-                    <Dropdown.Divider />
-                    <DropdownItem onClick={() => setOpenResetModal(true)}>
-                      <div className="flex items-center gap-2">
-                        <BiReset />
-                        <span>Reset All</span>
-                      </div>
-                    </DropdownItem>
-                  </>
-                  <DropdownItem onClick={() => setOpenSignOutModal(true)}>
-                    <div className="flex items-center gap-2">
-                      <HiOutlineLogout />
-                      <span>Sign out</span>
-                    </div>
-                  </DropdownItem>
-                  <DropdownItem onClick={() => setOpenDeleteModal(true)}>
-                    <div className="flex items-center gap-2 text-red-600">
-                      <HiOutlineTrash />
-                      <span>Delete Account</span>
-                    </div>
-                  </DropdownItem>
-                </Dropdown>
-              )}
-
-              {/* Non-admin users get a simpler dropdown */}
-              {!isAdmin && (
-                <Dropdown
-                  arrowIcon={false}
-                  inline
-                  label={
-                    <div className="flex size-8 items-center justify-center rounded-full bg-[#1a748f] text-white">
-                      {(session.user?.name || 'U').charAt(0).toUpperCase()}
-                    </div>
-                  }
-                >
-                  <DropdownItem onClick={() => setOpenSignOutModal(true)}>
-                    <div className="flex items-center gap-2">
-                      <HiOutlineLogout />
-                      <span>Sign out</span>
-                    </div>
-                  </DropdownItem>
-                  <DropdownItem onClick={() => setOpenDeleteModal(true)}>
-                    <div className="flex items-center gap-2 text-red-600">
-                      <HiOutlineTrash />
-                      <span>Delete Account</span>
-                    </div>
-                  </DropdownItem>
-                </Dropdown>
-              )}
-            </div>
-          ) : (
-            <Button
-              as={Link}
-              href="/auth/signin"
-              color="light"
-            >
-              <HiOutlineLogin className="mr-1 size-5" />
-              Sign In
-            </Button>
-          )}
-        </div>
+        )}
+        <NavbarToggle />
       </div>
+
+      <NavbarCollapse>
+        {/* NFL Bracket button - shown on mobile, hidden on desktop */}
+        <Button
+          as={Link}
+          href="https://www.nfl.com/playoffs/bracket/"
+          color="info"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full md:hidden"
+        >
+          NFL Bracket
+        </Button>
+        {!isAuthenticated && (
+          <Button
+            as={Link}
+            href="/auth/signin"
+            color="light"
+            className="mt-2 w-full md:hidden"
+          >
+            <HiOutlineLogin className="mr-1 size-5" />
+            Sign In
+          </Button>
+        )}
+      </NavbarCollapse>
 
       {/* Reset Confirmation Modal */}
       <ResetConfirmationModal

@@ -93,6 +93,16 @@ export default function AuctionPlayerModal({
         });
     }, [player, teams, draftPicks]);
 
+    // Calculate maximum bid for each team (budget minus $1 per remaining roster spot after this pick)
+    const getMaxBid = (team: string): number => {
+        const budget = teamBudgets.get(team) || 0;
+        const remainingSpots = DraftManager.getRemainingRosterSpots(team, draftPicks);
+        // After this pick, they'll have (remainingSpots - 1) spots left
+        // They need to reserve $1 for each of those spots
+        const reserve = Math.max(0, remainingSpots - 1);
+        return Math.max(0, budget - reserve);
+    };
+
     const handleSubmit = () => {
         // Validate team selection
         if (!selectedTeam) {
@@ -228,7 +238,7 @@ export default function AuctionPlayerModal({
                         <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
                             <div className="space-y-2">
                                 {eligibleTeams.map((team) => {
-                                    const budget = teamBudgets.get(team) || 0;
+                                    const maxBid = getMaxBid(team);
                                     const isSelected = selectedTeam === team;
                                     return (
                                         <div
@@ -244,7 +254,7 @@ export default function AuctionPlayerModal({
                                             }`}
                                         >
                                             <span>{team}</span>
-                                            <span>${budget}</span>
+                                            <span>${maxBid}</span>
                                         </div>
                                     );
                                 })}

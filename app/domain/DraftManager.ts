@@ -30,6 +30,7 @@ export class DraftManager {
                     name: pick.player.name,
                     position: pick.player.position as "QB" | "RB" | "WR" | "TE" | "K",
                     teamName: pick.player.teamName || undefined, // Include teamName if available
+                    cost: pick.cost || undefined, // Include cost if available
                 }
                 : null;
         });
@@ -122,7 +123,7 @@ export class DraftManager {
             RB: hasFlex ? 1 : 2,
             WR: hasFlex ? 2 : 3,
             TE: 1,
-            K: hasFlex ? 1 : 2,
+            K: 1,
         };
 
         return players

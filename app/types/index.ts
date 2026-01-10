@@ -3,6 +3,7 @@ export type Player = {
   name: string;
   position: "QB" | "RB" | "WR" | "TE" | "K";
   teamName?: string;
+  cost?: number;
 };
 
 export interface TeamWithBudget {

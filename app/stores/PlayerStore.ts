@@ -142,7 +142,7 @@ export class PlayersStore {
             // Update UI state
             const updatedDraftPicks = {
                 ...this.draftPicks,
-                [team]: { ...this.draftPicks[team], [pick]: player }
+                [team]: { ...this.draftPicks[team], [pick]: { ...player, cost } }
             };
 
             // Update budgets
@@ -273,7 +273,7 @@ export class PlayersStore {
             if (!this.draftPicks[data.team]) {
                 this.draftPicks[data.team] = {};
             }
-            this.draftPicks[data.team][data.pick] = data.player;
+            this.draftPicks[data.team][data.pick] = data.cost ? { ...data.player, cost: data.cost } : data.player;
 
             // If we have no players data yet, skip update
             // Don't trigger a reload as it might cause infinite loops

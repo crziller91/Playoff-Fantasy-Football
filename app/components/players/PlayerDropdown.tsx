@@ -24,6 +24,45 @@ interface PlayerDropdownProps {
   canEdit?: boolean; // Add permission prop
 }
 
+// Helper function to get team abbreviation
+const getTeamAbbreviation = (teamName: string): string => {
+  const abbrevMap: Record<string, string> = {
+    'Arizona Cardinals': 'ARI',
+    'Atlanta Falcons': 'ATL',
+    'Baltimore Ravens': 'BAL',
+    'Buffalo Bills': 'BUF',
+    'Carolina Panthers': 'CAR',
+    'Chicago Bears': 'CHI',
+    'Cincinnati Bengals': 'CIN',
+    'Cleveland Browns': 'CLE',
+    'Dallas Cowboys': 'DAL',
+    'Denver Broncos': 'DEN',
+    'Detroit Lions': 'DET',
+    'Green Bay Packers': 'GB',
+    'Houston Texans': 'HOU',
+    'Indianapolis Colts': 'IND',
+    'Jacksonville Jaguars': 'JAX',
+    'Kansas City Chiefs': 'KC',
+    'Las Vegas Raiders': 'LV',
+    'Los Angeles Chargers': 'LAC',
+    'Los Angeles Rams': 'LAR',
+    'Miami Dolphins': 'MIA',
+    'Minnesota Vikings': 'MIN',
+    'New England Patriots': 'NE',
+    'New Orleans Saints': 'NO',
+    'New York Giants': 'NYG',
+    'New York Jets': 'NYJ',
+    'Philadelphia Eagles': 'PHI',
+    'Pittsburgh Steelers': 'PIT',
+    'San Francisco 49ers': 'SF',
+    'Seattle Seahawks': 'SEA',
+    'Tampa Bay Buccaneers': 'TB',
+    'Tennessee Titans': 'TEN',
+    'Washington Commanders': 'WAS',
+  };
+  return abbrevMap[teamName] || teamName;
+};
+
 const PlayerDropdown = observer(({
   team,
   pick,
@@ -209,10 +248,28 @@ const PlayerDropdown = observer(({
         color={
           selectedPlayer ? positionColors[selectedPlayer.position] : "gray"
         }
-        className="w-full justify-start text-sm"
+        className="relative w-full justify-start text-sm"
         disabled={isDraftFinished || !canEdit}
       >
-        {selectedPlayer?.name || `Pick ${team} P${pick}`}
+        <span className="truncate pr-10">
+          {selectedPlayer ? (
+            <>
+              {selectedPlayer.name}
+              {selectedPlayer.teamName && (
+                <span className="ml-1 text-xs opacity-70">
+                  {getTeamAbbreviation(selectedPlayer.teamName)}
+                </span>
+              )}
+            </>
+          ) : (
+            `Pick ${team} P${pick}`
+          )}
+        </span>
+        {selectedPlayer?.cost !== undefined && selectedPlayer.cost !== null && (
+          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-bold">
+            ${selectedPlayer.cost}
+          </span>
+        )}
       </Button>
       {isOpen &&
         dropdownPosition &&
