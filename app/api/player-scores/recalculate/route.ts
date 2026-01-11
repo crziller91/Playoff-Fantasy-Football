@@ -55,62 +55,61 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
         console.log(`Found ${playerScores.length} scores to recalculate`);
 
-        // Process scores in batches to avoid timeouts
-        const batchSize = 10;
-        const batches = [];
+        // Calculate all new scores first (fast, no DB calls)
+        const scoreUpdates = await Promise.all(playerScores.map(async (score) => {
+            try {
+                // Parse the score data
+                const scoreData = score.scoreData ? JSON.parse(score.scoreData) : {};
 
-        for (let i = 0; i < playerScores.length; i += batchSize) {
-            batches.push(playerScores.slice(i, i + batchSize));
-        }
+                // Create ExtendedPlayer object from player data
+                const player = {
+                    id: score.player.id,
+                    name: score.player.name,
+                    position: score.player.position as "QB" | "RB" | "WR" | "TE" | "K",
+                    teamName: score.player.teamName || undefined,
+                };
 
-        let updatedCount = 0;
+                // Calculate new score
+                const newScore = await calculatePlayerScore(player, scoreData);
 
-        for (const batch of batches) {
-            const updates = await Promise.all(batch.map(async (score) => {
-                try {
-                    // Parse the score data
-                    const scoreData = score.scoreData ? JSON.parse(score.scoreData) : {};
+                return {
+                    id: score.id,
+                    newScore,
+                    success: true
+                };
+            } catch (error) {
+                console.error(`Error calculating score ID ${score.id}:`, error);
+                return {
+                    id: score.id,
+                    newScore: 0,
+                    success: false
+                };
+            }
+        }));
 
-                    // Create ExtendedPlayer object from player data
-                    const player = {
-                        id: score.player.id,
-                        name: score.player.name,
-                        position: score.player.position as "QB" | "RB" | "WR" | "TE" | "K",
-                        teamName: score.player.teamName || undefined,
-                    };
+        // Batch update all scores in transactions (chunk to avoid transaction limits)
+        const successfulUpdates = scoreUpdates.filter(u => u.success);
+        const chunkSize = 50; // Update 50 at a time to stay within transaction limits
 
-                    console.log(`Recalculating score for ${player.name} (${player.position})`);
-
-                    // IMPORTANT: Always recalculate all scores regardless of whether they've changed
-                    // This ensures scores are updated even when scoring rule values revert to original values
-                    const newScore = await calculatePlayerScore(player, scoreData);
-
-                    console.log(`Old score: ${score.score}, New score: ${newScore}`);
-
-                    // Always update the score to trigger a database update
-                    return prisma.playerScore.update({
-                        where: { id: score.id },
+        for (let i = 0; i < successfulUpdates.length; i += chunkSize) {
+            const chunk = successfulUpdates.slice(i, i + chunkSize);
+            await prisma.$transaction(
+                chunk.map(update =>
+                    prisma.playerScore.update({
+                        where: { id: update.id },
                         data: {
-                            score: newScore,
+                            score: update.newScore,
                             updatedAt: new Date(),
                         },
-                    });
-                    updatedCount++;
-                } catch (error) {
-                    console.error(`Error recalculating score ID ${score.id}:`, error);
-                    return null; // Skip this score on error
-                }
-            }));
-
-            // Filter out nulls (scores that had errors)
-            const validUpdates = updates.filter(Boolean);
-            updatedCount += validUpdates.length;
+                    })
+                )
+            );
         }
 
         return NextResponse.json({
-            message: `Successfully recalculated and updated ${updatedCount} player scores`,
+            message: `Successfully recalculated and updated ${successfulUpdates.length} player scores`,
             totalProcessed: playerScores.length,
-            updated: updatedCount,
+            updated: successfulUpdates.length,
         });
     } catch (error) {
         console.error("API POST /player-scores/recalculate: Error recalculating scores:", error);
