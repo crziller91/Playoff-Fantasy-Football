@@ -137,18 +137,16 @@ const TeamCard = observer(({
                                         <>
                                             {/* Show view stats button if player has scores */}
                                             {(showScore || showZeroScore) && onViewStats && (
-                                                <Tooltip content="Click to view player stats" animation="duration-500" arrow={false}>
-                                                    <Button
-                                                        size="xs"
-                                                        color="success"
-                                                        onClick={() => {
-                                                            console.log('Button clicked for player:', player);
-                                                            onViewStats(playerScores[player.name]);
-                                                        }}
-                                                    >
-                                                        {playerScores[player.name]?.score || 0} pts
-                                                    </Button>
-                                                </Tooltip>
+                                                <Button
+                                                    size="xs"
+                                                    color="success"
+                                                    onClick={() => {
+                                                        console.log('Button clicked for player:', player);
+                                                        onViewStats(playerScores[player.name]);
+                                                    }}
+                                                >
+                                                    {playerScores[player.name]?.score || 0} pts
+                                                </Button>
                                             )}
                                             {/* Show badge for disabled players */}
                                             {isDisabled && (
