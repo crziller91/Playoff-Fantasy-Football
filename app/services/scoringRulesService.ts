@@ -121,3 +121,28 @@ export const getPositionScoringRules = async (position: string): Promise<{ [cate
     const rules = await fetchScoringRules();
     return rules[position] || DEFAULT_SCORING_RULES[position] || null;
 };
+
+// Direct database query version for server-side use (avoids HTTP calls)
+// Import prisma at the top of files that need this
+export const getScoringRuleFromDB = async (prisma: any, position: string, category: string): Promise<number> => {
+    try {
+        const rule = await prisma.scoringRule.findUnique({
+            where: {
+                position_category: {
+                    position,
+                    category,
+                },
+            },
+        });
+
+        if (rule) {
+            return rule.value;
+        }
+
+        // Fallback to default
+        return DEFAULT_SCORING_RULES[position]?.[category] ?? 0;
+    } catch (error) {
+        console.error(`Error fetching scoring rule from DB for ${position}.${category}:`, error);
+        return DEFAULT_SCORING_RULES[position]?.[category] ?? 0;
+    }
+};

@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { calculatePlayerScore } from "@/app/utils/scoreCalculator";
+import { calculatePlayerScore, parseNum } from "@/app/utils/scoreCalculator";
 
 // POST handler: Recalculate all player scores based on updated scoring rules
 export async function POST(request: NextRequest): Promise<NextResponse> {
@@ -55,26 +55,87 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
         console.log(`Found ${playerScores.length} scores to recalculate`);
 
-        // Calculate all new scores first (fast, no DB calls)
-        const scoreUpdates = await Promise.all(playerScores.map(async (score) => {
+        // Fetch all scoring rules from database once (avoid HTTP calls)
+        const scoringRules = await prisma.scoringRule.findMany();
+        const rulesMap: Record<string, Record<string, number>> = {};
+
+        scoringRules.forEach(rule => {
+            if (!rulesMap[rule.position]) {
+                rulesMap[rule.position] = {};
+            }
+            rulesMap[rule.position][rule.category] = rule.value;
+        });
+
+        // Helper to get scoring rule from our local map
+        const getRule = (position: string, category: string): number => {
+            return rulesMap[position]?.[category] ?? 0;
+        };
+
+        // Calculate all new scores first (fast, no external calls)
+        const scoreUpdates = playerScores.map((score) => {
             try {
                 // Parse the score data
                 const scoreData = score.scoreData ? JSON.parse(score.scoreData) : {};
+                const pos = score.player.position;
+                let calculatedScore = 0;
 
-                // Create ExtendedPlayer object from player data
-                const player = {
-                    id: score.player.id,
-                    name: score.player.name,
-                    position: score.player.position as "QB" | "RB" | "WR" | "TE" | "K",
-                    teamName: score.player.teamName || undefined,
-                };
+                // Calculate score based on position using local rules
+                switch (pos) {
+                    case "QB":
+                        calculatedScore += parseNum(scoreData.touchdowns) * getRule("QB", "passingTouchdown");
+                        calculatedScore += Math.round(parseNum(scoreData.yards) / getRule("QB", "passingYardDivisor"));
+                        calculatedScore += parseNum(scoreData.interceptions) * getRule("QB", "interception");
+                        calculatedScore += Math.round(parseNum(scoreData.completions) / getRule("QB", "completionDivisor"));
+                        calculatedScore += parseNum(scoreData.rushingTouchdowns) * getRule("QB", "rushingTouchdown");
+                        calculatedScore += Math.max(0, Math.floor(parseNum(scoreData.rushingYards) / getRule("QB", "rushingYardDivisor")));
+                        calculatedScore += Math.floor(parseNum(scoreData.rushingAttempts) / getRule("QB", "rushingAttemptDivisor"));
+                        calculatedScore += parseNum(scoreData.twoPointConversions) * getRule("QB", "twoPtConversion");
+                        calculatedScore += parseNum(scoreData.fumblesLost) * getRule("QB", "fumbleLost");
+                        break;
 
-                // Calculate new score
-                const newScore = await calculatePlayerScore(player, scoreData);
+                    case "RB":
+                        calculatedScore += parseNum(scoreData.touchdowns) * getRule("RB", "rushingTouchdown");
+                        calculatedScore += Math.max(0, Math.floor(parseNum(scoreData.rushingYards) / getRule("RB", "rushingYardDivisor")));
+                        calculatedScore += Math.floor(parseNum(scoreData.rushingAttempts) / getRule("RB", "rushingAttemptDivisor"));
+                        calculatedScore += parseNum(scoreData.receivingTouchdowns) * getRule("RB", "receivingTouchdown");
+                        calculatedScore += Math.max(0, Math.floor(parseNum(scoreData.receivingYards) / getRule("RB", "receivingYardDivisor")));
+                        calculatedScore += parseNum(scoreData.receptions) * getRule("RB", "reception");
+                        calculatedScore += parseNum(scoreData.fumblesLost) * getRule("RB", "fumbleLost");
+                        calculatedScore += parseNum(scoreData.passingTouchdowns) * getRule("RB", "passingTouchdown");
+                        calculatedScore += parseNum(scoreData.twoPointConversions) * getRule("RB", "twoPtConversion");
+                        break;
+
+                    case "WR":
+                    case "TE":
+                        calculatedScore += parseNum(scoreData.touchdowns) * getRule(pos, "receivingTouchdown");
+                        calculatedScore += Math.max(0, Math.floor(parseNum(scoreData.receivingYards) / getRule(pos, "receivingYardDivisor")));
+                        calculatedScore += parseNum(scoreData.receptions) * getRule(pos, "reception");
+                        calculatedScore += parseNum(scoreData.rushingTouchdowns) * getRule(pos, "rushingTouchdown");
+                        calculatedScore += Math.max(0, Math.floor(parseNum(scoreData.rushingYards) / getRule(pos, "rushingYardDivisor")));
+                        calculatedScore += Math.floor(parseNum(scoreData.rushingAttempts) / getRule(pos, "rushingAttemptDivisor"));
+                        calculatedScore += parseNum(scoreData.fumblesLost) * getRule(pos, "fumbleLost");
+                        calculatedScore += parseNum(scoreData.passingTouchdowns) * getRule(pos, "passingTouchdown");
+                        calculatedScore += parseNum(scoreData.twoPointConversions) * getRule(pos, "twoPtConversion");
+                        break;
+
+                    case "K":
+                        calculatedScore += parseNum(scoreData.pat) * getRule("K", "pat");
+                        calculatedScore += parseNum(scoreData.fgMisses) * getRule("K", "fgMiss");
+                        if (scoreData.fgYardages) {
+                            scoreData.fgYardages.forEach((yardage: string) => {
+                                const yards = parseNum(yardage);
+                                if (yards >= 60) calculatedScore += getRule("K", "fg60plus");
+                                else if (yards >= 50) calculatedScore += getRule("K", "fg50to59");
+                                else if (yards >= 40) calculatedScore += getRule("K", "fg40to49");
+                                else if (yards >= 0) calculatedScore += getRule("K", "fg0to39");
+                            });
+                        }
+                        break;
+                }
 
                 return {
                     id: score.id,
-                    newScore,
+                    newScore: calculatedScore,
                     success: true
                 };
             } catch (error) {
@@ -85,7 +146,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
                     success: false
                 };
             }
-        }));
+        });
 
         // Batch update all scores in transactions (chunk to avoid transaction limits)
         const successfulUpdates = scoreUpdates.filter(u => u.success);
