@@ -1,15 +1,16 @@
 import { observer } from "mobx-react-lite";
 import { Tabs, type TabsRef } from "flowbite-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useStore } from "../../stores/StoreContext";
 import { PLAYOFF_ROUNDS } from "../../constants/playoffs";
 import { usePlayerModals } from "../../hooks/usePlayerModals";
 import PlayerModals from "../players/PlayerModals";
 import RoundDisabledMessage from "../ui/RoundDisabledMessage";
 import TeamCardList from "./TeamCardList";
-import { PlayerScoresByRound } from "../../types";
+import { PlayerScoresByRound, ExtendedPlayer } from "../../types";
 import { getOrderedTeamPicks } from "../../utils/teamUtils";
 import { usePermissions } from "../../hooks/usePermissions";
+import ViewPlayerStatsModal from "../modals/ViewPlayerStatsModal";
 
 interface TeamsViewProps {
   initialActiveRound?: string;
@@ -21,6 +22,7 @@ const TeamsView = observer(({ initialActiveRound, onRoundChange }: TeamsViewProp
   const { draftStore, teamsStore, playersStore, scoresStore, socket } = store;
   const tabsRef = useRef<TabsRef>(null);
   const { canEditScores } = usePermissions();
+  const [viewStatsPlayer, setViewStatsPlayer] = useState<ExtendedPlayer | null>(null);
 
   // Create a wrapper function for MobX action to make it compatible with the hook
   const setPlayerScoresWrapper = (scores: PlayerScoresByRound) => {
@@ -91,6 +93,13 @@ const TeamsView = observer(({ initialActiveRound, onRoundChange }: TeamsViewProp
   // Handle tab change from user interaction
   const handleTabChange = (tab: number) => {
     scoresStore.setActiveRound(PLAYOFF_ROUNDS[tab]);
+  };
+
+  // Handle viewing player stats
+  const handleViewStats = (player: ExtendedPlayer) => {
+    console.log('handleViewStats called with player:', player);
+    console.log('Player scoreData:', player?.scoreData);
+    setViewStatsPlayer(player);
   };
 
   // Compute round validation based on completion status
@@ -167,6 +176,7 @@ const TeamsView = observer(({ initialActiveRound, onRoundChange }: TeamsViewProp
                 onAutoFillScore={handleAutoFillScore}
                 autoFillLoadingPlayerId={autoFillLoadingPlayerId}
                 canEditScores={canEditScores}
+                onViewStats={handleViewStats}
               />
             ) : (
               <RoundDisabledMessage round={round} />
@@ -183,6 +193,13 @@ const TeamsView = observer(({ initialActiveRound, onRoundChange }: TeamsViewProp
           activeRound={scoresStore.activeRound}
         />
       )}
+
+      {/* View stats modal for all users */}
+      <ViewPlayerStatsModal
+        isOpen={viewStatsPlayer !== null}
+        onClose={() => setViewStatsPlayer(null)}
+        player={viewStatsPlayer}
+      />
     </div>
   );
 });

@@ -27,6 +27,7 @@ interface TeamCardProps {
     round?: string;
     ranking?: number;
     canEditScores: boolean;
+    onViewStats?: (player: ExtendedPlayer) => void;
 }
 
 const TeamCard = observer(({
@@ -38,7 +39,8 @@ const TeamCard = observer(({
     autoFillLoadingPlayerId,
     round,
     ranking,
-    canEditScores
+    canEditScores,
+    onViewStats
 }: TeamCardProps) => {
     const { playersStore } = useStore();
     const { draftPicks } = playersStore;
@@ -132,11 +134,29 @@ const TeamCard = observer(({
 
                                     {/* For users WITHOUT edit permissions, show score to the right */}
                                     {!canEditScores && (showScore || showZeroScore || isDisabled) && (
-                                        <Badge color={isDisabled ? "gray" : "success"} size="sm">
-                                            {showScore && `${playerScores[player.name]?.score} pts`}
-                                            {showZeroScore && "0 pts"}
-                                            {isDisabled && (statusReason === "eliminated" ? "Eliminated" : "Not Playing")}
-                                        </Badge>
+                                        <>
+                                            {/* Show view stats button if player has scores */}
+                                            {(showScore || showZeroScore) && onViewStats && (
+                                                <Tooltip content="Click to view player stats" animation="duration-500" arrow={false}>
+                                                    <Button
+                                                        size="xs"
+                                                        color="success"
+                                                        onClick={() => {
+                                                            console.log('Button clicked for player:', player);
+                                                            onViewStats(playerScores[player.name]);
+                                                        }}
+                                                    >
+                                                        {playerScores[player.name]?.score || 0} pts
+                                                    </Button>
+                                                </Tooltip>
+                                            )}
+                                            {/* Show badge for disabled players */}
+                                            {isDisabled && (
+                                                <Badge color="gray" size="sm">
+                                                    {statusReason === "eliminated" ? "Eliminated" : "Not Playing"}
+                                                </Badge>
+                                            )}
+                                        </>
                                     )}
 
                                     {/* Only show controls if user has permission */}
