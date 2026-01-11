@@ -11,6 +11,7 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const query = searchParams.get('query');
+    const type = searchParams.get('type') || 'player'; // Default to player, but allow team searches
 
     if (!query) {
       return NextResponse.json(
@@ -19,9 +20,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log(`Searching ESPN for: ${query}`);
+    console.log(`Searching ESPN for: ${query} (type: ${type})`);
 
-    const espnUrl = `https://site.api.espn.com/apis/search/v2?query=${encodeURIComponent(query)}&limit=10&lang=en&region=us&type=player&sport=football&league=nfl`;
+    const espnUrl = `https://site.api.espn.com/apis/search/v2?query=${encodeURIComponent(query)}&limit=10&lang=en&region=us&type=${type}&sport=football&league=nfl`;
 
     console.log(`Fetching from ESPN: ${espnUrl}`);
 

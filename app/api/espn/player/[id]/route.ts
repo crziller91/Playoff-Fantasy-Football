@@ -16,12 +16,14 @@ export async function GET(
     console.log(`Fetching ESPN data for player ${id}, endpoint: ${endpoint}`);
 
     let espnUrl = '';
-    const season = searchParams.get('season') || '2024'; // Default to 2024 season
+    const season = searchParams.get('season') || '2025'; // Default to 2025 season
+    const seasontype = searchParams.get('seasontype'); // Optional seasontype parameter
 
     switch (endpoint) {
       case 'gamelog':
         // Athlete Gamelog - Player stats per game
-        espnUrl = `https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/${id}/gamelog`;
+        // Add seasontype parameter if provided (3 = postseason)
+        espnUrl = `https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/${id}/gamelog${seasontype ? `?seasontype=${seasontype}` : ''}`;
         break;
       case 'eventlog':
         // Athlete Eventlog - Log of events/stats for a player in a season

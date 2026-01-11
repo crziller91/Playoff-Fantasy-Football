@@ -146,28 +146,172 @@ async function findPlayerByName(playerName: string, teamName?: string): Promise<
 }
 
 /**
- * Fetch player stats from ESPN's API
+ * Get the most recent completed or in-progress game event ID
+ * Returns the event ID if found, null otherwise
  */
-async function getPlayerStats(espnId: string, position: string): Promise<PlayerStats | null> {
+async function getMostRecentGameEventId(teamName: string): Promise<string | null> {
   try {
-    // Use the gamelog endpoint - this has game-by-game stats
-    // Use our API route to avoid CORS issues
-    const gamelogUrl = `/api/espn/player/${espnId}?endpoint=gamelog`;
+    // First, search for the team to get the team ID
+    const searchUrl = `/api/espn/search?query=${encodeURIComponent(teamName)}&type=team`;
+    console.log(`Searching for team: ${teamName}`);
+    const searchResponse = await fetch(searchUrl);
 
-    console.log(`Fetching stats from: ${gamelogUrl}`);
-
-    const response = await fetch(gamelogUrl);
-    if (!response.ok) {
-      console.warn(`Gamelog API returned status: ${response.status}`);
-      // Try alternative endpoint
-      return await getPlayerStatsAlternative(espnId, position);
+    if (!searchResponse.ok) {
+      console.warn('Failed to search for team');
+      return null;
     }
 
-    const data = await response.json();
-    console.log('Gamelog response structure:', JSON.stringify(data, null, 2));
+    const searchData = await searchResponse.json();
+    console.log('Team search response:', JSON.stringify(searchData, null, 2));
 
-    // Parse the most recent game stats
-    return parseGamelogStats(data, position);
+    const teamResults = searchData.results?.find((r: any) => r.type === 'team');
+
+    if (!teamResults || !teamResults.contents || teamResults.contents.length === 0) {
+      console.warn(`No team found for: ${teamName}`);
+      console.warn('Available result types:', searchData.results?.map((r: any) => r.type));
+      return null;
+    }
+
+    console.log('Team results:', JSON.stringify(teamResults.contents[0], null, 2));
+
+    // Extract team ID from the first result
+    const teamUid = teamResults.contents[0].uid;
+    const teamId = teamUid?.split('~t:')[1];
+
+    if (!teamId) {
+      console.warn('Could not extract team ID from uid:', teamUid);
+      return null;
+    }
+
+    console.log(`Found team ID: ${teamId} for ${teamName}`);
+
+    // Fetch the team's schedule
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    const season = (currentMonth <= 1) ? currentYear - 1 : currentYear;
+
+    const scheduleUrl = `/api/espn/teams/${teamId}/schedule?season=${season}`;
+    const scheduleResponse = await fetch(scheduleUrl);
+
+    if (!scheduleResponse.ok) {
+      console.warn('Failed to fetch team schedule');
+      return null;
+    }
+
+    const scheduleData = await scheduleResponse.json();
+    const events = scheduleData.events || [];
+
+    console.log('=== SCHEDULE API RESPONSE ===');
+    console.log(`Total events in schedule: ${events.length}`);
+    if (events.length > 0) {
+      console.log('Sample event structure:', JSON.stringify(events[0], null, 2));
+      console.log('All event IDs and statuses:', events.map((e: any) => ({
+        id: e.id,
+        date: e.date || e.competitions?.[0]?.date,
+        completed: e.competitions?.[0]?.status?.type?.completed,
+        state: e.competitions?.[0]?.status?.type?.state,
+        description: e.competitions?.[0]?.status?.type?.description
+      })));
+    }
+
+    if (events.length === 0) {
+      console.warn('No games found in schedule');
+      return null;
+    }
+
+    // Filter for completed or in-progress games
+    const eligibleGames = events.filter((event: any) => {
+      const status = event.competitions?.[0]?.status?.type;
+      return status?.completed === true || status?.state === 'in';
+    });
+
+    console.log(`Eligible games (completed or in-progress): ${eligibleGames.length}`);
+    if (eligibleGames.length > 0) {
+      console.log('Eligible game IDs:', eligibleGames.map((e: any) => e.id));
+    }
+
+    if (eligibleGames.length === 0) {
+      console.warn('No completed or in-progress games found');
+      return null;
+    }
+
+    // Sort by date descending to get most recent
+    eligibleGames.sort((a: any, b: any) => {
+      const dateA = new Date(a.date || a.competitions?.[0]?.date);
+      const dateB = new Date(b.date || b.competitions?.[0]?.date);
+      return dateB.getTime() - dateA.getTime();
+    });
+
+    const mostRecentGame = eligibleGames[0];
+    const eventId = mostRecentGame.id;
+    const gameDate = mostRecentGame.date || mostRecentGame.competitions?.[0]?.date;
+    const gameStatus = mostRecentGame.competitions?.[0]?.status?.type;
+
+    console.log(`Most recent eligible game: ${eventId} on ${gameDate} (completed: ${gameStatus?.completed}, state: ${gameStatus?.state})`);
+    return eventId;
+  } catch (error) {
+    console.error('Error getting most recent game:', error);
+    return null;
+  }
+}
+
+/**
+ * Fetch player stats from ESPN's API
+ */
+async function getPlayerStats(espnId: string, position: string, teamName?: string): Promise<PlayerStats | null> {
+  try {
+    // If we have a team name, try to get the most recent game event ID with status info
+    let targetEventId: string | null = null;
+    if (teamName) {
+      targetEventId = await getMostRecentGameEventId(teamName);
+      if (targetEventId) {
+        console.log(`Target event ID from schedule: ${targetEventId}`);
+      }
+    }
+
+    // Try postseason first (seasontype=3)
+    console.log(`Trying to fetch postseason stats for player ${espnId}`);
+    let gamelogUrl = `/api/espn/player/${espnId}?endpoint=gamelog&seasontype=3`;
+    let response = await fetch(gamelogUrl);
+
+    let data: any = null;
+    let isPostseason = false;
+
+    if (response.ok) {
+      data = await response.json();
+      // Check if there are any events in the postseason data
+      const hasEvents = data?.seasonTypes?.[0]?.categories?.[0]?.events?.length > 0 ||
+                       (data?.events && Object.keys(data.events).length > 0);
+
+      if (hasEvents) {
+        console.log('Found postseason stats');
+        isPostseason = true;
+      } else {
+        console.log('No postseason games found, trying regular season');
+        data = null;
+      }
+    }
+
+    // If no postseason data, try regular season (seasontype=2)
+    if (!data) {
+      console.log(`Fetching regular season stats for player ${espnId}`);
+      gamelogUrl = `/api/espn/player/${espnId}?endpoint=gamelog&seasontype=2`;
+      response = await fetch(gamelogUrl);
+
+      if (!response.ok) {
+        console.warn(`Gamelog API returned status: ${response.status}`);
+        // Try alternative endpoint
+        return await getPlayerStatsAlternative(espnId, position);
+      }
+
+      data = await response.json();
+    }
+
+    console.log(`Using ${isPostseason ? 'postseason' : 'regular season'} data`);
+
+    // Parse the most recent game stats, passing the target event ID if we have one
+    return parseGamelogStats(data, position, isPostseason, targetEventId);
   } catch (error) {
     console.error('Error fetching player stats:', error);
     // Try alternative endpoint
@@ -204,7 +348,7 @@ async function getPlayerStatsAlternative(espnId: string, position: string): Prom
 /**
  * Parse stats from gamelog endpoint
  */
-function parseGamelogStats(data: any, position: string): PlayerStats {
+function parseGamelogStats(data: any, position: string, isPostseason: boolean = false, targetEventId: string | null = null): PlayerStats {
   const stats: PlayerStats = {};
 
   try {
@@ -217,6 +361,8 @@ function parseGamelogStats(data: any, position: string): PlayerStats {
       return stats;
     }
 
+    console.log(`Parsing ${isPostseason ? 'postseason' : 'regular season'} gamelog data`);
+
     // Navigate to the actual game stats in seasonTypes
     const seasonTypes = data?.seasonTypes;
     if (!seasonTypes || !Array.isArray(seasonTypes) || seasonTypes.length === 0) {
@@ -224,7 +370,7 @@ function parseGamelogStats(data: any, position: string): PlayerStats {
       return stats;
     }
 
-    // Get the first season type (current season)
+    // Get the first season type (should be the one we requested)
     const currentSeason = seasonTypes[0];
     const categories = currentSeason?.categories;
 
@@ -233,19 +379,56 @@ function parseGamelogStats(data: any, position: string): PlayerStats {
       return stats;
     }
 
-    // Get the events from the first category (regular season stats)
+    // Get the events from the first category
     const eventCategory = categories.find((cat: any) => cat.type === 'event');
-    if (!eventCategory || !eventCategory.events || eventCategory.events.length === 0) {
+    if (!eventCategory || !eventCategory.events || !Array.isArray(eventCategory.events) || eventCategory.events.length === 0) {
       console.warn('No events found in category');
       return stats;
     }
 
-    // Get the most recent game (first in the array)
-    const latestGameStats = eventCategory.events[0];
+    console.log(`Found ${eventCategory.events.length} games in ${isPostseason ? 'postseason' : 'regular season'}`);
+
+    // If we have a target event ID from the schedule (with status info), use that
+    if (targetEventId) {
+      console.log(`Looking for target event ID: ${targetEventId}`);
+      const targetEvent = eventCategory.events.find((e: any) => e.eventId === targetEventId);
+
+      if (targetEvent) {
+        console.log(`Found target event in gamelog data: ${targetEventId}`);
+        const gameStats = targetEvent?.stats || [];
+
+        console.log('Stat names:', names.join(', '));
+        console.log('Game stats values:', gameStats.join(', '));
+
+        // Build stats list and return
+        const statsList: any[] = [];
+        names.forEach((name: string, index: number) => {
+          statsList.push({
+            name: name,
+            abbreviation: labels[index],
+            value: gameStats[index]
+          });
+        });
+
+        return parseStatsForPosition(statsList, position);
+      } else {
+        console.warn(`Target event ${targetEventId} not found in gamelog, falling back to sorting`);
+      }
+    }
+
+    // Fallback: Sort by event ID (higher = more recent)
+    const sortedEvents = [...eventCategory.events].sort((a: any, b: any) => {
+      return String(b.eventId).localeCompare(String(a.eventId));
+    });
+
+    console.log('Top 3 events by ID:', sortedEvents.slice(0, 3).map((e: any) => ({
+      eventId: e.eventId
+    })));
+
+    const latestGameStats = sortedEvents[0];
     const gameStats = latestGameStats?.stats || [];
 
-    console.log(`Found ${eventCategory.events.length} games in current season`);
-    console.log(`Latest game event ID: ${latestGameStats.eventId}`);
+    console.log(`Using event ID: ${latestGameStats.eventId}`);
     console.log('Stat names:', names.join(', '));
     console.log('Game stats values:', gameStats.join(', '));
 
@@ -440,8 +623,8 @@ export async function searchPlayerStats(
 
     console.log(`Found ESPN ID: ${espnId} for ${playerName}`);
 
-    // Then fetch their stats
-    const stats = await getPlayerStats(espnId, position);
+    // Then fetch their stats, passing the team name for schedule lookup
+    const stats = await getPlayerStats(espnId, position, teamName);
 
     if (!stats || Object.keys(stats).length === 0) {
       throw new Error(
