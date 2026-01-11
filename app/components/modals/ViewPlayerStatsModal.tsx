@@ -15,7 +15,8 @@ export default function ViewPlayerStatsModal({
     if (!player || !player.scoreData) return null;
 
     const renderPositionStats = () => {
-        const { scoreData } = player;
+        const scoreData = player.scoreData;
+        if (!scoreData) return null;
 
         switch (player.position) {
             case "QB":
