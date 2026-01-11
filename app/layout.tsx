@@ -4,6 +4,7 @@ import { Flowbite } from "flowbite-react";
 import { StoreProvider } from "./stores/StoreContext";
 import Providers from "./providers";
 import { ToastContainer } from 'react-toastify';
+import { Analytics } from "@vercel/analytics/react";
 import 'react-toastify/dist/ReactToastify.css';
 import "./globals.css";
 
@@ -44,6 +45,7 @@ export default function RootLayout({
             />
           </StoreProvider>
         </Providers>
+        <Analytics />
       </body>
     </html>
   );
