@@ -53,8 +53,10 @@ export interface ExtendedPlayer extends Player {
   score?: number;
   scoreData?: ScoreForm;
   isDisabled?: boolean; // Track disabled status
-  statusReason?: "eliminated" | "notPlaying" | null; // Track the reason player is disabled
+  statusReason?: "eliminated" | "notPlaying" | "injured" | null; // Track the reason player is disabled
   currentRound?: string; // Track which playoff round this score is for
+  backupPlayerId?: number; // ID of backup QB (only for QB position)
+  backupPlayerName?: string; // Name of backup QB for display
 }
 
 export interface ScoreForm {
@@ -133,9 +135,11 @@ export interface PlayerScoreRequest {
   playerId: number;
   round: string;
   isDisabled: boolean;
-  statusReason: "eliminated" | "notPlaying" | null;
+  statusReason: "eliminated" | "notPlaying" | "injured" | null;
   score: number;
   scoreData?: any;
+  backupPlayerId?: number;
+  backupPlayerName?: string;
 }
 
 export interface BulkPlayerScoreRequest {

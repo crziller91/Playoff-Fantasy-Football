@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ExtendedPlayer, ScoreForm, FormErrors, PlayerScoresByRound } from '../types';
+import { ExtendedPlayer, ScoreForm, FormErrors, PlayerScoresByRound, Player } from '../types';
 import { validateForm, calculatePlayerScore } from '../utils/scoreCalculator';
 import { deletePlayerScore } from '../services/scoreService';
 import { PLAYOFF_ROUNDS } from '../constants/playoffs';
@@ -14,6 +14,7 @@ interface UsePlayerModalsProps {
     activeRound: string;
     deletePlayerScore?: (player: ExtendedPlayer, round: string) => Promise<boolean>;
     socket?: Socket | null; // Add socket as a parameter
+    allPlayers?: Player[]; // All players for QB backup selection
 }
 
 export function usePlayerModals({
@@ -21,7 +22,8 @@ export function usePlayerModals({
     setPlayerScores,
     activeRound,
     deletePlayerScore,
-    socket // Accept socket as a parameter
+    socket, // Accept socket as a parameter
+    allPlayers = [] // All players for QB backup selection
 }: UsePlayerModalsProps) {
     // Get permissions
     const { canEditScores } = usePermissions();
@@ -43,12 +45,16 @@ export function usePlayerModals({
     const [openStatusModal, setOpenStatusModal] = useState(false);
     const [openReactivationModal, setOpenReactivationModal] = useState(false);
     const [openZeroStatsModal, setOpenZeroStatsModal] = useState(false);
+    const [openSeasonEndingModal, setOpenSeasonEndingModal] = useState(false);
+    const [openQBBackupModal, setOpenQBBackupModal] = useState(false);
 
     // Players for various modals
     const [clearScoresPlayer, setClearScoresPlayer] = useState<ExtendedPlayer | null>(null);
     const [statusPlayer, setStatusPlayer] = useState<ExtendedPlayer | null>(null);
     const [reactivationPlayer, setReactivationPlayer] = useState<ExtendedPlayer | null>(null);
     const [zeroStatsPlayer, setZeroStatsPlayer] = useState<ExtendedPlayer | null>(null);
+    const [seasonEndingPlayer, setSeasonEndingPlayer] = useState<ExtendedPlayer | null>(null);
+    const [qbBackupPlayer, setQBBackupPlayer] = useState<ExtendedPlayer | null>(null);
 
     // Auto-fill loading state - track which player is being auto-filled
     const [autoFillLoadingPlayerId, setAutoFillLoadingPlayerId] = useState<number | null>(null);
@@ -95,9 +101,17 @@ export function usePlayerModals({
         // Check permissions before proceeding
         if (!canEditScores) return;
 
-        setSelectedPlayer({ ...player, currentRound: activeRound });
+        // Get current player data from scores to include backup info
+        const currentPlayerData = playerScores[activeRound]?.[player.name];
+
+        setSelectedPlayer({
+            ...player,
+            currentRound: activeRound,
+            backupPlayerId: currentPlayerData?.backupPlayerId,
+            backupPlayerName: currentPlayerData?.backupPlayerName
+        });
         // Load existing score data if available
-        const currentScoreData = playerScores[activeRound]?.[player.name]?.scoreData || {};
+        const currentScoreData = currentPlayerData?.scoreData || {};
         setScoreForm(currentScoreData);
         setInitialScoreForm(JSON.parse(JSON.stringify(currentScoreData)));
 
@@ -168,11 +182,13 @@ export function usePlayerModals({
         setStatusPlayer(null);
     };
 
-    // Handler for player just not playing this round
+    // Handler for player just not playing this round (opens season-ending injury modal)
     const handlePlayerNotPlaying = () => {
         if (!canEditScores || !statusPlayer) return;
-        updatePlayerStatus(statusPlayer, true, false);
+        // Close status modal and open season-ending injury modal
         setOpenStatusModal(false);
+        setSeasonEndingPlayer(statusPlayer);
+        setOpenSeasonEndingModal(true);
         setStatusPlayer(null);
     };
 
@@ -180,6 +196,128 @@ export function usePlayerModals({
     const handleCloseStatusModal = () => {
         setOpenStatusModal(false);
         setStatusPlayer(null);
+    };
+
+    // Handler for season-ending injury confirmation
+    const handleSeasonEndingConfirm = () => {
+        if (!canEditScores || !seasonEndingPlayer) return;
+        // Update with season-ending injury (cascade to future rounds)
+        updatePlayerStatus(seasonEndingPlayer, true, true, "injured");
+        setOpenSeasonEndingModal(false);
+        setSeasonEndingPlayer(null);
+    };
+
+    // Handler for not season-ending injury confirmation
+    const handleNotSeasonEndingConfirm = () => {
+        if (!canEditScores || !seasonEndingPlayer) return;
+        // Update without cascade (just this round)
+        updatePlayerStatus(seasonEndingPlayer, true, false, "injured");
+        setOpenSeasonEndingModal(false);
+        setSeasonEndingPlayer(null);
+    };
+
+    // Handler for closing the season-ending injury modal
+    const handleCloseSeasonEndingModal = () => {
+        setOpenSeasonEndingModal(false);
+        setSeasonEndingPlayer(null);
+    };
+
+    // Handler for opening the QB swap modal
+    const handleOpenQBSwapModal = (player: ExtendedPlayer) => {
+        if (!canEditScores) return;
+        if (player.position !== "QB") return;
+
+        // Get current player data from scores to include backup info
+        const currentPlayerData = playerScores[activeRound]?.[player.name];
+
+        setQBBackupPlayer({
+            ...player,
+            currentRound: activeRound,
+            backupPlayerId: currentPlayerData?.backupPlayerId,
+            backupPlayerName: currentPlayerData?.backupPlayerName
+        });
+        setOpenQBBackupModal(true);
+    };
+
+    // Handler for QB swap confirmation
+    const handleQBSwapConfirm = (backupPlayer: Player | null, applyToFutureRounds: boolean, isRevert?: boolean) => {
+        if (!canEditScores || !qbBackupPlayer) return;
+
+        // If not reverting and no backup player, don't proceed
+        if (!isRevert && !backupPlayer) return;
+
+        const round = qbBackupPlayer.currentRound || activeRound;
+
+        // Create a deep copy of the current state
+        const newState = JSON.parse(JSON.stringify(playerScores));
+
+        // Initialize the round if it doesn't exist
+        if (!newState[round]) {
+            newState[round] = {};
+        }
+
+        // Get or create the player entry
+        const currentPlayer = newState[round][qbBackupPlayer.name] || { ...qbBackupPlayer, currentRound: round };
+
+        if (isRevert) {
+            // Revert: clear backup QB info
+            newState[round][qbBackupPlayer.name] = {
+                ...currentPlayer,
+                backupPlayerId: undefined,
+                backupPlayerName: undefined
+            };
+        } else {
+            // Update player in current round with backup QB info
+            newState[round][qbBackupPlayer.name] = {
+                ...currentPlayer,
+                backupPlayerId: backupPlayer!.id,
+                backupPlayerName: backupPlayer!.name
+            };
+        }
+
+        // If applyToFutureRounds is true, also update subsequent rounds
+        if (applyToFutureRounds && round !== "Superbowl") {
+            const roundIndex = PLAYOFF_ROUNDS.indexOf(round);
+            const subsequentRounds = PLAYOFF_ROUNDS.slice(roundIndex + 1);
+
+            subsequentRounds.forEach(futureRound => {
+                // Initialize the round if it doesn't exist
+                if (!newState[futureRound]) {
+                    newState[futureRound] = {};
+                }
+
+                const futurePlayer = newState[futureRound][qbBackupPlayer.name] || { ...qbBackupPlayer, currentRound: futureRound };
+
+                if (isRevert) {
+                    // Revert: clear backup QB info
+                    newState[futureRound][qbBackupPlayer.name] = {
+                        ...futurePlayer,
+                        backupPlayerId: undefined,
+                        backupPlayerName: undefined
+                    };
+                } else {
+                    // Update player in future round with backup QB info
+                    newState[futureRound][qbBackupPlayer.name] = {
+                        ...futurePlayer,
+                        backupPlayerId: backupPlayer!.id,
+                        backupPlayerName: backupPlayer!.name
+                    };
+                }
+            });
+        }
+
+        // Update the scores state
+        setPlayerScores(newState);
+
+        // Clean up
+        setOpenQBBackupModal(false);
+        setQBBackupPlayer(null);
+    };
+
+    // Handler for closing the QB backup modal
+    const handleCloseQBBackupModal = () => {
+        setOpenQBBackupModal(false);
+        setQBBackupPlayer(null);
     };
 
     // Handler for confirming player reactivation
@@ -421,7 +559,14 @@ export function usePlayerModals({
     };
 
     // Shared function to update player status
-    const updatePlayerStatus = (player: ExtendedPlayer, isDisabled: boolean, cascade: boolean) => {
+    const updatePlayerStatus = (
+        player: ExtendedPlayer,
+        isDisabled: boolean,
+        cascade: boolean,
+        reason?: "eliminated" | "notPlaying" | "injured",
+        backupPlayerId?: number,
+        backupPlayerName?: string
+    ) => {
         if (!canEditScores) return;
 
         const round = player.currentRound || activeRound;
@@ -442,8 +587,15 @@ export function usePlayerModals({
             return;
         }
 
-        // Update status for this round
-        const statusReason = isDisabled ? (cascade ? "eliminated" : "notPlaying") : null;
+        // Determine status reason - use provided reason or fall back to old logic
+        let statusReason: "eliminated" | "notPlaying" | "injured" | null = null;
+        if (isDisabled) {
+            if (reason) {
+                statusReason = reason;
+            } else {
+                statusReason = cascade ? "eliminated" : "notPlaying";
+            }
+        }
 
         // Update player in current round
         newState[round][player.name] = {
@@ -451,7 +603,9 @@ export function usePlayerModals({
             isDisabled: isDisabled,
             statusReason: statusReason,
             score: isDisabled ? 0 : currentPlayer.score,
-            scoreData: isDisabled ? undefined : currentPlayer.scoreData
+            scoreData: isDisabled ? undefined : currentPlayer.scoreData,
+            backupPlayerId: backupPlayerId || undefined,
+            backupPlayerName: backupPlayerName || undefined
         };
 
         // If cascade is true and we're not in Wild Card round,
@@ -468,13 +622,18 @@ export function usePlayerModals({
 
                 const futurePlayer = newState[futureRound][player.name] || { ...player, currentRound: futureRound };
 
+                // Determine future round status reason
+                const futureStatusReason = reason === "injured" ? "injured" : "eliminated";
+
                 // Update player in future round
                 newState[futureRound][player.name] = {
                     ...futurePlayer,
                     isDisabled: true,
-                    statusReason: "eliminated", // Mark as eliminated in future rounds
+                    statusReason: futureStatusReason,
                     score: 0,
-                    scoreData: undefined
+                    scoreData: undefined,
+                    backupPlayerId: backupPlayerId || undefined,
+                    backupPlayerName: backupPlayerName || undefined
                 };
             });
         }
@@ -495,10 +654,18 @@ export function usePlayerModals({
         setAutoFillLoadingPlayerId(player.id);
 
         try {
-            console.log(`Auto-filling scores for ${player.name} (${player.position})`);
+            // Check if this is a QB with a backup assigned in the current round
+            const currentPlayerData = playerScores[activeRound]?.[player.name];
+            const backupPlayerName = currentPlayerData?.backupPlayerName;
+            const hasBackupQB = player.position === "QB" && backupPlayerName;
 
-            // Fetch stats from ESPN
-            const stats = await searchPlayerStats(player.name, player.position, player.teamName);
+            // Use backup QB name if swapped, otherwise use original player name
+            const playerNameToSearch = hasBackupQB ? backupPlayerName : player.name;
+
+            console.log(`Auto-filling scores for ${playerNameToSearch} (${player.position})${hasBackupQB ? ` [Backup for ${player.name}]` : ''}`);
+
+            // Fetch stats from ESPN using the active QB name
+            const stats = await searchPlayerStats(playerNameToSearch, player.position, player.teamName);
 
             if (!stats) {
                 console.error("No stats found for this player");
@@ -575,14 +742,17 @@ export function usePlayerModals({
                 ...player,
                 score,
                 scoreData: { ...autoScoreForm },
-                isDisabled: false
+                isDisabled: false,
+                // Preserve backup QB info if it exists
+                backupPlayerId: currentPlayerData?.backupPlayerId,
+                backupPlayerName: currentPlayerData?.backupPlayerName
             };
             setPlayerScores(newScores);
 
             // The setPlayerScores call above will trigger the bulk save through ScoresStore
             // No need to call savePlayerScore individually here
 
-            console.log(`Successfully auto-filled and saved scores for ${player.name}`);
+            console.log(`Successfully auto-filled and saved scores for ${playerNameToSearch}${hasBackupQB ? ` (backup for ${player.name})` : ''}`);
         } catch (error) {
             // Display user-friendly error message
             const errorMessage = error instanceof Error ? error.message : "Failed to fetch stats from ESPN";
@@ -604,9 +774,13 @@ export function usePlayerModals({
         handleEditScore,
         handleTogglePlayerDisabled,
         handleAutoFillScore,
+        handleOpenQBSwapModal,
 
         // Loading state
         autoFillLoadingPlayerId,
+
+        // All players (for QB backup selection)
+        allPlayers,
 
         // Modals state
         modalsState: {
@@ -633,6 +807,14 @@ export function usePlayerModals({
             zeroStatsModal: {
                 isOpen: openZeroStatsModal,
                 player: zeroStatsPlayer
+            },
+            seasonEndingModal: {
+                isOpen: openSeasonEndingModal,
+                player: seasonEndingPlayer
+            },
+            qbBackupModal: {
+                isOpen: openQBBackupModal,
+                player: qbBackupPlayer
             }
         },
 
@@ -662,6 +844,15 @@ export function usePlayerModals({
                 onClose: handleCloseZeroStatsModal,
                 onConfirmDeactivate: handleZeroStatsDeactivate,
                 onKeepZeroScore: handleZeroStatsKeepScore
+            },
+            seasonEndingModal: {
+                onClose: handleCloseSeasonEndingModal,
+                onConfirmSeasonEnding: handleSeasonEndingConfirm,
+                onConfirmNotSeasonEnding: handleNotSeasonEndingConfirm
+            },
+            qbBackupModal: {
+                onClose: handleCloseQBBackupModal,
+                onConfirm: handleQBSwapConfirm
             }
         }
     };

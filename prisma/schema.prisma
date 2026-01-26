@@ -52,16 +52,18 @@ model DraftStatus {
 
 // New model for player scores
 model PlayerScore {
-  id           Int      @id @default(autoincrement())
-  playerId     Int
-  player       Player   @relation(fields: [playerId], references: [id])
-  round        String   // "Wild Card", "Divisional", "Conference", "Superbowl"
-  isDisabled   Boolean  @default(false)
-  statusReason String?  // "eliminated", "notPlaying", or null
-  score        Int      @default(0)
-  scoreData    String?  // JSON data of all player stats
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id              Int      @id @default(autoincrement())
+  playerId        Int
+  player          Player   @relation(fields: [playerId], references: [id])
+  round           String   // "Wild Card", "Divisional", "Conference", "Superbowl"
+  isDisabled      Boolean  @default(false)
+  statusReason    String?  // "eliminated", "notPlaying", "injured", or null
+  score           Int      @default(0)
+  scoreData       String?  // JSON data of all player stats
+  backupPlayerId  Int?     // ID of backup QB (only for QB position)
+  backupPlayerName String? // Name of backup QB for display
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@unique([playerId, round], name: "playerId_round")
 }

@@ -36,8 +36,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
                 teamName: score.player.teamName || undefined,
                 score: score.score,
                 isDisabled: score.isDisabled,
-                statusReason: score.statusReason as "eliminated" | "notPlaying" | null,
+                statusReason: score.statusReason as "eliminated" | "notPlaying" | "injured" | null,
                 scoreData: score.scoreData ? JSON.parse(score.scoreData) : undefined,
+                backupPlayerId: score.backupPlayerId || undefined,
+                backupPlayerName: score.backupPlayerName || undefined,
             };
         });
 
@@ -55,7 +57,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 export async function POST(request: NextRequest): Promise<NextResponse> {
     try {
         const data = await request.json();
-        const { playerId, round, isDisabled, statusReason, score, scoreData } = data;
+        const { playerId, round, isDisabled, statusReason, score, scoreData, backupPlayerId, backupPlayerName } = data;
 
         if (!playerId || !round) {
             return NextResponse.json(
@@ -92,6 +94,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
                 statusReason,
                 score,
                 scoreData: formattedScoreData,
+                backupPlayerId: backupPlayerId || null,
+                backupPlayerName: backupPlayerName || null,
             },
             create: {
                 playerId,
@@ -100,6 +104,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
                 statusReason,
                 score,
                 scoreData: formattedScoreData,
+                backupPlayerId: backupPlayerId || null,
+                backupPlayerName: backupPlayerName || null,
             },
             include: {
                 player: true,

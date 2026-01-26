@@ -88,6 +88,8 @@ export const bulkSavePlayerScores = async (playerScores: {
   statusReason: "eliminated" | "notPlaying" | null;
   score: number;
   scoreData?: any;
+  backupPlayerId?: number | null;
+  backupPlayerName?: string | null;
 }[]): Promise<any> => {
   const response = await fetch("/api/player-scores/bulk", {
     method: "POST",
@@ -124,7 +126,9 @@ export const convertToApiFormat = (
           isDisabled: playerData.isDisabled || false,
           statusReason: playerData.statusReason || null,
           score: playerData.score || 0,
-          scoreData: playerData.scoreData
+          scoreData: playerData.scoreData,
+          backupPlayerId: playerData.backupPlayerId || null,
+          backupPlayerName: playerData.backupPlayerName || null
         });
       }
     });

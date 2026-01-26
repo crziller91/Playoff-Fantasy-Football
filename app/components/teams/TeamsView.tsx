@@ -35,7 +35,9 @@ const TeamsView = observer(({ initialActiveRound, onRoundChange }: TeamsViewProp
     handleEditScore,
     handleTogglePlayerDisabled,
     handleAutoFillScore,
+    handleOpenQBSwapModal,
     autoFillLoadingPlayerId,
+    allPlayers,
     modalsState,
     modalsHandlers
   } = usePlayerModals({
@@ -70,7 +72,8 @@ const TeamsView = observer(({ initialActiveRound, onRoundChange }: TeamsViewProp
         return false;
       }
     },
-    socket: socket // Pass the socket to the hook
+    socket: socket, // Pass the socket to the hook
+    allPlayers: playersStore.allPlayers // Pass all players for QB backup selection
   });
 
   // Synchronize tab UI with initialActiveRound prop
@@ -174,6 +177,7 @@ const TeamsView = observer(({ initialActiveRound, onRoundChange }: TeamsViewProp
                 onEditScore={handleEditScore}
                 onTogglePlayerDisabled={handleTogglePlayerDisabled}
                 onAutoFillScore={handleAutoFillScore}
+                onQBSwap={handleOpenQBSwapModal}
                 autoFillLoadingPlayerId={autoFillLoadingPlayerId}
                 canEditScores={canEditScores}
                 onViewStats={handleViewStats}
@@ -191,6 +195,7 @@ const TeamsView = observer(({ initialActiveRound, onRoundChange }: TeamsViewProp
           modalsState={modalsState}
           modalsHandlers={modalsHandlers}
           activeRound={scoresStore.activeRound}
+          allPlayers={allPlayers}
         />
       )}
 

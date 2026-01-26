@@ -4,7 +4,9 @@ import ClearScoresModal from "../modals/ClearScoresModal";
 import PlayerStatusModal from "../modals/PlayerStatusModal";
 import PlayerReactivationModal from "../modals/PlayerReactivationModal";
 import ZeroStatsModal from "../modals/ZeroStatsModal";
-import { ExtendedPlayer, ScoreForm, FormErrors } from "../../types";
+import SeasonEndingInjuryModal from "../modals/SeasonEndingInjuryModal";
+import QBBackupModal from "../modals/QBBackupModal";
+import { ExtendedPlayer, ScoreForm, FormErrors, Player } from "../../types";
 
 interface PlayerModalsProps {
     modalsState: {
@@ -29,6 +31,14 @@ interface PlayerModalsProps {
             player: ExtendedPlayer | null;
         };
         zeroStatsModal: {
+            isOpen: boolean;
+            player: ExtendedPlayer | null;
+        };
+        seasonEndingModal: {
+            isOpen: boolean;
+            player: ExtendedPlayer | null;
+        };
+        qbBackupModal: {
             isOpen: boolean;
             player: ExtendedPlayer | null;
         };
@@ -59,8 +69,18 @@ interface PlayerModalsProps {
             onConfirmDeactivate: () => void;
             onKeepZeroScore: () => void;
         };
+        seasonEndingModal: {
+            onClose: () => void;
+            onConfirmSeasonEnding: () => void;
+            onConfirmNotSeasonEnding: () => void;
+        };
+        qbBackupModal: {
+            onClose: () => void;
+            onConfirm: (backupPlayer: Player | null, applyToFutureRounds: boolean, isRevert?: boolean) => void;
+        };
     };
     activeRound: string;
+    allPlayers: Player[];
 }
 
 /**
@@ -69,14 +89,17 @@ interface PlayerModalsProps {
 export default function PlayerModals({
     modalsState,
     modalsHandlers,
-    activeRound
+    activeRound,
+    allPlayers
 }: PlayerModalsProps) {
     const {
         scoreModal,
         clearScoresModal,
         statusModal,
         reactivationModal,
-        zeroStatsModal
+        zeroStatsModal,
+        seasonEndingModal,
+        qbBackupModal
     } = modalsState;
 
     const {
@@ -84,7 +107,9 @@ export default function PlayerModals({
         clearScoresModal: clearScoresModalHandlers,
         statusModal: statusModalHandlers,
         reactivationModal: reactivationModalHandlers,
-        zeroStatsModal: zeroStatsModalHandlers
+        zeroStatsModal: zeroStatsModalHandlers,
+        seasonEndingModal: seasonEndingModalHandlers,
+        qbBackupModal: qbBackupModalHandlers
     } = modalsHandlers;
 
     return (
@@ -138,6 +163,26 @@ export default function PlayerModals({
                 onClose={zeroStatsModalHandlers.onClose}
                 onConfirmDeactivate={zeroStatsModalHandlers.onConfirmDeactivate}
                 onKeepZeroScore={zeroStatsModalHandlers.onKeepZeroScore}
+            />
+
+            {/* Season Ending Injury modal */}
+            <SeasonEndingInjuryModal
+                isOpen={seasonEndingModal.isOpen}
+                player={seasonEndingModal.player}
+                round={activeRound}
+                onClose={seasonEndingModalHandlers.onClose}
+                onConfirmSeasonEnding={seasonEndingModalHandlers.onConfirmSeasonEnding}
+                onConfirmNotSeasonEnding={seasonEndingModalHandlers.onConfirmNotSeasonEnding}
+            />
+
+            {/* QB Backup Selection modal */}
+            <QBBackupModal
+                isOpen={qbBackupModal.isOpen}
+                player={qbBackupModal.player}
+                round={activeRound}
+                allPlayers={allPlayers}
+                onClose={qbBackupModalHandlers.onClose}
+                onConfirm={qbBackupModalHandlers.onConfirm}
             />
         </>
     );

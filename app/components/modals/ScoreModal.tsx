@@ -40,8 +40,12 @@ export default function ScoreModal({
         setIsAutoFilling(true);
         setAutoFillError(null);
 
+        // Use backup QB name if swapped, otherwise use original player name
+        const hasBackup = player.position === "QB" && player.backupPlayerName;
+        const playerNameToSearch = hasBackup ? player.backupPlayerName : player.name;
+
         try {
-            const stats = await searchPlayerStats(player.name, player.position, player.teamName);
+            const stats = await searchPlayerStats(playerNameToSearch!, player.position, player.teamName);
 
             if (!stats) {
                 setAutoFillError("No stats found for this player");
@@ -72,13 +76,17 @@ export default function ScoreModal({
             const errorMessage = error instanceof Error ? error.message : "Failed to fetch stats";
             setAutoFillError(errorMessage);
             // Log error without full stack trace to avoid Next.js error overlay
-            console.log(`Error auto-filling stats for ${player.name}:`, errorMessage);
+            console.log(`Error auto-filling stats for ${playerNameToSearch}:`, errorMessage);
         } finally {
             setIsAutoFilling(false);
         }
     };
 
     if (!player) return null;
+
+    // Check if this is a QB with a backup assigned
+    const hasBackupQB = player.position === "QB" && player.backupPlayerName;
+    const displayName = hasBackupQB ? player.backupPlayerName : player.name;
 
     const commonProps = (id: string, label: string, field: keyof ScoreForm) => {
         const hasError = submitAttempted && formErrors[field];
@@ -565,7 +573,7 @@ export default function ScoreModal({
             <Modal.Body>
                 <div className="space-y-6">
                     <h3 className="text-xl font-medium text-gray-900 dark:text-white">
-                        Add scores for {player.name}
+                        Add scores for {displayName}
                     </h3>
 
                     {/* Auto-fill button */}

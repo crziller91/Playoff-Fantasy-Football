@@ -1,9 +1,17 @@
 import { observer } from "mobx-react-lite";
-import { Card } from "flowbite-react";
+import { Card, Badge } from "flowbite-react";
 import { PLAYOFF_ROUNDS } from "../../constants/playoffs";
-import { useState, useEffect } from "react";
 import { getOrderedTeamPicks } from "../../utils/teamUtils";
 import { useStore } from "../../stores/StoreContext";
+
+// Map position to badge color (same as TeamCard)
+const positionBadgeColors: Record<string, "info" | "gray" | "failure" | "success" | "warning" | "indigo" | "purple" | "pink"> = {
+  QB: "success",
+  RB: "purple",
+  WR: "warning",
+  TE: "failure",
+  K: "info"
+};
 
 const ScoresTab = observer(() => {
   const { teamsStore, playersStore, scoresStore } = useStore();
@@ -57,6 +65,23 @@ const ScoresTab = observer(() => {
     (a, b) => (overallScores[b] || 0) - (overallScores[a] || 0)
   );
 
+  // Get remaining (active) players for a team - players not eliminated
+  const getRemainingPlayers = (team: string) => {
+    const teamPlayers = getOrderedTeamPicks(team, draftPicks);
+
+    // Find players that are still active (not eliminated in any round)
+    return teamPlayers.filter(({ player }) => {
+      // Check if player has been eliminated in any round
+      for (const round of PLAYOFF_ROUNDS) {
+        const playerData = playerScores[round]?.[player.name];
+        if (playerData?.isDisabled && playerData?.statusReason === "eliminated") {
+          return false;
+        }
+      }
+      return true;
+    }).map(({ player }) => player);
+  };
+
   if (isLoading) {
     return (
       <div className="flex h-32 items-center justify-center text-gray-500">
@@ -94,13 +119,34 @@ const ScoresTab = observer(() => {
               key={`${team}-${round}`}
               className="flex items-center justify-between"
             >
-              <span className="text-sm text-gray-700">{round}:</span>
-              <span className="text-sm font-semibold">
+              <span className="text-sm text-gray-700 dark:text-gray-300">{round}:</span>
+              <span className="text-sm font-semibold dark:text-white">
                 {roundScore} pts
               </span>
             </div>
           );
         })}
+      </div>
+
+      {/* Remaining Players */}
+      <div className="mt-4 border-t border-gray-200 pt-3 dark:border-gray-700">
+        <span className="mb-2 block text-xs font-medium text-gray-500 dark:text-gray-400">
+          Remaining Players
+        </span>
+        <div className="flex flex-wrap gap-1.5">
+          {getRemainingPlayers(team).map((player) => (
+            <Badge
+              key={player.id}
+              color={positionBadgeColors[player.position] || "gray"}
+              size="xs"
+            >
+              {player.name}
+            </Badge>
+          ))}
+          {getRemainingPlayers(team).length === 0 && (
+            <span className="text-xs text-gray-400">No players remaining</span>
+          )}
+        </div>
       </div>
     </Card>
   );

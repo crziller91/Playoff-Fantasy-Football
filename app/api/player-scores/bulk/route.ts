@@ -16,8 +16,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     // Create an array of database operations
     const operations = playerScores.map((scoreData) => {
-      const { playerId, round, isDisabled, statusReason, score, scoreData: playerScoreData } = scoreData;
-      
+      const { playerId, round, isDisabled, statusReason, score, scoreData: playerScoreData, backupPlayerId, backupPlayerName } = scoreData;
+
       // Format score data for storage
       const formattedScoreData = playerScoreData ? JSON.stringify(playerScoreData) : null;
 
@@ -33,6 +33,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           statusReason,
           score,
           scoreData: formattedScoreData,
+          backupPlayerId: backupPlayerId || null,
+          backupPlayerName: backupPlayerName || null,
         },
         create: {
           playerId,
@@ -41,6 +43,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           statusReason,
           score,
           scoreData: formattedScoreData,
+          backupPlayerId: backupPlayerId || null,
+          backupPlayerName: backupPlayerName || null,
         },
       });
     });

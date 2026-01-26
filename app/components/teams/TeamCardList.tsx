@@ -9,6 +9,7 @@ interface TeamCardListProps {
     onEditScore: (player: ExtendedPlayer) => void;
     onTogglePlayerDisabled: (player: ExtendedPlayer, isClearScores?: boolean) => void;
     onAutoFillScore?: (player: ExtendedPlayer) => void;
+    onQBSwap?: (player: ExtendedPlayer) => void;
     autoFillLoadingPlayerId?: number | null;
     canEditScores: boolean;
     onViewStats?: (player: ExtendedPlayer) => void;
@@ -19,6 +20,7 @@ const TeamCardList = observer(({
     onEditScore,
     onTogglePlayerDisabled,
     onAutoFillScore,
+    onQBSwap,
     autoFillLoadingPlayerId,
     canEditScores,
     onViewStats
@@ -47,6 +49,7 @@ const TeamCardList = observer(({
                     onEditScore={onEditScore}
                     onTogglePlayerDisabled={onTogglePlayerDisabled}
                     onAutoFillScore={onAutoFillScore}
+                    onQBSwap={onQBSwap}
                     autoFillLoadingPlayerId={autoFillLoadingPlayerId}
                     round={round}
                     ranking={index} // Pass the ranking to display medals
